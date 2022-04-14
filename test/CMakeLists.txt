@@ -19,7 +19,9 @@ if (NOT libuuid)
     MESSAGE(FATAL_ERROR "library uuid Not Found")
 endif()
 
-target_link_libraries(server rfc ${LIBS})
-target_link_libraries(server rfc ${LIBS})
+SET(LIBS ${libpthread} ${libdl} ${libuuid})
+
+target_link_libraries(server rcf ${LIBS})
+target_link_libraries(client rcf ${LIBS})
 
 
