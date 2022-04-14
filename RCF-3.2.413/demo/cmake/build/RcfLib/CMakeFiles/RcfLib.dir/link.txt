@@ -1,2 +1,0 @@
-/Library/Developer/CommandLineTools/usr/bin/ar qc ../../bin/libRcfLib.a CMakeFiles/RcfLib.dir/Users/kqh/PostGraduate/RaftWork/RCF-3.2.413/src/RCF/RCF.cpp.o
-/Library/Developer/CommandLineTools/usr/bin/ranlib ../../bin/libRcfLib.a
