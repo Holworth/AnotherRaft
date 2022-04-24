@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.8)
 SET(CMAKE_CXX_STANDARD 17)
 
-add_executable(server SampleServer.cc)
-add_executable(client SampleClient.cc)
+find_package(GTest REQUIRED)
+
+include_directories(${GTEST_INCLUDE_DIR})
+
 
 find_library(libpthread NAMES pthread)
 if (NOT libpthread)
@@ -21,7 +23,15 @@ endif()
 
 SET(LIBS ${libpthread} ${libdl} ${libuuid})
 
-target_link_libraries(server rcf ${LIBS})
-target_link_libraries(client rcf ${LIBS})
+add_executable(server SampleServer.cc)
+add_executable(client SampleClient.cc)
+
+target_link_libraries(server rcf ${LIBS} GTest::gtest GTest::gtest_main)
+target_link_libraries(client rcf ${LIBS} GTest::gtest GTest::gtest_main)
+
+add_executable(serializer_test serializer_test.cc)
+target_link_libraries(serializer_test rcf raft ${LIBS} GTest::gtest GTest::gtest_main)
+
+
 
 

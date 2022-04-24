@@ -1,17 +1,27 @@
 [
 {
-  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/RCF",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/rcf.dir/src/RCF/RCF.cpp.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/src/RCF/RCF.cpp",
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/osx-debug/RCF",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/rcf.dir/src/RCF/RCF.cpp.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/src/RCF/RCF.cpp",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/src/RCF/RCF.cpp"
 },
 {
-  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/test",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/server.dir/SampleServer.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleServer.cc",
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/osx-debug/src",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/raft.dir/log_entry.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_entry.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_entry.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/osx-debug/test",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/server.dir/SampleServer.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleServer.cc",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleServer.cc"
 },
 {
-  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/test",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/client.dir/SampleClient.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleClient.cc",
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/osx-debug/test",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/client.dir/SampleClient.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleClient.cc",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/SampleClient.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/osx-debug/test",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/serializer_test.dir/serializer_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/serializer_test.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/test/serializer_test.cc"
 }
 ]
