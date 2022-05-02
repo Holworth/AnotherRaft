@@ -65,7 +65,7 @@ void Serializer::Deserialize(const RCF::ByteBuffer *buffer, RequestVoteReply *re
 void Serializer::Serialize(const AppendEntriesArgs* args, RCF::ByteBuffer* buffer) {
   assert(args->entry_cnt == args->entries.size());
   auto dst = buffer->getPtr();
-  std::memcpy(dst, &args, kAppendEntriesArgsHdrSize);
+  std::memcpy(dst, args, kAppendEntriesArgsHdrSize);
   dst += kAppendEntriesArgsHdrSize;
   for (const auto& ent : args->entries) {
     dst = serialize_logentry_helper(&ent, dst);
