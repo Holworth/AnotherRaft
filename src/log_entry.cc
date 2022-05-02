@@ -1,54 +1,55 @@
 #include "log_entry.h"
+#include "RCF/ByteBuffer.hpp"
 
 namespace raft {
 
-void LogEntry::serialize(SF::Archive &ar) {
-  ar &term;
-  ar &index;
-  ar &type;
-  ar &seq;
-  ar &n;
-  ar &k;
-  ar &fragment_id;
-  ar &start_fragment_offset;
-
-  if (ar.isWrite()) { // Serializing
-    switch (Type()) {
-    case kNormal:
-      ar &command_data_.toString();
-      return;
-
-    case kFragments:
-      ar &not_encoded_slice_.toString();
-      ar &fragment_slice_.toString();
-      return;
-
-    // Can never reach this
-    case kTypeMax:
-      assert(false);
-    }
-  } else { // Deserializing
-    std::string command_data;
-    std::string not_encoded_data, fragment_data;
-    switch (Type()) {
-    case kNormal:
-      ar &command_data;
-      SetCommandData(Slice(command_data));
-      return;
-
-    case kFragments:
-      ar &not_encoded_data;
-      ar &fragment_data;
-      SetNotEncodedSlice(Slice(not_encoded_data));
-      SetFragmentSlice(Slice(fragment_data));
-      return;
-
-    // Can never reach this
-    case kTypeMax:
-      assert(false);
-    }
-  }
-}
+/* void LogEntry::serialize(SF::Archive &ar) { */
+/*   ar &term; */
+/*   ar &index; */
+/*   ar &type; */
+/*   ar &seq; */
+/*   ar &n; */
+/*   ar &k; */
+/*   ar &fragment_id; */
+/*   ar &start_fragment_offset; */
+/*  */
+/*   if (ar.isWrite()) { // Serializing */
+/*     switch (Type()) { */
+/*     case kNormal: */
+/*       ar &command_data_.toString(); */
+/*       return; */
+/*  */
+/*     case kFragments: */
+/*       ar &not_encoded_slice_.toString(); */
+/*       ar &fragment_slice_.toString(); */
+/*       return; */
+/*  */
+/*     // Can never reach this */
+/*     case kTypeMax: */
+/*       assert(false); */
+/*     } */
+/*   } else { // Deserializing */
+/*     std::string command_data; */
+/*     std::string not_encoded_data, fragment_data; */
+/*     switch (Type()) { */
+/*     case kNormal: */
+/*       ar &command_data; */
+/*       SetCommandData(Slice(command_data)); */
+/*       return; */
+/*  */
+/*     case kFragments: */
+/*       ar &not_encoded_data; */
+/*       ar &fragment_data; */
+/*       SetNotEncodedSlice(Slice(not_encoded_data)); */
+/*       SetFragmentSlice(Slice(fragment_data)); */
+/*       return; */
+/*  */
+/*     // Can never reach this */
+/*     case kTypeMax: */
+/*       assert(false); */
+/*     } */
+/*   } */
+/* } */
 
 // This function is basically only used to test if network transfer is ok
 auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool {
