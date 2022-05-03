@@ -7,7 +7,7 @@
 namespace raft {
 namespace rpc {
 
-struct Address {
+struct NetAddress {
   std::string ip;
   uint16_t port;
 };

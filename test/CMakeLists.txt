@@ -25,8 +25,14 @@ SET(LIBS ${libpthread} ${libdl} ${libuuid})
 add_executable(server SampleServer.cc)
 add_executable(client SampleClient.cc)
 
+add_executable(async_server AsyncServer.cc)
+add_executable(async_client AsyncClient.cc)
+
 target_link_libraries(server rcf ${LIBS} GTest::gtest GTest::gtest_main)
 target_link_libraries(client rcf ${LIBS} GTest::gtest GTest::gtest_main)
+
+target_link_libraries(async_server rcf ${LIBS} GTest::gtest GTest::gtest_main)
+target_link_libraries(async_client rcf ${LIBS} GTest::gtest GTest::gtest_main)
 
 
 
