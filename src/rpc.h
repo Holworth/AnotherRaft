@@ -12,8 +12,6 @@ struct NetAddress {
   uint16_t port;
 };
 
-class RaftState;
-
 // An interface for sending rpc requests to target remote peer
 class RpcClient {
 public:

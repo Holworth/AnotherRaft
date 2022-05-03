@@ -4,17 +4,32 @@
 
 #include "RCF/ClientStub.hpp"
 #include "RCF/Future.hpp"
+#include "RCF/InitDeinit.hpp"
+#include "RCF/RcfServer.hpp"
 #include "raft_struct.h"
 #include "rpc.h"
+#include "serializer.h"
 
 namespace raft {
+class RaftState;
 namespace rpc {
 
 RCF_BEGIN(I_RaftRPCService, "I_RaftRPCService")
 RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
+RCF_METHOD_R1(RCF::ByteBuffer, AppendEntries, const RCF::ByteBuffer &)
 RCF_END(I_RaftService)
 
-class RaftService {};
+
+class RaftRPCService {
+public:
+  RaftRPCService() = default;
+  void SetRaftState(RaftState* raft) { raft_ = raft; }
+  RCF::ByteBuffer RequestVote(const RCF::ByteBuffer& arg_buf);
+  RCF::ByteBuffer AppendEntries(const RCF::ByteBuffer& arg_buf);
+private:
+  RaftState* raft_;
+};
+
 
 // An implementation of RpcClient interface using RCF (Remote Call Framework)
 class RCFRpcClient final : public RpcClient {
@@ -34,9 +49,29 @@ class RCFRpcClient final : public RpcClient {
   void sendMessage(const AppendEntriesArgs &args) override;
 
  private:
+  // Callback function
+  static void onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> buf, RaftState *raft);
+  static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf, RaftState *raft);
+
+ private:
   RaftState *raft_;
-  RcfClient<I_RaftRPCService> client_;
+  RcfClient<I_RaftRPCService> rcf_client_;
+  RCF::RcfInit rcf_init_;
 };
 
+class RCFRpcServer final : public RpcServer {
+public:
+  RCFRpcServer(const NetAddress& my_address);
+public:
+  void Start() override;
+  void dealWithMessage(const RequestVoteArgs &reply) override;
+  void SetRaftState(RaftState* raft) {
+    service_.SetRaftState(raft);
+  }
+private:
+  RCF::RcfInit rcf_init_;
+  RCF::RcfServer server_;
+  RaftRPCService service_;
+};
 }  // namespace rpc
 }  // namespace raft
