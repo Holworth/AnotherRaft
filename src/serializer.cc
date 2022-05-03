@@ -114,7 +114,9 @@ size_t Serializer::getSerializeSize(const LogEntry &entry) {
   size_t ret = sizeof(LogEntry);
   ret += entry.NotEncodedSlice().size();
   ret += entry.FragmentSlice().size();
-  return ret + 2 * sizeof(size_t);
+  ret += 2 * sizeof(size_t);
+  // Make size 4B aligment
+  return (ret - 1) / 4 * 4 + 4;
 }
 
 size_t Serializer::getSerializeSize(const RequestVoteArgs &args) { return sizeof(args); }
@@ -128,7 +130,8 @@ size_t Serializer::getSerializeSize(const AppendEntriesArgs &args) {
   for (const auto &ent : args.entries) {
     ret += getSerializeSize(ent);
   }
-  return ret;
+  // Make the size 4B alignment
+  return (ret - 1) / 4 * 4 + 4;
 }
 
 size_t Serializer::getSerializeSize(const AppendEntriesReply &reply) {

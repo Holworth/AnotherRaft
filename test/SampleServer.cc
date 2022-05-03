@@ -8,7 +8,7 @@ RCF_END(I_PrintService)
 class PrintService {
 public:
   void Print(const std::string &s) {
-    std::cout << "I_PrintService service: " << s << std::endl;
+    std::cout << "I_PrintService service: " << s.size() << std::endl;
   }
 };
 int main() {

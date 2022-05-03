@@ -51,8 +51,9 @@ struct AppendEntriesReply {
 };
 
 enum {
-  kAppendEntriesArgsHdrSize = sizeof(raft_term_t) * 2 + sizeof(raft_index_t) * 2 +
-                              sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
+  // kAppendEntriesArgsHdrSize = sizeof(raft_term_t) * 2 + sizeof(raft_index_t) * 2 +
+  // sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
+  kAppendEntriesArgsHdrSize = 40
 };
 
 }  // namespace raft

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <random>
+#include <iostream>
 
 #include "RCF/RCF.hpp"
 #include "gtest/gtest.h"
@@ -24,7 +25,6 @@ class EchoService {
 
 class SerializerTest : public ::testing::Test {
  public:
-  template <typename T>
   void LaunchServerThread() {
     auto server_work = [this]() {
       RCF::RcfInit rcfInit;
@@ -34,29 +34,28 @@ class SerializerTest : public ::testing::Test {
       server.start();
       // Wait until this echo service is executed at least once
       std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
+      int a;
+      std::cin >> a;
     };
     auto thread = std::thread(server_work);
     thread.detach();
   }
 
   template <typename T, typename Cmp>
-  void LaunchClientThread(const T &ent, Cmp &cmp) {
-    auto client_work = [this, &ent, &cmp]() {
-      RCF::RcfInit rcfInit;
-      RcfClient<I_EchoService> client(RCF::TcpEndpoint(kLocalTestIp, kLocalTestPort));
+  void SendClientRequestTest(const T &ent, Cmp &cmp) {
+    RCF::RcfInit rcfInit;
+    RcfClient<I_EchoService> client(RCF::TcpEndpoint(kLocalTestIp, kLocalTestPort));
 
-      auto serializer = Serializer::NewSerializer();
+    auto serializer = Serializer::NewSerializer();
 
-      RCF::ByteBuffer buffer(serializer.getSerializeSize(ent));
-      serializer.Serialize(&ent, &buffer);
+    RCF::ByteBuffer buffer(serializer.getSerializeSize(ent));
+    serializer.Serialize(&ent, &buffer);
 
-      RCF::ByteBuffer returned = client.Echo(buffer);
-      T parse;
-      serializer.Deserialize(&returned, &parse);
-      ASSERT_TRUE(cmp(ent, parse));
-    };
-    auto thread = std::thread(client_work);
-    thread.join();
+    RCF::ByteBuffer returned = client.Echo(buffer);
+    T parse;
+    serializer.Deserialize(&returned, &parse);
+    ASSERT_TRUE(cmp(ent, parse));
+    std::cout << "[PASS] Test Serialize " << typeid(T).name() << std::endl;
   }
 
   auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
@@ -94,6 +93,14 @@ class SerializerTest : public ::testing::Test {
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime * 2));
   }
 
+  void TestNoDataLogEntryTransfer();
+  void TestCompleteCommandDataLogEntryTransfer();
+  void TestFragmentDataLogEntryTransfer();
+  void TestSerializeRequestVoteArgs();
+  void TestSerializeRequestVoteReply();
+  void TestSerializeAppendEntriesArgs();
+  void TestSerializeAppendEntriesReply();
+
  private:
   const std::string kLocalTestIp = "127.0.0.1";
   const int kLocalTestPort = 50001;
@@ -101,31 +108,25 @@ class SerializerTest : public ::testing::Test {
   const int kSleepTime = 1000;
 };
 
-TEST_F(SerializerTest, TestNoDataLogEntryTransfer) {
+void SerializerTest::TestNoDataLogEntryTransfer() {
   LogEntry ent = GenerateRandomLogEntry(false, kNormal);
   auto cmp = [](const LogEntry &a, const LogEntry &b) -> bool { return a == b; };
-  LaunchServerThread<LogEntry>();
-  LaunchClientThread<LogEntry>(ent, cmp);
-  WaitServerExit();
+  SendClientRequestTest<LogEntry>(ent, cmp);
 }
 
-TEST_F(SerializerTest, TestCompleteCommandDataLogEntryTransfer) {
+void SerializerTest::TestCompleteCommandDataLogEntryTransfer() {
   LogEntry ent = GenerateRandomLogEntry(true, kNormal);
   auto cmp = [](const LogEntry &a, const LogEntry &b) -> bool { return a == b; };
-  LaunchServerThread<LogEntry>();
-  LaunchClientThread<LogEntry>(ent, cmp);
-  WaitServerExit();
+  SendClientRequestTest<LogEntry>(ent, cmp);
 }
 
-TEST_F(SerializerTest, TestFragmentDataLogEntryTransfer) {
+void SerializerTest::TestFragmentDataLogEntryTransfer() {
   LogEntry ent = GenerateRandomLogEntry(true, kFragments);
   auto cmp = [](const LogEntry &a, const LogEntry &b) -> bool { return a == b; };
-  LaunchServerThread<LogEntry>();
-  LaunchClientThread<LogEntry>(ent, cmp);
-  WaitServerExit();
+  SendClientRequestTest<LogEntry>(ent, cmp);
 }
 
-TEST_F(SerializerTest, TestSerializeRequestVoteArgs) {
+void SerializerTest::TestSerializeRequestVoteArgs() {
   RequestVoteArgs args = RequestVoteArgs{
       static_cast<raft_term_t>(rand()), static_cast<raft_node_id_t>(rand()),
       static_cast<raft_index_t>(rand()), static_cast<raft_term_t>(rand())};
@@ -133,22 +134,18 @@ TEST_F(SerializerTest, TestSerializeRequestVoteArgs) {
   auto cmp = [](const RequestVoteArgs &a, const RequestVoteArgs &b) -> bool {
     return std::memcmp(&a, &b, sizeof(RequestVoteArgs)) == 0;
   };
-  LaunchServerThread<RequestVoteArgs>();
-  LaunchClientThread<RequestVoteArgs>(args, cmp);
-  WaitServerExit();
+  SendClientRequestTest<RequestVoteArgs>(args, cmp);
 }
 
-TEST_F(SerializerTest, TestSerializeRequestVoteReply) {
+void SerializerTest::TestSerializeRequestVoteReply() {
   RequestVoteReply reply = RequestVoteReply{static_cast<raft_term_t>(rand()), rand()};
   auto cmp = [](const RequestVoteReply &a, const RequestVoteReply &b) -> bool {
     return std::memcmp(&a, &b, sizeof(RequestVoteReply)) == 0;
   };
-  LaunchServerThread<RequestVoteReply>();
-  LaunchClientThread<RequestVoteReply>(reply, cmp);
-  WaitServerExit();
+  SendClientRequestTest<RequestVoteReply>(reply, cmp);
 }
 
-TEST_F(SerializerTest, TestSerializeAppendEntriesArgs) {
+void SerializerTest::TestSerializeAppendEntriesArgs() {
   AppendEntriesArgs args = AppendEntriesArgs{
       static_cast<raft_term_t>(rand()),  static_cast<raft_node_id_t>(rand()),
       static_cast<raft_index_t>(rand()), static_cast<raft_term_t>(rand()),
@@ -172,12 +169,10 @@ TEST_F(SerializerTest, TestSerializeAppendEntriesArgs) {
     }
     return true;
   };
-  LaunchServerThread<AppendEntriesArgs>();
-  LaunchClientThread<AppendEntriesArgs>(args, cmp);
-  WaitServerExit();
+  SendClientRequestTest<AppendEntriesArgs>(args, cmp);
 }
 
-TEST_F(SerializerTest, TestSerializeAppendEntriesReply) {
+void SerializerTest::TestSerializeAppendEntriesReply() {
   AppendEntriesReply reply = AppendEntriesReply{
       static_cast<raft_term_t>(rand()),
       rand(),
@@ -185,18 +180,22 @@ TEST_F(SerializerTest, TestSerializeAppendEntriesReply) {
       static_cast<raft_node_id_t>(rand()),
   };
 
-  auto cmp = [](const AppendEntriesReply& lhs, const AppendEntriesReply& rhs) -> bool {
+  auto cmp = [](const AppendEntriesReply &lhs, const AppendEntriesReply &rhs) -> bool {
     return std::memcmp(&lhs, &rhs, sizeof(AppendEntriesReply)) == 0;
   };
-
-  LaunchServerThread<AppendEntriesReply>();
-  LaunchClientThread<AppendEntriesReply>(reply, cmp);
-  WaitServerExit();
+  SendClientRequestTest<AppendEntriesReply>(reply, cmp);
 }
 
-int main(int argc, char *argv[]) {
-  ::testing::InitGoogleTest();
-  return RUN_ALL_TESTS();
+TEST_F(SerializerTest, TestSerialize) {
+  LaunchServerThread();
+  TestNoDataLogEntryTransfer();
+  TestCompleteCommandDataLogEntryTransfer();
+  TestFragmentDataLogEntryTransfer();
+  TestSerializeRequestVoteArgs();
+  TestSerializeRequestVoteReply();
+  TestSerializeAppendEntriesArgs();
+  TestSerializeAppendEntriesReply();
 }
+
 }  // namespace raft
    //
