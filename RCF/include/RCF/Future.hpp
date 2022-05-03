@@ -21,6 +21,7 @@
 
 #include <RCF/ClientStub.hpp>
 #include <RCF/Marshal.hpp>
+#include <iostream>
 
 namespace RCF {
 
@@ -128,6 +129,7 @@ namespace RCF {
         // Retrieves the exception, if any, returned by an asynchronous call.
         std::unique_ptr<Exception> getAsyncException()
         {
+            // std::cout << mStatePtr << std::endl;
             return mStatePtr->getClientStub().getAsyncException();
         }
 
@@ -232,6 +234,7 @@ namespace RCF {
 
             ClientStub & getClientStub()
             {
+                // std::cout << mpClientStub << std::endl;
                 return *mpClientStub;
             }
 
