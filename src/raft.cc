@@ -284,7 +284,7 @@ void RaftState::convertToLeader() {
 void RaftState::resetNextIndexAndMatchIndex() {
   auto next_index = lm_->LastLogEntryIndex() + 1;
   // Since there is no match index yet, the server simply set it to be 0
-  for (auto& [id, peer] : peers_) {
+  for (auto &[id, peer] : peers_) {
     peer->SetNextIndex(next_index);
     peer->SetMatchIndex(0);
   }
@@ -344,8 +344,12 @@ void RaftState::broadcastHeatbeat() {
 
 void RaftState::resetElectionTimer() {
   srand(19201);
-  election_time_out_ =
-      rand() % (electionTimeLimitMax_ - electionTimeLimitMin_) + electionTimeLimitMin_;
+  if (electionTimeLimitMin_ == electionTimeLimitMax_) {
+    election_time_out_ = electionTimeLimitMin_;
+  } else {
+    election_time_out_ =
+        rand() % (electionTimeLimitMax_ - electionTimeLimitMin_) + electionTimeLimitMin_;
+  }
   election_timer_.Reset();
 }
 
@@ -411,7 +415,7 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
 
   auto require_entry_cnt = lm_->LastLogEntryIndex() - prev_index;
   args.entries.reserve(require_entry_cnt);
-  lm_->GetLogEntriesFrom(next_index,&args.entries);
+  lm_->GetLogEntriesFrom(next_index, &args.entries);
 
   assert(require_entry_cnt == args.entries.size());
   args.entry_cnt = args.entries.size();
