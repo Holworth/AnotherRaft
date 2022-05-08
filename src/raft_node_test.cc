@@ -21,6 +21,7 @@
 namespace raft {
 class RaftNodeTest : public ::testing::Test {
  public:
+  static constexpr int kMaxNodeNum = 9;
   using NetConfig = std::unordered_map<raft_node_id_t, rpc::NetAddress>;
 
   static constexpr raft_node_id_t kNoLeader = -1;
@@ -96,7 +97,7 @@ class RaftNodeTest : public ::testing::Test {
 
   // Calling end will exits all existed raft node thread, and clear all allocated
   // resources. This should be only called when a test is done
-  void End() {
+  void TestEnd() {
     std::for_each(nodes_, nodes_ + node_num_, [](RaftNode* node) {
       if (!node->Exited()) {
         node->Exit();
@@ -107,7 +108,7 @@ class RaftNodeTest : public ::testing::Test {
 
  public:
   // Record each nodes and all nodes number
-  RaftNode* nodes_[7];
+  RaftNode* nodes_[kMaxNodeNum];
   int node_num_;
 };
 
@@ -117,8 +118,6 @@ void RaftNodeTest::LaunchRaftNodeInstance(const RaftNode::NodeConfig& config) {
     this->nodes_[config.node_id_me] = raft_node;
     raft_node->Init();
     raft_node->Start();
-    while (!raft_node->Exited())
-      ;
   });
 
   node_thread.detach();
@@ -134,7 +133,7 @@ TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
 
   ASSERT_TRUE(CheckOneLeader());
 
-  End();
+  TestEnd();
 }
 
 // NOTE: This test may fail due to RPC , the default RPC uses TCP protocol, which
@@ -162,7 +161,7 @@ TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
   ASSERT_NE(leader_id2, kNoLeader);
   ASSERT_NE(leader_id2, leader_id1);
 
-  End();
+  TestEnd();
 }
 
 TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
@@ -190,7 +189,7 @@ TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
     Reconnect(net_config, i2);
   }
 
-  End();
+  TestEnd();
 }
 
 }  // namespace raft

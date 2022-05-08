@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 
+#include "log_entry.h"
 #include "log_manager.h"
 #include "raft_struct.h"
 #include "raft_type.h"
@@ -216,6 +217,25 @@ void RaftState::Process(RequestVoteReply *reply) {
   }
   return;
 }
+
+void RaftState::Propose(const CommandData& command) {
+  std::scoped_lock<std::mutex> lck(mtx_);
+
+  raft_index_t next_entry_index = lm_->LastLogEntryIndex() + 1;
+  LogEntry entry;
+  entry.SetCommandData(command.command_data);
+  entry.SetIndex(next_entry_index);
+  entry.SetTerm(CurrentTerm());
+  entry.SetStartOffset(command.start_fragment_offset);
+
+  lm_->AppendLogEntry(entry);
+
+  // Replicate this entry out
+  for (auto& [id, _] : peers_) {
+    sendAppendEntries(id);
+  }
+}
+
 
 bool RaftState::isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term) {
   LOG(util::kRaft, "S%d CheckLog (LastTerm=%d ArgTerm=%d) (LastIndex=%d ArgIndex=%d)",

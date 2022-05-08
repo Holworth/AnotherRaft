@@ -18,7 +18,7 @@ enum RaftRole {
 };
 
 namespace config {
-const int64_t kHeartbeatInterval = 100; // 100ms
+const int64_t kHeartbeatInterval = 100;  // 100ms
 };
 
 struct RaftConfig {
@@ -75,6 +75,10 @@ class RaftState {
   void Process(AppendEntriesArgs *args, AppendEntriesReply *reply);
   void Process(AppendEntriesReply *reply);
 
+  // This is a command from upper level application, the raft instance is supposed to
+  // copy this entry to its own log and replicate it to other followers 
+  void Propose(const CommandData& command);
+
  public:
   // Init all necessary status of raft state, including reset election timer
   void Init();
@@ -99,7 +103,7 @@ class RaftState {
   void SetCommitIndex(raft_index_t raft_index) { commit_index_ = raft_index; }
 
   raft_index_t LastLogIndex() const { return lm_->LastLogEntryIndex(); }
-  raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index);}
+  raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index); }
 
  private:
   // Check specified raft_index and raft_term is newer than log entries stored
@@ -117,7 +121,7 @@ class RaftState {
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
   // Add any new entries that are not in raft's log
-  void checkConflictEntryAndAppendNew(AppendEntriesArgs* args);
+  void checkConflictEntryAndAppendNew(AppendEntriesArgs *args);
 
   // Reset the next index and match index fields when current server becomes leader
   void resetNextIndexAndMatchIndex();

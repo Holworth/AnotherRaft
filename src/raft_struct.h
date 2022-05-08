@@ -68,6 +68,14 @@ struct AppendEntriesReply {
   raft_node_id_t reply_id;
 };
 
+// A struct that indicates the command specified by user of the raft cluster
+struct CommandData {
+  int start_fragment_offset;
+  // The ownership of data contained in this command_data is handled to Raft, if you
+  // call RaftState->Process(..)
+  Slice command_data;
+};
+
 enum {
   // kAppendEntriesArgsHdrSize = sizeof(raft_term_t) * 2 + sizeof(raft_index_t) * 2 +
   // sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
