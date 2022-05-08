@@ -36,6 +36,11 @@
 },
 {
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/raft.dir/raft_node.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_node.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_node.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
   "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/log_manager_test.dir/log_manager_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_manager_test.cc",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_manager_test.cc"
 },
@@ -43,6 +48,11 @@
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
   "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/raft_appendentries_test.dir/raft_appendentries_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_appendentries_test.cc",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_appendentries_test.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/raft_node_test.dir/raft_node_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_node_test.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/raft_node_test.cc"
 },
 {
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",

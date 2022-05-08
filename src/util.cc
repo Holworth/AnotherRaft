@@ -41,8 +41,8 @@ void Logger::Debug(LogMsgType type, const char* fmt, ...) {
 }
 
 Logger* LoggerInstance() {
-  static Logger* logger = new Logger();
-  return logger;
+  static Logger logger;
+  return &logger;
 }
 
 }

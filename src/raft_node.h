@@ -31,6 +31,11 @@ class RaftNode {
 
   // Calling exit to stop running this raft node, and release all resources
   void Exit();
+  // Check if current node has exited
+  bool Exited() { return exit_.load(); }
+
+  // NOTE: This method should only be used in test or debug mod
+  RaftState* getRaftState() { return raft_state_; }
 
   private:
   void startTickerThread();
@@ -41,7 +46,7 @@ private:
   std::unordered_map<raft_node_id_t, rpc::NetAddress> servers_;
   RaftState* raft_state_;
   // RPC related struct
-  std::shared_ptr<rpc::RpcServer> rcf_server_;
+  rpc::RpcServer* rcf_server_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient*> rcf_clients_;
   // Inidicating if this server has exited, i.e. Stop running, this is important so that 
   // the ticker thread and applier thread can also exit normally

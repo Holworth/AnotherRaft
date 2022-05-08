@@ -275,6 +275,7 @@ void RaftState::convertToCandidate() {
 }
 
 void RaftState::convertToLeader() {
+  LOG(util::kRaft, "S%d become leader", id_);
   SetRole(kLeader);
   resetNextIndexAndMatchIndex();
   broadcastHeartbeat();

@@ -6,6 +6,7 @@
 
 #include "raft.h"
 #include "rcf_rpc.h"
+#include "util.h"
 namespace raft {
 
 RaftNode::RaftNode(const NodeConfig& node_config)
@@ -15,18 +16,17 @@ RaftNode::RaftNode(const NodeConfig& node_config)
 
 void RaftNode::Init() {
   // Create an RPC server that receives request from remote servers
-  rcf_server_ =
-      std::make_shared<rpc::RCFRpcServer>(new rpc::RCFRpcServer(servers_[node_id_me_]));
+  rcf_server_ = new rpc::RCFRpcServer(servers_[node_id_me_]);
 
   // Create an RPC client that is able to send RPC request to remote server
-  for (const auto&[id, addr] : servers_) {
+  for (const auto& [id, addr] : servers_) {
     if (id != node_id_me_) {
       rcf_clients_.insert({id, new rpc::RCFRpcClient(addr)});
     }
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig {node_id_me_, rcf_clients_, nullptr, 150, 300};
+  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, nullptr, 150, 300};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct
@@ -37,6 +37,7 @@ void RaftNode::Init() {
 }
 
 void RaftNode::Start() {
+  LOG(util::kRaft, "S%d Starts", node_id_me_);
   exit_.store(false);
   rcf_server_->Start();
   raft_state_->Init();
@@ -54,12 +55,13 @@ void RaftNode::Exit() {
   for (auto& [_, client] : rcf_clients_) {
     delete client;
   }
+  delete rcf_server_;
   // TODO: Release storage or state machine if it's necessary
 }
 
 void RaftNode::startTickerThread() {
   auto ticker = [=]() {
-    while (!this->exit_.load()) {
+    while (!this->Exited()) {
       // Tick the raft state for every 10ms so that the raft can make progress
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
       this->raft_state_->Tick();

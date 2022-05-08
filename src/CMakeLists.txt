@@ -30,6 +30,7 @@ set(
   log_manager.cc
   rcf_rpc.cc
   raft.cc
+  raft_node.cc
 )
 
 add_library(raft ${RAFT_SRC})
