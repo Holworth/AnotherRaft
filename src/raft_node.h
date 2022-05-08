@@ -22,6 +22,7 @@ class RaftNode {
 
   // Constructor
   RaftNode(const NodeConfig& node_config);
+  ~RaftNode();
 
   // Start running this raft node
   void Start();

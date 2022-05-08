@@ -51,12 +51,15 @@ void RaftNode::Exit() {
   this->exit_.store(true);
   std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
+  // TODO: Release storage or state machine if it's necessary
+}
+
+RaftNode::~RaftNode() {
   delete raft_state_;
   for (auto& [_, client] : rcf_clients_) {
     delete client;
   }
   delete rcf_server_;
-  // TODO: Release storage or state machine if it's necessary
 }
 
 void RaftNode::startTickerThread() {

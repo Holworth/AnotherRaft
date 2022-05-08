@@ -43,6 +43,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
 
   ret->electionTimeLimitMin_ = config.electionTimeMin;
   ret->electionTimeLimitMax_ = config.electionTimeMax;
+  ret->heartbeatTimeInterval = config::kHeartbeatInterval;
 
   return ret;
 }
@@ -54,9 +55,14 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
   assert(args != nullptr && reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
+  LOG(util::kRaft, "S%d RequestVote From S%d AT%d", id_, args->candidate_id, args->term);
+
+  reply->reply_id = id_;
+
   // The request server has smaller term, just refuse this vote request
   // immediately and return my term to update its term
   if (args->term < CurrentTerm()) {
+    LOG(util::kRaft, "S%d Refuse: Term is bigger(%d>%d)", id_, CurrentTerm(), args->term);
     reply->term = CurrentTerm();
     reply->vote_granted = false;
     return;
@@ -77,6 +83,7 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
 
   // Vote for this requesting server
   if (rule1 && rule2) {
+    LOG(util::kRaft, "S%d VoteFor S%d", id_, args->candidate_id);
     reply->vote_granted = true;
     SetVoteFor(args->candidate_id);
 
@@ -86,6 +93,7 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
     return;
   }
 
+  LOG(util::kRaft, "S%d RefuseVote R1=%d R2=%d", id_, rule1, rule2);
   // Refuse vote for this server
   reply->vote_granted = false;
   return;
@@ -184,9 +192,11 @@ void RaftState::Process(RequestVoteReply *reply) {
   assert(reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
+  LOG(util::kRaft, "S%d HandleVoteResp from S%d term=%d grant=%d",id_, reply->reply_id,
+      reply->term, reply->vote_granted);
+
   // Current raft peer is no longer candidate, or the term is expired
   if (Role() != kCandidate || reply->term < CurrentTerm()) {
-    // LOG(util::kRaft, "Hello");
     return;
   }
 
@@ -198,6 +208,7 @@ void RaftState::Process(RequestVoteReply *reply) {
 
   if (reply->vote_granted == true) {
     incrementVoteMeCnt();
+    LOG(util::kRaft, "S%d voteMeCnt=%d", id_, vote_me_cnt_);
     // Win votes of the majority of the cluster
     if (vote_me_cnt_ >= livenessLevel() + 1) {
       convertToLeader();
@@ -207,6 +218,9 @@ void RaftState::Process(RequestVoteReply *reply) {
 }
 
 bool RaftState::isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term) {
+  LOG(util::kRaft, "S%d CheckLog (LastTerm=%d ArgTerm=%d) (LastIndex=%d ArgIndex=%d)",
+      id_, lm_->LastLogEntryTerm(), raft_term, lm_->LastLogEntryIndex(), raft_index);
+
   if (raft_term > lm_->LastLogEntryTerm()) {
     return true;
   }
@@ -256,7 +270,10 @@ void RaftState::tryUpdateCommitIndex() {
 }
 
 void RaftState::convertToFollower(raft_term_t term) {
+  // This assertion ensures that the server will only convert to follower with higher
+  // term. i.e. The term attribute in followre is monotonically increasing
   assert(term >= CurrentTerm());
+  LOG(util::kRaft, "S%d ToFollower(T%d->T%d)", id_, CurrentTerm(), term);
 
   SetRole(kFollower);
   if (term > CurrentTerm()) {
@@ -269,13 +286,15 @@ void RaftState::convertToFollower(raft_term_t term) {
 }
 
 void RaftState::convertToCandidate() {
+  LOG(util::kRaft, "S%d ToCandi(T%d)", id_, CurrentTerm());
   SetRole(kCandidate);
   resetElectionTimer();
   startElection();
 }
 
 void RaftState::convertToLeader() {
-  LOG(util::kRaft, "S%d become leader", id_);
+  LOG(util::kRaft, "S%d ToLeader(T%d) LI%d", id_, CurrentTerm(),
+      lm_->LastLogEntryIndex());
   SetRole(kLeader);
   resetNextIndexAndMatchIndex();
   broadcastHeartbeat();
@@ -284,6 +303,7 @@ void RaftState::convertToLeader() {
 
 void RaftState::resetNextIndexAndMatchIndex() {
   auto next_index = lm_->LastLogEntryIndex() + 1;
+  LOG(util::kRaft, "S%d set NI=%d MI=%d", id_, next_index, 0);
   // Since there is no match index yet, the server simply set it to be 0
   for (auto &[id, peer] : peers_) {
     peer->SetNextIndex(next_index);
@@ -305,6 +325,9 @@ void RaftState::persistCurrentTerm() {
 // [REQUIRE] Current thread holds the lock of raft state
 void RaftState::startElection() {
   assert(Role() == kCandidate);
+
+  LOG(util::kRaft, "S%d Start Election (T%d) LI%d LT%d", id_, CurrentTerm() + 1,
+      lm_->LastLogEntryIndex(), lm_->LastLogEntryTerm());
 
   // Update current status of raft
   current_term_++;
@@ -331,6 +354,8 @@ void RaftState::startElection() {
     if (_ == id_) {  // Omit self
       continue;
     }
+
+    LOG(util::kRaft, "S%d RequestVote to S%d", id_, _);
     rpc_client->sendMessage(args);
   }
 }
@@ -344,7 +369,8 @@ void RaftState::broadcastHeartbeat() {
 }
 
 void RaftState::resetElectionTimer() {
-  srand(19201);
+  uint32_t seed = 19201 * id_ * id_;
+  srand(seed);
   if (electionTimeLimitMin_ == electionTimeLimitMax_) {
     election_time_out_ = electionTimeLimitMin_;
   } else {
@@ -425,6 +451,10 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
 }
 
 bool RaftState::containEntry(raft_index_t raft_index, raft_term_t raft_term) {
+  LOG(util::kRaft,
+      "S%d Check ContainEntry (LastTerm%d ArgTerm%d) (LastIndex%d ArgIndex%d)", id_,
+      lm_->LastLogEntryTerm(), raft_term, lm_->LastLogEntryIndex(), raft_index);
+
   if (raft_index == lm_->LastSnapshotIndex()) {
     return raft_term == lm_->LastSnapshotTerm();
   }

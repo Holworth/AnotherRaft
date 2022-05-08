@@ -17,6 +17,10 @@ enum RaftRole {
   kLeader = 3,
 };
 
+namespace config {
+const int64_t kHeartbeatInterval = 100; // 100ms
+};
+
 struct RaftConfig {
   // The node id of curernt peer. A node id is the unique identifier to
   // distinguish different raft peers

@@ -5,6 +5,24 @@
 #include "raft_type.h"
 
 namespace raft {
+struct RequestVoteArgs {
+  raft_term_t term;
+
+  raft_node_id_t candidate_id;
+
+  raft_index_t last_log_index;
+
+  raft_term_t last_log_term;
+};
+
+struct RequestVoteReply {
+  raft_term_t term;
+
+  int vote_granted;
+
+  raft_node_id_t reply_id;
+};
+
 struct AppendEntriesArgs {
   // Leader's term when sending this AppendEntries RPC.
   raft_term_t term;
