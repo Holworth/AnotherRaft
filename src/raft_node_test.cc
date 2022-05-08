@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 #include <unordered_map>
@@ -27,21 +28,42 @@ class RaftNodeTest : public ::testing::Test {
   // returns the pointer to that raft node
   void LaunchRaftNodeInstance(const RaftNode::NodeConfig& config);
 
-  // Check that there exists one leader among all nodes
-  bool CheckHasLeader() {
-    bool has_leader = false;
-    std::for_each(nodes_, nodes_ + node_num_, [&](RaftNode* node) {
-      has_leader |= (node->getRaftState()->Role() == kLeader);
-    });
-    return has_leader;
-  }
-
   bool CheckNoLeader() {
     bool has_leader = false;
     std::for_each(nodes_, nodes_ + node_num_, [&](RaftNode* node) {
       has_leader |= (node->getRaftState()->Role() == kLeader);
     });
     return has_leader == false;
+  }
+
+  // Check that at every fixed term, there is and there is only one leader alive
+  bool CheckOneLeader() {
+    const int retry_cnt = 5;
+    std::unordered_map<raft_term_t, int> leader_cnt;
+    auto record = [&](RaftNode* node) {
+      if (!node->Exited()) {
+        auto raft_state = node->getRaftState();
+        leader_cnt[raft_state->CurrentTerm()] += (raft_state->Role() == kLeader);
+      }
+    };
+    for (int i = 0; i < retry_cnt; ++i) {
+      leader_cnt.clear();
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      std::for_each(nodes_, nodes_ + node_num_, record);
+
+      raft_term_t lastTerm = 0;
+      for (const auto& [term, cnt] : leader_cnt) {
+        if (cnt > 2) {
+          std::printf("Term %d has more than one leader\n", term);
+          return false;
+        }
+        lastTerm = std::max(lastTerm, term);
+      }
+      if (lastTerm > 0 && leader_cnt[lastTerm] == 1) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void LaunchAllServers(const NetConfig& net_config) {
@@ -68,16 +90,18 @@ class RaftNodeTest : public ::testing::Test {
     }
   }
 
-  // Let all created raft nodes to exit
-  void ExitAll() {
+  void Reconnect(const NetConfig& net_config, raft_node_id_t id) {
+    nodes_[id]->Start();
+  }
+
+  // Calling end will exits all existed raft node thread, and clear all allocated
+  // resources. This should be only called when a test is done
+  void End() {
     std::for_each(nodes_, nodes_ + node_num_, [](RaftNode* node) {
       if (!node->Exited()) {
         node->Exit();
       }
     });
-  }
-
-  void ClearAll() {
     std::for_each(nodes_, nodes_ + node_num_, [](RaftNode* node) { delete node; });
   }
 
@@ -108,10 +132,9 @@ TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
   };
   LaunchAllServers(net_config);
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  ASSERT_TRUE(CheckHasLeader());
-  ExitAll();
-  ClearAll();
+  ASSERT_TRUE(CheckOneLeader());
+
+  End();
 }
 
 // NOTE: This test may fail due to RPC , the default RPC uses TCP protocol, which
@@ -126,23 +149,48 @@ TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
   };
   LaunchAllServers(net_config);
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  ASSERT_TRUE(CheckHasLeader());
+  ASSERT_TRUE(CheckOneLeader());
 
   auto leader_id1 = GetLeaderId();
   ASSERT_NE(leader_id1, kNoLeader);
 
   ShutDown(leader_id1);
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  ASSERT_TRUE(CheckHasLeader());
+  ASSERT_TRUE(CheckOneLeader());
 
   auto leader_id2 = GetLeaderId();
   ASSERT_NE(leader_id2, kNoLeader);
   ASSERT_NE(leader_id2, leader_id1);
 
-  ExitAll();
-  ClearAll();
+  End();
+}
+
+TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
+  NetConfig net_config = {
+      {0, {"127.0.0.1", 50001}},
+      {1, {"127.0.0.1", 50002}},
+      {2, {"127.0.0.1", 50003}},
+      {3, {"127.0.0.1", 50004}},
+      {4, {"127.0.0.1", 50005}},
+  };
+  LaunchAllServers(net_config);
+  ASSERT_TRUE(CheckOneLeader());
+
+  const int iter_cnt = 10;
+  for (int i = 0; i < iter_cnt; ++i) {
+    raft_node_id_t i1 = rand() % node_num_;
+    raft_node_id_t i2 = rand() % node_num_;
+
+    ShutDown(i1);
+    ShutDown(i2);
+
+    ASSERT_TRUE(CheckOneLeader());
+
+    Reconnect(net_config, i1);
+    Reconnect(net_config, i2);
+  }
+
+  End();
 }
 
 }  // namespace raft
