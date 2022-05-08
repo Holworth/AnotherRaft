@@ -19,20 +19,21 @@ RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
 RCF_METHOD_R1(RCF::ByteBuffer, AppendEntries, const RCF::ByteBuffer &)
 RCF_END(I_RaftService)
 
-
 class RaftRPCService {
-public:
+ public:
   RaftRPCService() = default;
-  void SetRaftState(RaftState* raft) { raft_ = raft; }
-  RCF::ByteBuffer RequestVote(const RCF::ByteBuffer& arg_buf);
-  RCF::ByteBuffer AppendEntries(const RCF::ByteBuffer& arg_buf);
-private:
-  RaftState* raft_;
-};
+  void SetRaftState(RaftState *raft) { raft_ = raft; }
+  RCF::ByteBuffer RequestVote(const RCF::ByteBuffer &arg_buf);
+  RCF::ByteBuffer AppendEntries(const RCF::ByteBuffer &arg_buf);
 
+ private:
+  RaftState *raft_;
+};
 
 // An implementation of RpcClient interface using RCF (Remote Call Framework)
 class RCFRpcClient final : public RpcClient {
+  using ClientPtr = std::shared_ptr<RcfClient<I_RaftRPCService>>;
+
  public:
   // Construction
   RCFRpcClient(const NetAddress &target_address);
@@ -50,25 +51,28 @@ class RCFRpcClient final : public RpcClient {
 
  private:
   // Callback function
-  static void onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> buf, RaftState *raft);
-  static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf, RaftState *raft);
+  static void onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> buf,
+                                    ClientPtr client_ptr, RaftState *raft);
+
+  static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf,
+                                      ClientPtr client_ptr, RaftState *raft);
 
  private:
   RaftState *raft_;
-  RcfClient<I_RaftRPCService> rcf_client_;
   RCF::RcfInit rcf_init_;
+  NetAddress target_address_;
 };
 
 class RCFRpcServer final : public RpcServer {
-public:
-  RCFRpcServer(const NetAddress& my_address);
-public:
+ public:
+  RCFRpcServer(const NetAddress &my_address);
+
+ public:
   void Start() override;
   void dealWithMessage(const RequestVoteArgs &reply) override;
-  void SetRaftState(RaftState* raft) {
-    service_.SetRaftState(raft);
-  }
-private:
+  void SetRaftState(RaftState *raft) { service_.SetRaftState(raft); }
+
+ private:
   RCF::RcfInit rcf_init_;
   RCF::RcfServer server_;
   RaftRPCService service_;

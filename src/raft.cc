@@ -277,7 +277,7 @@ void RaftState::convertToCandidate() {
 void RaftState::convertToLeader() {
   SetRole(kLeader);
   resetNextIndexAndMatchIndex();
-  broadcastHeatbeat();
+  broadcastHeartbeat();
   resetHeartbeatTimer();
 }
 
@@ -334,7 +334,7 @@ void RaftState::startElection() {
   }
 }
 
-void RaftState::broadcastHeatbeat() {
+void RaftState::broadcastHeartbeat() {
   for (auto &[id, peer] : peers_) {
     if (id != id_) {
       sendHeartBeat(id);
@@ -392,7 +392,7 @@ void RaftState::tickOnLeader() {
   if (heartbeat_timer_.ElapseMilliseconds() < heartbeatTimeInterval) {
     return;
   }
-  broadcastHeatbeat();
+  broadcastHeartbeat();
   resetHeartbeatTimer();
 }
 

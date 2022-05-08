@@ -41,35 +41,39 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 }
 
 RCFRpcClient::RCFRpcClient(const NetAddress &target_address)
-    : rcf_client_(RCF::TcpEndpoint(target_address.ip, target_address.port)),
-      rcf_init_() {}
+    : target_address_(target_address), rcf_init_() {}
 
 void RCFRpcClient::Init() {}
 
 void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
+  ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
+      RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
+
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
-  auto cmp_callback = [=]() { onRequestVoteComplete(ret, this->raft_); };
-
-  ret = this->rcf_client_.RequestVote(RCF::AsyncTwoway(cmp_callback), arg_buf);
+  auto cmp_callback = [=]() { onRequestVoteComplete(ret, client_ptr, this->raft_); };
+  ret = client_ptr->RequestVote(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
 void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
+  ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
+      RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
+
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
-  auto cmp_callback = [=]() { onAppendEntriesComplete(ret, this->raft_); };
-
-  ret = this->rcf_client_.AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
+  auto cmp_callback = [=]() { onAppendEntriesComplete(ret, client_ptr, this->raft_); };
+  ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
 void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
-                                         RaftState *raft) {
+                                         ClientPtr client_ptr, RaftState *raft) {
+  (void)client_ptr;
   RCF::ByteBuffer ret_buf = *ret;
   RequestVoteReply reply;
   Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
@@ -77,7 +81,8 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
 }
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
-                                           RaftState *raft) {
+                                           ClientPtr client_ptr, RaftState *raft) {
+  (void)client_ptr;
   RCF::ByteBuffer ret_buf = *ret;
   AppendEntriesReply reply;
   Serializer::NewSerializer().Deserialize(&ret_buf, &reply);

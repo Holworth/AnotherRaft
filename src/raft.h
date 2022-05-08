@@ -137,7 +137,7 @@ class RaftState {
   void startElection();
 
   // Replicate entries to all other raft peers
-  void broadcastHeatbeat();
+  void broadcastHeartbeat();
 
   void incrementVoteMeCnt() { vote_me_cnt_++; }
 
