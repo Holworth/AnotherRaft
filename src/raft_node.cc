@@ -6,13 +6,16 @@
 
 #include "raft.h"
 #include "rcf_rpc.h"
+#include "rsm.h"
 #include "util.h"
+
 namespace raft {
 
 RaftNode::RaftNode(const NodeConfig& node_config)
     : node_id_me_(node_config.node_id_me),
       servers_(node_config.servers),
-      raft_state_(nullptr) {}
+      raft_state_(nullptr),
+      rsm_(node_config.rsm) {}
 
 void RaftNode::Init() {
   // Create an RPC server that receives request from remote servers
@@ -26,7 +29,7 @@ void RaftNode::Init() {
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, nullptr, 150, 300};
+  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, nullptr, 150, 300, rsm_};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct

@@ -44,7 +44,11 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
 
   ret->electionTimeLimitMin_ = config.electionTimeMin;
   ret->electionTimeLimitMax_ = config.electionTimeMax;
+  ret->rsm_ = config.rsm;
   ret->heartbeatTimeInterval = config::kHeartbeatInterval;
+
+  ret->last_applied_ = 0;
+  ret->commit_index_ = 0;
 
   return ret;
 }
@@ -147,6 +151,9 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   reply->term = CurrentTerm();
   reply->success = true;
 
+  // Commit index might have been changed, try apply committed entries
+  tryApplyLogEntries();
+
   return;
 }
 
@@ -185,6 +192,7 @@ void RaftState::Process(AppendEntriesReply *reply) {
   }
 
   // TODO: May require applier to apply this log entry
+  tryApplyLogEntries();
   return;
 }
 
@@ -193,7 +201,7 @@ void RaftState::Process(RequestVoteReply *reply) {
   assert(reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
-  LOG(util::kRaft, "S%d HandleVoteResp from S%d term=%d grant=%d",id_, reply->reply_id,
+  LOG(util::kRaft, "S%d HandleVoteResp from S%d term=%d grant=%d", id_, reply->reply_id,
       reply->term, reply->vote_granted);
 
   // Current raft peer is no longer candidate, or the term is expired
@@ -218,11 +226,16 @@ void RaftState::Process(RequestVoteReply *reply) {
   return;
 }
 
-void RaftState::Propose(const CommandData& command) {
+ProposeResult RaftState::Propose(const CommandData &command) {
   std::scoped_lock<std::mutex> lck(mtx_);
+
+  if (Role() != kLeader) {
+    return ProposeResult{0, 0, false};
+  }
 
   raft_index_t next_entry_index = lm_->LastLogEntryIndex() + 1;
   LogEntry entry;
+  entry.SetType(kNormal);
   entry.SetCommandData(command.command_data);
   entry.SetIndex(next_entry_index);
   entry.SetTerm(CurrentTerm());
@@ -231,11 +244,11 @@ void RaftState::Propose(const CommandData& command) {
   lm_->AppendLogEntry(entry);
 
   // Replicate this entry out
-  for (auto& [id, _] : peers_) {
+  for (auto &[id, _] : peers_) {
     sendAppendEntries(id);
   }
+  return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
-
 
 bool RaftState::isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term) {
   LOG(util::kRaft, "S%d CheckLog (LastTerm=%d ArgTerm=%d) (LastIndex=%d ArgIndex=%d)",
@@ -286,6 +299,26 @@ void RaftState::tryUpdateCommitIndex() {
       SetCommitIndex(N);
       break;
     }
+  }
+}
+
+void RaftState::tryApplyLogEntries() {
+  while (last_applied_ < commit_index_) {
+    auto old_apply_idx = last_applied_;
+
+    // apply this message on state machine:
+    if (rsm_ != nullptr) {
+      // In asynchronize applying scheme, the applier thread may find that one
+      // entry has been released due to the main thread adding more commands.
+      LogEntry ent;
+      auto stat = lm_->GetEntryObject(last_applied_ + 1, &ent);
+      assert(stat == kOk);
+
+      rsm_->ApplyLogEntry(ent);
+    }
+    last_applied_ += 1;
+
+    LOG(util::kRaft, "S%d APPLY(%d->%d)", id_, old_apply_idx, last_applied_);
   }
 }
 

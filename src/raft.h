@@ -6,6 +6,7 @@
 #include "raft_type.h"
 #include "rpc.h"
 #include "util.h"
+#include "rsm.h"
 
 namespace raft {
 
@@ -36,6 +37,14 @@ struct RaftConfig {
   Persister *storage;
 
   int64_t electionTimeMin, electionTimeMax;
+
+  Rsm* rsm;
+};
+
+struct ProposeResult {
+  raft_index_t propose_index;
+  raft_term_t propose_term;
+  bool is_leader;
 };
 
 // A raft peer maintains the necessary information in terms of "Logic" state
@@ -77,7 +86,7 @@ class RaftState {
 
   // This is a command from upper level application, the raft instance is supposed to
   // copy this entry to its own log and replicate it to other followers 
-  void Propose(const CommandData& command);
+  ProposeResult Propose(const CommandData& command);
 
  public:
   // Init all necessary status of raft state, including reset election timer
@@ -117,6 +126,8 @@ class RaftState {
   // When receiving AppendEntries Reply, the raft peer checks all peers match index
   // condition and may update the commit_index field
   void tryUpdateCommitIndex();
+
+  void tryApplyLogEntries();
 
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
@@ -201,5 +212,7 @@ class RaftState {
 
  private:
   int vote_me_cnt_;
+
+  Rsm* rsm_;
 };
 }  // namespace raft
