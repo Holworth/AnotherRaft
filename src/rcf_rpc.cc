@@ -8,6 +8,7 @@
 #include "raft.h"
 #include "raft_struct.h"
 #include "raft_type.h"
+#include "util.h"
 
 namespace raft {
 namespace rpc {

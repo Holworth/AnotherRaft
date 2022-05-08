@@ -18,6 +18,7 @@
 #include "RCF/UdpEndpoint.hpp"
 #include "rcf_rpc.h"
 #include "rpc.h"
+#include "util.h"
 
 RCF_BEGIN(I_CounterService, "I_CounterService")
 RCF_METHOD_R1(RCF::ByteBuffer, Add, const RCF::ByteBuffer&)

@@ -9,10 +9,11 @@
 #include "raft_struct.h"
 #include "rpc.h"
 #include "serializer.h"
+#include "raft.h"
 
 namespace raft {
-class RaftState;
 namespace rpc {
+
 
 RCF_BEGIN(I_RaftRPCService, "I_RaftRPCService")
 RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
@@ -48,6 +49,7 @@ class RCFRpcClient final : public RpcClient {
   void Init() override;
   void sendMessage(const RequestVoteArgs &args) override;
   void sendMessage(const AppendEntriesArgs &args) override;
+  void setState(void *state) override { raft_ = reinterpret_cast<RaftState *>(state); }
 
  private:
   // Callback function
@@ -70,7 +72,9 @@ class RCFRpcServer final : public RpcServer {
  public:
   void Start() override;
   void dealWithMessage(const RequestVoteArgs &reply) override;
-  void SetRaftState(RaftState *raft) { service_.SetRaftState(raft); }
+  void setState(void *state) override {
+    service_.SetRaftState(reinterpret_cast<RaftState *>(state));
+  }
 
  private:
   RCF::RcfInit rcf_init_;

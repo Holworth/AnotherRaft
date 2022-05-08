@@ -4,7 +4,6 @@
 #include "log_manager.h"
 #include "raft_struct.h"
 #include "raft_type.h"
-#include "rcf_rpc.h"
 #include "rpc.h"
 #include "util.h"
 

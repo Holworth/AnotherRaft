@@ -61,6 +61,6 @@ Logger* LoggerInstance();
 }  // namespace util
 #define LOG(msg_type, format, ...)  { \
   auto logger = util::LoggerInstance(); \
-  logger->Debug(msg_type, format, __VA_ARGS__) \
+  logger->Debug(msg_type, format, ##__VA_ARGS__); \
 }
 }  // namespace raft

@@ -129,6 +129,8 @@ class RaftElectionTest : public ::testing::Test {
     void sendMessage(const AppendEntriesArgs &args) override {
       appendentries_channel_->push_back(args);
     }
+    void setState(void*) override {
+    }
 
    private:
     RequestVoteMsgChannel *requestvote_channel_;
