@@ -10,7 +10,7 @@
 namespace raft {
 Serializer Serializer::NewSerializer() { return Serializer(); }
 
-char* Serializer::serialize_logentry_helper(const LogEntry* entry, char* dst) {
+char *Serializer::serialize_logentry_helper(const LogEntry *entry, char *dst) {
   std::memcpy(dst, entry, sizeof(LogEntry));
   dst += sizeof(LogEntry);
   dst = PutPrefixLengthSlice(entry->NotEncodedSlice(), dst);
@@ -18,12 +18,37 @@ char* Serializer::serialize_logentry_helper(const LogEntry* entry, char* dst) {
   return dst;
 }
 
-const char* Serializer::deserialize_logentry_helper(const char* src, LogEntry* entry) {
+const char *Serializer::deserialize_logentry_helper(const char *src, LogEntry *entry) {
   std::memcpy(entry, src, sizeof(LogEntry));
   src += sizeof(LogEntry);
   Slice not_encoded, frag;
   src = ParsePrefixLengthSlice(src, &not_encoded);
   src = ParsePrefixLengthSlice(src, &frag);
+
+  entry->SetNotEncodedSlice(not_encoded);
+  entry->SetFragmentSlice(frag);
+
+  if (entry->Type() == kNormal) {
+    entry->SetCommandData(not_encoded);
+  }
+  return src;
+}
+
+const char *Serializer::deserialize_logentry_withbound(const char *src, size_t len,
+                                                       LogEntry *entry) {
+  if (len < sizeof(LogEntry)) {
+    return nullptr;
+  }
+  std::memcpy(entry, src, sizeof(LogEntry));
+  src += sizeof(LogEntry);
+  len -= sizeof(LogEntry);
+  Slice not_encoded, frag;
+  auto tmp_src = src;
+  src = ParsePrefixLengthSliceWithBound(src, len, &not_encoded);
+  if (src == nullptr) return nullptr;
+  len -= (src - tmp_src);
+  src = ParsePrefixLengthSliceWithBound(src, len, &frag);
+  if (src == nullptr) return nullptr;
 
   entry->SetNotEncodedSlice(not_encoded);
   entry->SetFragmentSlice(frag);
@@ -62,18 +87,18 @@ void Serializer::Deserialize(const RCF::ByteBuffer *buffer, RequestVoteReply *re
   std::memcpy(reply, src, sizeof(RequestVoteReply));
 }
 
-void Serializer::Serialize(const AppendEntriesArgs* args, RCF::ByteBuffer* buffer) {
+void Serializer::Serialize(const AppendEntriesArgs *args, RCF::ByteBuffer *buffer) {
   assert(args->entry_cnt == args->entries.size());
   auto dst = buffer->getPtr();
   std::memcpy(dst, args, kAppendEntriesArgsHdrSize);
   dst += kAppendEntriesArgsHdrSize;
-  for (const auto& ent : args->entries) {
+  for (const auto &ent : args->entries) {
     dst = serialize_logentry_helper(&ent, dst);
   }
 }
 
-void Serializer::Deserialize(const RCF::ByteBuffer* buffer, AppendEntriesArgs* args) {
-  const char* src = buffer->getPtr();
+void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesArgs *args) {
+  const char *src = buffer->getPtr();
   std::memcpy(args, src, kAppendEntriesArgsHdrSize);
   src += kAppendEntriesArgsHdrSize;
   args->entries.reserve(args->entry_cnt);
@@ -84,12 +109,12 @@ void Serializer::Deserialize(const RCF::ByteBuffer* buffer, AppendEntriesArgs* a
   }
 }
 
-void Serializer::Serialize(const AppendEntriesReply* reply, RCF::ByteBuffer* buffer) {
+void Serializer::Serialize(const AppendEntriesReply *reply, RCF::ByteBuffer *buffer) {
   auto dst = buffer->getPtr();
   std::memcpy(dst, reply, sizeof(AppendEntriesReply));
 }
 
-void Serializer::Deserialize(const RCF::ByteBuffer* buffer, AppendEntriesReply* reply) {
+void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesReply *reply) {
   auto src = buffer->getPtr();
   std::memcpy(reply, src, sizeof(AppendEntriesReply));
 }
@@ -103,6 +128,22 @@ char *Serializer::PutPrefixLengthSlice(const Slice &slice, char *buf) {
 
 const char *Serializer::ParsePrefixLengthSlice(const char *buf, Slice *slice) {
   size_t size = *reinterpret_cast<const size_t *>(buf);
+  char *data = new char[size];
+  buf += sizeof(size_t);
+  std::memcpy(data, buf, size);
+  *slice = Slice(data, size);
+  return buf + size;
+}
+
+const char *Serializer::ParsePrefixLengthSliceWithBound(const char *buf, size_t len,
+                                                        Slice *slice) {
+  if (len < sizeof(size_t)) {
+    return nullptr;
+  }
+  size_t size = *reinterpret_cast<const size_t *>(buf);
+  if (size + sizeof(size_t) > len) {  // Beyond range
+    return nullptr;
+  }
   char *data = new char[size];
   buf += sizeof(size_t);
   std::memcpy(data, buf, size);

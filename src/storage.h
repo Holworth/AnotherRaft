@@ -1,13 +1,15 @@
 #pragma once
+#include <sys/stat.h>
 #include "log_entry.h"
 #include "raft_type.h"
+#include <fstream>
 
 namespace raft {
 
-// Persister is an interface used for retriving persisted raft status
-// including current term, voteFor, persisted log entries and so on
+// Storage is an interface used for retriving (and store) persisted raft status
+// including current term, voteFor, persisted log entries
 class Storage {
-public:
+ public:
   struct PersistRaftState {
     // Indicating if this state is valid, for example, when creating
     // a persister on first bootstrap, there is no valid raft state yet
@@ -16,7 +18,7 @@ public:
     raft_node_id_t persisted_vote_for;
   };
 
-public:
+ public:
   // LastIndex returns the raft index of last persisted log entries, if
   // there is no valid log entry, returns 0
   virtual raft_index_t LastIndex() const = 0;
@@ -24,17 +26,29 @@ public:
   // Return the persisted raft state. Mark valid field as false if there
   // is no valid raft state
   virtual PersistRaftState PersistState() const = 0;
+  virtual void PersistState(const PersistRaftState& state) = 0;
 
-  // Get all persisted but not discarded log entries and store via a
-  // temporary vector variable
-  virtual void LogEntries(std::vector<LogEntry> *entries) const = 0;
+  // Get all persisted but not discarded log entries and store them in a temporary
+  // vector
+  virtual void LogEntries(std::vector<LogEntry>* entries) = 0;
+
+  // Persist log entries within specified range to storage, there might be old version
+  // of data that has been persisted in storage, if so, old version of these entries
+  // would be ignored when reading. However, upon reading, this may require us to scan
+  // the whole log file
+  virtual void PersistEntries(raft_index_t lo, raft_index_t hi,
+                              const std::vector<LogEntry>& batch) = 0;
+
+  // Persist the last index attribute would ignore any entries with higher index in
+  // the next reading. It can be used when an entry deleting occurs
+  virtual void SetLastIndex(raft_index_t raft_index) = 0;
 };
 
 // This class is only for unit test, it is used for simulating the behaviour
 // of a persister by place them simply in memory. The test module may feel
 // free to inherit this class and override corresponding methods
-class MemPersister : public Storage {
-public:
+class MemStorage : public Storage {
+ public:
   raft_index_t LastIndex() const override {
     if (!persisted_entries_.size()) {
       return 0;
@@ -47,14 +61,84 @@ public:
     return {true, persisted_term_, persisted_vote_for_};
   }
 
-  void LogEntries(std::vector<LogEntry> *entries) const override {
+  void PersistState(const PersistRaftState& state) override {}
+
+  void LogEntries(std::vector<LogEntry>* entries) override {
     *entries = persisted_entries_;
   }
 
-protected:
+  // Should do nothing
+  void PersistEntries(raft_index_t lo, raft_index_t hi,
+                      const std::vector<LogEntry>& batch) override {}
+
+  void SetLastIndex(raft_index_t raft_index) override {}
+
+ protected:
   raft_term_t persisted_term_;
   raft_node_id_t persisted_vote_for_;
   std::vector<LogEntry> persisted_entries_;
 };
 
-} // namespace raft
+// A storage implementation that persist log entries and raft state into log file
+// to achive persistence. Note that each PersistStorage instance only creates one
+// file and the maximum storage capacity depends on the maximum size of a file the
+// operating system supports
+class PersistStorage : public Storage {
+ public:
+  // Open an existed log file or create one, if it does not exist. Returns nullptr to
+  // indicate that any error occured
+  static PersistStorage* Open(const std::string& logname);
+
+ public:
+  raft_index_t LastIndex() const { return valid_header_ ? header_.lastLogIndex : 0; };
+
+  PersistRaftState PersistState() const {
+    return valid_header_ ? PersistRaftState{true, header_.currentTerm, header_.voteFor}
+                       : PersistRaftState{false};
+  }
+
+  void PersistState(const PersistRaftState& state) {
+    if (!state.valid) {
+      return;
+    }
+    header_.voteFor = state.persisted_vote_for;
+    header_.currentTerm = state.persisted_term;
+    valid_header_ = true;
+    persistHeader();
+  };
+
+  void LogEntries(std::vector<LogEntry>* entries);
+  void PersistEntries(raft_index_t lo, raft_index_t hi,
+                      const std::vector<LogEntry>& batch);
+
+  void SetLastIndex(raft_index_t raft_index) {
+    header_.lastLogIndex = raft_index;
+    valid_header_ = true;
+    persistHeader();
+  };
+
+private:
+  void persistHeader();
+
+ private:
+  // The header occupies the first a few bytes of storage of the logfile, for recording
+  // any necessary meta information about the whole log file
+  struct Header {
+    raft_node_id_t voteFor;
+    raft_term_t currentTerm;
+    raft_index_t lastLogIndex;
+    raft_term_t lastLogTerm;
+    size_t write_off; // Move file write pointer to off position for next write
+    size_t read_off;
+    size_t last_off;  // Basically the file size, used to check if reaches the end
+  };
+  Header header_;
+  bool valid_header_;  // indicating if header is valid, e.g. On creating
+  std::fstream* file_;
+  static const size_t kHeaderSize = sizeof(Header);
+  char* buf_;  // Internal buffer for read and write
+  size_t buf_size;
+  static const size_t kInitBufSize = 1024 * 1024;
+};
+
+}  // namespace raft

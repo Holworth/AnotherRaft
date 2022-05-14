@@ -140,7 +140,7 @@ class RaftElectionTest : public ::testing::Test {
 
 // A mock class that inherits from MemPersister for providing more conveinient
 // public interface to modify stored entries
-class StorageMock : public MemPersister {
+class StorageMock : public MemStorage {
  public:
   void Append(raft_term_t raft_term, raft_index_t raft_index) {
     LogEntry ent;

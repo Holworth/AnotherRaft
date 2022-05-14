@@ -19,7 +19,7 @@ namespace raft {
 
 // A storage implementation that simulates a persister, we need this class to construct
 // pre-exists log entries during test
-class StorageMock : public MemPersister {
+class StorageMock : public MemStorage {
  public:
   void Append(raft_term_t raft_term, raft_index_t raft_index) {
     LogEntry ent;
