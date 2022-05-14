@@ -1,8 +1,10 @@
 #pragma once
 #include <sys/stat.h>
+
+#include <fstream>
+
 #include "log_entry.h"
 #include "raft_type.h"
-#include <fstream>
 
 namespace raft {
 
@@ -42,6 +44,8 @@ class Storage {
   // Persist the last index attribute would ignore any entries with higher index in
   // the next reading. It can be used when an entry deleting occurs
   virtual void SetLastIndex(raft_index_t raft_index) = 0;
+
+  virtual ~Storage() = default;
 };
 
 // This class is only for unit test, it is used for simulating the behaviour
@@ -89,12 +93,17 @@ class PersistStorage : public Storage {
   // indicate that any error occured
   static PersistStorage* Open(const std::string& logname);
 
+  ~PersistStorage() {
+    persistHeader();
+    this->file_->close();
+    delete this->file_;
+  }
+
  public:
-  raft_index_t LastIndex() const { return valid_header_ ? header_.lastLogIndex : 0; };
+  raft_index_t LastIndex() const { return header_.lastLogIndex; };
 
   PersistRaftState PersistState() const {
-    return valid_header_ ? PersistRaftState{true, header_.currentTerm, header_.voteFor}
-                       : PersistRaftState{false};
+    return  PersistRaftState{true, header_.currentTerm, header_.voteFor};
   }
 
   void PersistState(const PersistRaftState& state) {
@@ -103,7 +112,6 @@ class PersistStorage : public Storage {
     }
     header_.voteFor = state.persisted_vote_for;
     header_.currentTerm = state.persisted_term;
-    valid_header_ = true;
     persistHeader();
   };
 
@@ -113,11 +121,10 @@ class PersistStorage : public Storage {
 
   void SetLastIndex(raft_index_t raft_index) {
     header_.lastLogIndex = raft_index;
-    valid_header_ = true;
     persistHeader();
   };
 
-private:
+ private:
   void persistHeader();
 
  private:
@@ -128,12 +135,11 @@ private:
     raft_term_t currentTerm;
     raft_index_t lastLogIndex;
     raft_term_t lastLogTerm;
-    size_t write_off; // Move file write pointer to off position for next write
+    size_t write_off;  // Move file write pointer to off position for next write
     size_t read_off;
     size_t last_off;  // Basically the file size, used to check if reaches the end
   };
   Header header_;
-  bool valid_header_;  // indicating if header is valid, e.g. On creating
   std::fstream* file_;
   static const size_t kHeaderSize = sizeof(Header);
   char* buf_;  // Internal buffer for read and write

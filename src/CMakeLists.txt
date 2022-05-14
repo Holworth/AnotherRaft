@@ -31,6 +31,7 @@ set(
   rcf_rpc.cc
   raft.cc
   raft_node.cc
+  storage.cc
 )
 
 add_library(raft ${RAFT_SRC})
