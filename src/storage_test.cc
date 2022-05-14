@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <unordered_map>
+#include <vector>
 
 #include "gtest/gtest.h"
 #include "log_entry.h"
@@ -172,6 +173,51 @@ TEST_F(StorageTest, TestOverwriteLogEntries) {
   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
     ASSERT_EQ(read_ents[i], sets2[i]);
   }
+  Clear();
+}
+
+TEST_F(StorageTest, TestDeleteEntries) {
+  Clear();
+  const raft_index_t kPutCnt = 10;
+  const raft_index_t kLastIndex = kPutCnt / 2;
+  auto sets = GenerateRandomEntrySets(kPutCnt);
+  std::vector<LogEntry> entries;
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    entries.push_back(sets[i]);
+  }
+
+  auto storage = PersistStorage::Open(kStorageTestFileName);
+  storage->PersistEntries(1, kPutCnt, entries);
+  delete storage;
+
+  storage = PersistStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  std::vector<LogEntry> read_ents;
+
+  // Check all entries
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kPutCnt);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    ASSERT_EQ(read_ents[i], sets[i]);
+  }
+
+  // Discard log entries with higher index
+  storage->SetLastIndex(kLastIndex);
+  delete storage;
+
+  storage = PersistStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kLastIndex);
+
+  // Check all entries
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kLastIndex);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kLastIndex; ++i) {
+    ASSERT_EQ(read_ents[i], sets[i]);
+  }
+  Clear();
 }
 
 }  // namespace raft
