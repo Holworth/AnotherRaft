@@ -6,7 +6,7 @@ namespace raft {
 
 // Persister is an interface used for retriving persisted raft status
 // including current term, voteFor, persisted log entries and so on
-class Persister {
+class Storage {
 public:
   struct PersistRaftState {
     // Indicating if this state is valid, for example, when creating
@@ -33,7 +33,7 @@ public:
 // This class is only for unit test, it is used for simulating the behaviour
 // of a persister by place them simply in memory. The test module may feel
 // free to inherit this class and override corresponding methods
-class MemPersister : public Persister {
+class MemPersister : public Storage {
 public:
   raft_index_t LastIndex() const override {
     if (!persisted_entries_.size()) {

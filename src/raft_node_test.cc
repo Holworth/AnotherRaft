@@ -93,7 +93,7 @@ class RaftNodeTest : public ::testing::Test {
     *reinterpret_cast<int*>(data) = value;
     CommandData cmd{sizeof(int), Slice(data, sizeof(int))};
 
-    const int retry_cnt = 10;
+    const int retry_cnt = 20;
     for (int run = 0; run < retry_cnt; ++run) {
       raft_node_id_t leader_id = kNoLeader;
       ProposeResult propose_result;
@@ -119,7 +119,7 @@ class RaftNodeTest : public ::testing::Test {
       }
 
       // Sleep for 50ms so that the entry will be committed
-      sleepMs(50);
+      sleepMs(500);
     }
     return false;
   }
@@ -160,7 +160,10 @@ class RaftNodeTest : public ::testing::Test {
     }
   }
 
-  void Reconnect(const NetConfig& net_config, raft_node_id_t id) { nodes_[id]->Start(); }
+  void Reconnect(const NetConfig& net_config, raft_node_id_t id) { 
+    // nodes_[id]->Start(); 
+    LaunchRaftNodeInstance({id, net_config, "", new RsmMock});
+  }
 
   // Calling end will exits all existed raft node thread, and clear all allocated
   // resources. This should be only called when a test is done
@@ -190,7 +193,7 @@ void RaftNodeTest::LaunchRaftNodeInstance(const RaftNode::NodeConfig& config) {
   node_thread.detach();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestRequestVoteHasLeader) {
+TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -207,7 +210,7 @@ TEST_F(RaftNodeTest, DISABLED_TestRequestVoteHasLeader) {
 // requires both sender and receiver maintains their state. However, when we shut
 // down the first leader, the rest two may fail to send rpc to the shut-down server
 // and causes some exception
-TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
+TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -231,7 +234,7 @@ TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
+TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
@@ -242,7 +245,7 @@ TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
   const int iter_cnt = 10;
   for (int i = 0; i < iter_cnt; ++i) {
     raft_node_id_t i1 = rand() % node_num_;
-    raft_node_id_t i2 = rand() % node_num_;
+    raft_node_id_t i2 = (i1 + 1) % node_num_;
 
     ShutDown(i1);
     ShutDown(i2);
@@ -256,14 +259,14 @@ TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, TestProposeSingleEntry) {
+TEST_F(RaftNodeTest, TestSimplyProposeEntry) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
       {2, {"127.0.0.1", 50003}},
   };
   LaunchAllServers(net_config);
-  ASSERT_TRUE(CheckOneLeader());
+  sleepMs(10);
 
   // Test propose a few entries
   ASSERT_TRUE(ProposeOneEntry(1));
@@ -271,6 +274,57 @@ TEST_F(RaftNodeTest, TestProposeSingleEntry) {
   ASSERT_TRUE(ProposeOneEntry(3));
 
   TestEnd();
+}
+
+TEST_F(RaftNodeTest, TestProposeEntryWhenServerShutdown) {
+  NetConfig net_config = {
+      {0, {"127.0.0.1", 50001}},
+      {1, {"127.0.0.1", 50002}},
+      {2, {"127.0.0.1", 50003}},
+  };
+  LaunchAllServers(net_config);
+  sleepMs(10);
+
+  ASSERT_TRUE(ProposeOneEntry(1));
+  ASSERT_TRUE(ProposeOneEntry(2));
+  ASSERT_TRUE(ProposeOneEntry(3));
+
+  auto leader_id1 = GetLeaderId();
+
+  ShutDown(leader_id1);
+
+  ASSERT_TRUE(ProposeOneEntry(4));
+  ASSERT_TRUE(ProposeOneEntry(5));
+  ASSERT_TRUE(ProposeOneEntry(6));
+
+  TestEnd();
+}
+
+TEST_F(RaftNodeTest, TestFailReachAgreementIfMajorityShutDown) {
+  NetConfig net_config = {
+      {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
+      {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
+  };
+  LaunchAllServers(net_config);
+  sleepMs(10);
+
+  const int iter_cnt = 1;
+  for (int i = 0; i < iter_cnt; ++i) {
+    raft_node_id_t id1 = rand() % node_num_;
+    raft_node_id_t id2 = (id1 + 1) % node_num_;
+    raft_node_id_t id3 = (id1 + 2) % node_num_;
+
+    ShutDown(id1);
+    ShutDown(id2);
+    ShutDown(id3);
+
+    // Can not propose and commit an entry since there is only 2 alive servers
+    ASSERT_FALSE(ProposeOneEntry(i + 1));
+
+    Reconnect(net_config, id1);
+    Reconnect(net_config, id2);
+    Reconnect(net_config, id3);
+  }
 }
 
 }  // namespace raft

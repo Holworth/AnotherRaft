@@ -14,7 +14,7 @@ void default_Deleter(LogEntry *entry) {
   entry->~LogEntry();
 }
 
-LogManager::LogManager(Persister *persister, int64_t initial_cap,
+LogManager::LogManager(Storage *persister, int64_t initial_cap,
                        Deleter deleter)
     : capacity_(initial_cap), front_(0), back_(0), count_(0),
       base_(1), // For empty log array, set base to be 1 instead of 0
@@ -27,7 +27,7 @@ LogManager::LogManager(Persister *persister, int64_t initial_cap,
 }
 
 // Create a new log manager from persisted storage
-LogManager *LogManager::NewLogManager(Persister *persister) {
+LogManager *LogManager::NewLogManager(Storage *persister) {
   auto ret = new LogManager(persister, 1, nullptr);
   if (persister != nullptr) {
     std::vector<LogEntry> vec;
@@ -230,7 +230,7 @@ raft_term_t LogManager::TermAt(raft_index_t idx) const {
   return entries_[raftIndexToArrayIndex(idx)].Term();
 }
 
-void ReadLogFromPersister(LogManager *lm, Persister *persister) {
+void ReadLogFromPersister(LogManager *lm, Storage *persister) {
   if (persister == nullptr) {
     return;
   }

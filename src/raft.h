@@ -10,7 +10,7 @@
 
 namespace raft {
 
-class Persister;
+class Storage;
 
 enum RaftRole {
   kFollower = 1,
@@ -34,7 +34,7 @@ struct RaftConfig {
   // Persistence storage, which is used to recover from failure, could be
   // nullptr. If storage is nullptr, any change to RaftState will not be
   // persisted
-  Persister *storage;
+  Storage *storage;
 
   int64_t electionTimeMin, electionTimeMax;
 

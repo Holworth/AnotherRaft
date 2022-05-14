@@ -18,7 +18,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   auto ret = new RaftState;
   ret->id_ = config.id;
 
-  Persister::PersistRaftState state;
+  Storage::PersistRaftState state;
   // If the storage provides a valid persisted raft state, use this
   // state to initialize this raft state instance
   if (config.storage != nullptr &&
@@ -505,7 +505,7 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
 
 bool RaftState::containEntry(raft_index_t raft_index, raft_term_t raft_term) {
   LOG(util::kRaft,
-      "S%d Check ContainEntry (LastTerm%d ArgTerm%d) (LastIndex%d ArgIndex%d)", id_,
+      "S%d ContainEntry? (LT%d AT%d) (LI%d AI%d)", id_,
       lm_->LastLogEntryTerm(), raft_term, lm_->LastLogEntryIndex(), raft_index);
 
   if (raft_index == lm_->LastSnapshotIndex()) {

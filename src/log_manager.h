@@ -13,7 +13,7 @@ enum Status {
   kNeedSnapshot = 3,
 };
 
-class Persister;
+class Storage;
 // LogManager is a class responsible for managing log entries. It provides
 // uniformly raft_index indexing scheme and is able to discard outdated log
 // entries in log compaction LogManager uses a ring buffer to store log entries.
@@ -22,7 +22,7 @@ class LogManager {
 public:
   // Callback function when an entry is deleted in log manager
   using Deleter = void (*)(LogEntry *);
-  friend void ReadLogFromPersister(LogManager *lm, Persister *persister);
+  friend void ReadLogFromPersister(LogManager *lm, Storage *persister);
 
 public:
   // Default constructor is not allowed, one LogManager needs at least one
@@ -33,7 +33,7 @@ public:
   LogManager(const LogManager &) = delete;
   LogManager &operator=(const LogManager &) = delete;
 
-  LogManager(Persister *persister, int64_t initial_size = 1,
+  LogManager(Storage *persister, int64_t initial_size = 1,
              Deleter deleter = nullptr);
 
   ~LogManager();
@@ -41,7 +41,7 @@ public:
 public:
   // Allocate a LogManager with capacity of initial_size Use "delete" to release
   // this logmananger object
-  static LogManager* NewLogManager(Persister* persister);
+  static LogManager* NewLogManager(Storage* persister);
 
 public:
   int Capacity() const { return capacity_; }
@@ -119,7 +119,7 @@ private:
   raft_index_t base_;
 
   // Persist raft log entries when needed
-  Persister *persister_;
+  Storage *persister_;
 
   // The index and term of the last snapshot entry
   raft_index_t last_snapshot_index_;
@@ -158,5 +158,5 @@ inline raft_index_t LogManager::LastLogEntryTerm() const {
 // Reconstruct log entries from failure by reading all log entries
 // from a persister.
 // NOTE: Only use this function when a persister is initialized
-void ReadLogFromPersister(LogManager *lm, Persister *persister);
+void ReadLogFromPersister(LogManager *lm, Storage *persister);
 } // namespace raft
