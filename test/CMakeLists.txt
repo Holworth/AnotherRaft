@@ -30,13 +30,13 @@ add_executable(async_client AsyncClient.cc)
 
 add_executable(adder Adder.cc)
 
-target_link_libraries(server rcf ${LIBS} GTest::gtest GTest::gtest_main)
-target_link_libraries(client rcf ${LIBS} GTest::gtest GTest::gtest_main)
+target_link_libraries(server rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(client rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
-target_link_libraries(async_server rcf ${LIBS} GTest::gtest GTest::gtest_main)
-target_link_libraries(async_client rcf ${LIBS} GTest::gtest GTest::gtest_main)
+target_link_libraries(async_server rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(async_client rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
-target_link_libraries(adder rcf ${LIBS} GTest::gtest GTest::gtest_main)
+target_link_libraries(adder rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
 
 

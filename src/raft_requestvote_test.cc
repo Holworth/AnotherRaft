@@ -173,9 +173,9 @@ TEST_F(RaftRequestVoteTest, TestRequestVoteGrantWithNoLogEntry) {
   raft->SetVoteFor(RaftState::kNotVoted);
 
   std::vector<TestCase> tests = {
-      TestCase{{1, 2, 0, 0}, {1, true}, {kFollower, 1, 2}},
-      TestCase{{1, 2, 1, 1}, {1, true}, {kFollower, 1, 2}},
-      TestCase{{2, 2, 0, 0}, {2, true}, {kFollower, 2, 2}},
+      TestCase{{1, 2, 0, 0}, {1, true, 1}, {kFollower, 1, 2}},
+      TestCase{{1, 2, 1, 1}, {1, true, 1}, {kFollower, 1, 2}},
+      TestCase{{2, 2, 0, 0}, {2, true, 1}, {kFollower, 2, 2}},
   };
 
   RunAllTestCase(raft, tests);
@@ -201,9 +201,9 @@ TEST_F(RaftRequestVoteTest, TestRequestVoteWhenAlreadyVote) {
   // case3: the raft peer must vote for the target server since the term
   // is changed, and the voteFor is reset to be NotVoted
   std::vector<TestCase> tests = {
-      TestCase{{1, req_node, 0, 0}, {1, false}, {kFollower, 1, vote_for}},
-      TestCase{{1, req_node, 1, 1}, {1, false}, {kFollower, 1, vote_for}},
-      TestCase{{2, req_node, 1, 1}, {2, true}, {kFollower, 2, req_node}},
+      TestCase{{1, req_node, 0, 0}, {1, false, 1}, {kFollower, 1, vote_for}},
+      TestCase{{1, req_node, 1, 1}, {1, false, 1}, {kFollower, 1, vote_for}},
+      TestCase{{2, req_node, 1, 1}, {2, true, 1}, {kFollower, 2, req_node}},
   };
 
   RunAllTestCase(raft, tests);
@@ -227,10 +227,10 @@ TEST_F(RaftRequestVoteTest, TestRequestVoteAcceptIfLogIsNewer) {
   // case3: both last log term and index is higher
   // case4: term is higher, but index is lower
   std::vector<TestCase> tests = {
-      TestCase{{2, req_node, 3, 2}, {2, true}, {kFollower, 2, req_node}},
-      TestCase{{3, req_node, 3, 3}, {3, true}, {kFollower, 3, req_node}},
-      TestCase{{4, req_node, 5, 4}, {4, true}, {kFollower, 4, req_node}},
-      TestCase{{4, req_node, 1, 4}, {4, true}, {kFollower, 4, req_node}},
+      TestCase{{2, req_node, 3, 2}, {2, true, 1}, {kFollower, 2, req_node}},
+      TestCase{{3, req_node, 3, 3}, {3, true, 1}, {kFollower, 3, req_node}},
+      TestCase{{4, req_node, 5, 4}, {4, true, 1}, {kFollower, 4, req_node}},
+      TestCase{{4, req_node, 1, 4}, {4, true, 1}, {kFollower, 4, req_node}},
   };
 
   RunAllTestCase(raft, tests);
@@ -253,8 +253,8 @@ TEST_F(RaftRequestVoteTest, TestRequestVoteRefuseIfLogIsOld) {
   // case1: last log term is lower than peer's term
   // case2: log term is the same, but last log index is lower
   std::vector<TestCase> tests = {
-      TestCase{{2, req_node, 1, 1}, {2, false}, {kFollower, 2, RaftState::kNotVoted}},
-      TestCase{{2, req_node, 2, 2}, {2, false}, {kFollower, 2, RaftState::kNotVoted}},
+      TestCase{{2, req_node, 1, 1}, {2, false, 1}, {kFollower, 2, RaftState::kNotVoted}},
+      TestCase{{2, req_node, 2, 2}, {2, false, 1}, {kFollower, 2, RaftState::kNotVoted}},
   };
 
   RunAllTestCase(raft, tests);
