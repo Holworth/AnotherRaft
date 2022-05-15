@@ -78,8 +78,7 @@ public:
   auto CommandData() const -> Slice {
     return Type() == kNormal ? command_data_ : Slice();
   }
-
-  auto CommandDataLength() const -> size_t { return command_data_.size(); }
+  auto CommandLength() const -> size_t { return command_data_.size(); }
 
   void SetCommandData(const Slice &slice) { command_data_ = slice; }
 
