@@ -6,6 +6,8 @@
 #include "log_entry.h"
 #include "raft_type.h"
 
+#include "serializer.h"
+
 namespace raft {
 
 // Storage is an interface used for retriving (and store) persisted raft status

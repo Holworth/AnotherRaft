@@ -1,3 +1,4 @@
+#include "serializer.h"
 #include "storage.h"
 
 #include <cassert>
@@ -6,7 +7,6 @@
 #include <fstream>
 #include <ios>
 
-#include "serializer.h"
 
 static inline size_t alignment(size_t size, size_t align) {
   return ((size - 1) / align + 1) * align;
@@ -76,8 +76,8 @@ void PersistStorage::LogEntries(std::vector<LogEntry>* entries) {
       break;
     }
 
-    // NOTE: For file stream, when the file pointer reaches the end of file, we 
-    // can not move the file pointer any more. Thus we have to call clear 
+    // NOTE: For file stream, when the file pointer reaches the end of file, we
+    // can not move the file pointer any more. Thus we have to call clear
     if (file_->eof()) {
       file_->clear();
     }

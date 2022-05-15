@@ -28,10 +28,10 @@ set(
   serializer.cc
   util.cc
   log_manager.cc
+  storage.cc
   rcf_rpc.cc
   raft.cc
   raft_node.cc
-  storage.cc
 )
 
 add_library(raft ${RAFT_SRC})
