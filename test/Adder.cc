@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <thread>
+#include <atomic>
 
 #include "RCF/ClientStub.hpp"
 #include "RCF/Future.hpp"
