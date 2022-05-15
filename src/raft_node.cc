@@ -3,6 +3,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <atomic>
 
 #include "raft.h"
 #include "rcf_rpc.h"

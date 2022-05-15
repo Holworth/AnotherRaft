@@ -46,6 +46,16 @@
 },
 {
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/raft.dir/encoder.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/encoder.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/encoder.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/encoder_test.dir/encoder_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/encoder_test.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/encoder_test.cc"
+},
+{
+  "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/src",
   "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/log_manager_test.dir/log_manager_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_manager_test.cc",
   "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/src/log_manager_test.cc"
 },

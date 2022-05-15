@@ -1,3 +1,4 @@
+#pragma once
 #include "RCF/ByteBuffer.hpp"
 #include "log_entry.h"
 #include "raft_struct.h"

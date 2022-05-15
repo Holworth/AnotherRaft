@@ -72,12 +72,15 @@ public:
   auto FragId() const -> uint16_t { return fragment_id; }
   void SetFragId(uint16_t id) { this->fragment_id = id; }
 
-  auto StartOffset() -> int { return start_fragment_offset; }
+  auto StartOffset() const -> int { return start_fragment_offset; }
   void SetStartOffset(int off) { start_fragment_offset = off; }
 
   auto CommandData() const -> Slice {
     return Type() == kNormal ? command_data_ : Slice();
   }
+
+  auto CommandDataLength() const -> size_t { return command_data_.size(); }
+
   void SetCommandData(const Slice &slice) { command_data_ = slice; }
 
   auto NotEncodedSlice() const -> Slice {

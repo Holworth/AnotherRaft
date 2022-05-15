@@ -20,6 +20,12 @@ if (NOT libuuid)
     MESSAGE(FATAL_ERROR "library uuid Not Found")
 endif()
 
+find_library(libisal NAMES isal)
+if (NOT libisal)
+    MESSAGE("library isal Not Found")
+endif()
+
+# SET(LIBS ${libpthread} ${libdl} ${libuuid} ${libisal})
 SET(LIBS ${libpthread} ${libdl} ${libuuid})
 
 set(
@@ -32,6 +38,7 @@ set(
   raft.cc
   raft_node.cc
   storage.cc
+  encoder.cc
 )
 
 add_library(raft ${RAFT_SRC})
