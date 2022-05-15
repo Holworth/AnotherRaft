@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <memory>
 #include <unordered_map>
+#include <atomic>
 
 #include "raft.h"
 #include "rcf_rpc.h"
