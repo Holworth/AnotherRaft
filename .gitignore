@@ -38,3 +38,5 @@ build
 .cache
 cmake-build-debug
 neovim.json
+
+RCF/doc
