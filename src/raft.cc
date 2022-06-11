@@ -144,6 +144,9 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
     raft_index_t new_entry_idx = args->prev_log_index + args->entries.size();
     auto update_commit_idx = std::min(args->leader_commit, new_entry_idx);
     SetCommitIndex(std::min(update_commit_idx, lm_->LastLogEntryIndex()));
+
+    LOG(util::kRaft, "S%d Update CommitIndex (%d->%d)", id_, old_commit_idx,
+        CommitIndex());
   }
 
   // TODO: Notify applier thread to apply newly committed entries to state machine
@@ -243,10 +246,20 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   lm_->AppendLogEntry(entry);
 
+  int val = *reinterpret_cast<int *>(entry.CommandData().data());
+
+  LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
+      CurrentTerm(), entry.CommandData().data());
+
   // Replicate this entry out
   for (auto &[id, _] : peers_) {
     sendAppendEntries(id);
   }
+
+  // if (lm_->LastLogEntryIndex() >= 3) {
+  //   LOG(util::kRaft, "S%d detect value=%d ptr=%p after send AE", id_, val,
+  //       lm_->GetSingleLogEntry(3)->CommandData().data());
+  // }
   return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
 
@@ -273,14 +286,21 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
       break;
     }
     if (args->entries[array_index].Term() != lm_->TermAt(raft_index)) {
+      // Debug --------------------------------------------
+      auto old_last_index = lm_->LastLogEntryIndex();
       lm_->DeleteLogEntriesFrom(raft_index);
+      LOG(util::kRaft, "S%d Del Entry (%d->%d)", id_, old_last_index,
+          lm_->LastLogEntryIndex());
       break;
     }
   }
 
   for (auto i = array_index; i < args->entries.size(); ++i) {
     auto raft_index = args->prev_log_index + i + 1;
+    // Debug -------------------------------------------
+    auto old_last_index = lm_->LastLogEntryIndex();
     lm_->AppendLogEntry(args->entries[i]);
+    LOG(util::kRaft, "S%d APPEND(%d->%d)", id_, old_last_index, lm_->LastLogEntryIndex());
   }
 }
 
@@ -296,7 +316,11 @@ void RaftState::tryUpdateCommitIndex() {
 
     int require_agree_cnt = livenessLevel() + 1;
     if (agree_cnt >= require_agree_cnt && lm_->TermAt(N) == CurrentTerm()) {
+      // For Debug --------------------------------------------
+      auto old_commit_idx = CommitIndex();
       SetCommitIndex(N);
+      LOG(util::kRaft, "S%d Update CommitIndex (%d->%d)", id_, old_commit_idx,
+          CommitIndex());
       break;
     }
   }
@@ -313,6 +337,11 @@ void RaftState::tryApplyLogEntries() {
       LogEntry ent;
       auto stat = lm_->GetEntryObject(last_applied_ + 1, &ent);
       assert(stat == kOk);
+
+      // if (ent.Index() == 3) {
+      //   auto val = *reinterpret_cast<int*>(ent.CommandData().data());
+      //   LOG(util::kRaft, "S%d in APPLY detect value=%d", id_, val);
+      // }
 
       rsm_->ApplyLogEntry(ent);
     }
@@ -496,6 +525,15 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
   auto require_entry_cnt = lm_->LastLogEntryIndex() - prev_index;
   args.entries.reserve(require_entry_cnt);
   lm_->GetLogEntriesFrom(next_index, &args.entries);
+  LOG(util::kRaft, "S%d AE To S%d (%d->%d)", id_, peer, next_index,
+      lm_->LastLogEntryIndex());
+
+  // if (lm_->LastLogEntryIndex() >= 3) {
+  //   auto val = *reinterpret_cast<int *>(lm_->GetSingleLogEntry(3)->CommandData().data());
+  //   LOG(util::kRaft, "S%d detect value=%d ptr=%p size=%d", id_, val,
+  //       lm_->GetSingleLogEntry(3)->CommandData().data(),
+  //       lm_->GetSingleLogEntry(3)->CommandData().size());
+  // }
 
   assert(require_entry_cnt == args.entries.size());
   args.entry_cnt = args.entries.size();
@@ -504,8 +542,7 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
 }
 
 bool RaftState::containEntry(raft_index_t raft_index, raft_term_t raft_term) {
-  LOG(util::kRaft,
-      "S%d ContainEntry? (LT%d AT%d) (LI%d AI%d)", id_,
+  LOG(util::kRaft, "S%d ContainEntry? (LT%d AT%d) (LI%d AI%d)", id_,
       lm_->LastLogEntryTerm(), raft_term, lm_->LastLogEntryIndex(), raft_index);
 
   if (raft_index == lm_->LastSnapshotIndex()) {

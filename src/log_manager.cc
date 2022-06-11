@@ -1,10 +1,12 @@
 #include "log_manager.h"
-#include "log_entry.h"
-#include "storage.h"
 
 #include <cstdlib>
 #include <new>
 #include <vector>
+
+#include "log_entry.h"
+#include "storage.h"
+#include "util.h"
 
 namespace raft {
 // A default deleter that release dynamically allocated memory
@@ -14,11 +16,15 @@ void default_Deleter(LogEntry *entry) {
   entry->~LogEntry();
 }
 
-LogManager::LogManager(Storage *persister, int64_t initial_cap,
-                       Deleter deleter)
-    : capacity_(initial_cap), front_(0), back_(0), count_(0),
-      base_(1), // For empty log array, set base to be 1 instead of 0
-      persister_(persister), last_snapshot_index_(0), last_snapshot_term_(0),
+LogManager::LogManager(Storage *persister, int64_t initial_cap, Deleter deleter)
+    : capacity_(initial_cap),
+      front_(0),
+      back_(0),
+      count_(0),
+      base_(1),  // For empty log array, set base to be 1 instead of 0
+      persister_(persister),
+      last_snapshot_index_(0),
+      last_snapshot_term_(0),
       deleter_(deleter) {
   entries_ = new LogEntry[Capacity()];
   if (deleter_ == nullptr) {
@@ -61,7 +67,7 @@ Status LogManager::ensureCapacity(int entry_cnt) {
 
   int request_cap = capacity_;
   while (request_cap < Capacity() + entry_cnt) {
-    request_cap *= kExpandFactor; // expand factor = 4
+    request_cap *= kExpandFactor;  // expand factor = 4
   }
 
   LogEntry *new_array = nullptr;
@@ -74,7 +80,7 @@ Status LogManager::ensureCapacity(int entry_cnt) {
   int new_idx = 0, old_idx = front_;
   for (int i = 0; i < Count(); ++i) {
     new_array[new_idx] = entries_[old_idx];
-    new_idx = (new_idx + 1) % request_cap; // Update two indexes
+    new_idx = (new_idx + 1) % request_cap;  // Update two indexes
     old_idx = (old_idx + 1) % Capacity();
   }
 
@@ -144,8 +150,7 @@ Status LogManager::DeleteLogEntriesFrom(raft_index_t idx) {
 
 // Currently we simply use std::vector to return an array of log entries with
 // shallow copy. The caller of this function must ensure vec is cleared.
-Status LogManager::GetLogEntriesFrom(raft_index_t idx,
-                                     std::vector<LogEntry> *vec) {
+Status LogManager::GetLogEntriesFrom(raft_index_t idx, std::vector<LogEntry> *vec) {
   // std::lock_guard<std::mutex> lock(mtx_);
 
   if (Count() <= 0 || idx > LastLogEntryIndex()) {
@@ -169,7 +174,7 @@ Status LogManager::GetLogEntriesFrom(raft_index_t idx,
 }
 
 Status LogManager::DiscardLogEntriesBefore(raft_index_t idx) {
-  if (Count() <= 0 || idx < base_) { // There is no entry to discard
+  if (Count() <= 0 || idx < base_) {  // There is no entry to discard
     return kOk;
   }
   // Specified discard range might be beyond stored range
@@ -241,4 +246,4 @@ void ReadLogFromPersister(LogManager *lm, Storage *persister) {
   /*   lm->appendEntryHelper(entry); */
   /* } */
 }
-} // namespace raft
+}  // namespace raft

@@ -19,6 +19,9 @@
 #include "rpc.h"
 #include "rsm.h"
 #include "storage.h"
+#include "util.h"
+
+#define CONFLICT_TERM -2
 
 namespace raft {
 class RaftNodeTest : public ::testing::Test {
@@ -31,6 +34,7 @@ class RaftNodeTest : public ::testing::Test {
   class RsmMock : public Rsm {
     // (index, term) uniquely identify an entry
     using CommitResult = std::pair<raft_term_t, int>;
+
    public:
     void ApplyLogEntry(LogEntry ent) override {
       int val = *reinterpret_cast<int*>(ent.CommandData().data());
@@ -43,7 +47,7 @@ class RaftNodeTest : public ::testing::Test {
       }
       auto commit_res = applied_value_[raft_index];
       if (commit_res.first != raft_term) {
-        return -1;
+        return CONFLICT_TERM;
       }
       return commit_res.second;
     }
@@ -65,9 +69,15 @@ class RaftNodeTest : public ::testing::Test {
     return has_leader == false;
   }
 
+  CommandData ConstructCommandFromValue(int val) {
+    auto data = new char[64];
+    *reinterpret_cast<int*>(data) = val;
+    return CommandData{sizeof(int), Slice(data, sizeof(int))};
+  }
+
   // Check that at every fixed term, there is and there is only one leader alive
-  // NOTE: CheckOneLeader may fail under such condition: 
-  //   Say there are 3 servers, the old leader and one is alive, but another one is 
+  // NOTE: CheckOneLeader may fail under such condition:
+  //   Say there are 3 servers, the old leader and one is alive, but another one is
   //   separate from network and becoming candidate with much higher term.
   bool CheckOneLeader() {
     const int retry_cnt = 5;
@@ -99,15 +109,13 @@ class RaftNodeTest : public ::testing::Test {
   }
 
   bool ProposeOneEntry(int value) {
-    auto data = new char[sizeof(int)];
-    *reinterpret_cast<int*>(data) = value;
-    CommandData cmd{sizeof(int), Slice(data, sizeof(int))};
-
     const int retry_cnt = 20;
+
     for (int run = 0; run < retry_cnt; ++run) {
       raft_node_id_t leader_id = kNoLeader;
       ProposeResult propose_result;
-      for (int i = 0; i < node_num_; ++i) { // Search for a leader
+      auto cmd = ConstructCommandFromValue(value);
+      for (int i = 0; i < node_num_; ++i) {  // Search for a leader
         if (!Alive(i)) {
           continue;
         }
@@ -118,14 +126,24 @@ class RaftNodeTest : public ::testing::Test {
         }
       }
 
+      // This value has been proposed by a leader, however, we can not gurantee it
+      // will be committed
       if (leader_id != kNoLeader) {
         // Wait this entry to be committed
         assert(propose_result.propose_index > 0);
-        int val;
-        while ((val = checkCommitted(propose_result)) == -1) {
-          sleepMs(20);
+
+        // Retry 10 times
+        for (int run2 = 0; run2 < 10; ++run2) {
+          int val = checkCommitted(propose_result);
+          if (val == CONFLICT_TERM) {
+            break;
+          } else if (val == -1) {
+            sleepMs(20);
+          } else {
+            LOG(util::kRaft, "Check Propose value: Expect %d Get %d", value, val);
+            return val == value;
+          }
         }
-        return val == value;
       }
 
       // Sleep for 50ms so that the entry will be committed
@@ -145,9 +163,12 @@ class RaftNodeTest : public ::testing::Test {
 
   int checkCommitted(const ProposeResult& propose_result) {
     for (int i = 0; i < node_num_; ++i) {
-      if (nodes_[i]->getRaftState()->CommitIndex() >= propose_result.propose_index) {
-        return reinterpret_cast<RsmMock*>(nodes_[i]->getRsm())
-            ->getValue(propose_result.propose_index, propose_result.propose_term);
+      if (Alive(i)) {
+        auto rsm = reinterpret_cast<RsmMock*>(nodes_[i]->getRsm());
+        auto raft = nodes_[i]->getRaftState();
+        if (raft->CommitIndex() >= propose_result.propose_index) {
+          return rsm->getValue(propose_result.propose_index, propose_result.propose_term);
+        }
       }
     }
     return -1;
@@ -183,7 +204,7 @@ class RaftNodeTest : public ::testing::Test {
     }
   }
 
-  void Reconnect(const NetConfig& net_config, raft_node_id_t id) { 
+  void Reconnect(const NetConfig& net_config, raft_node_id_t id) {
     // std::cout << "Reconnect " << id << std::endl;
     nodes_[id]->Reconnect();
   }
@@ -257,7 +278,7 @@ TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
+TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
@@ -282,7 +303,7 @@ TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, TestSimplyProposeEntry) {
+TEST_F(RaftNodeTest, DISABLED_TestSimplyProposeEntry) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -299,7 +320,7 @@ TEST_F(RaftNodeTest, TestSimplyProposeEntry) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, TestProposeEntryWhenServerShutdown) {
+TEST_F(RaftNodeTest, DISABLED_TestProposeEntryWhenServerShutdown) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -323,7 +344,7 @@ TEST_F(RaftNodeTest, TestProposeEntryWhenServerShutdown) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, TestFailReachAgreementIfMajorityShutDown) {
+TEST_F(RaftNodeTest, DISABLED_TestFailReachAgreementIfMajorityShutDown) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
@@ -348,6 +369,48 @@ TEST_F(RaftNodeTest, TestFailReachAgreementIfMajorityShutDown) {
     Reconnect(net_config, id2);
     Reconnect(net_config, id3);
   }
+  TestEnd();
+}
+
+TEST_F(RaftNodeTest, TestOldLeaderRejoin) {
+  NetConfig net_config = {
+      {0, {"127.0.0.1", 50001}},
+      {1, {"127.0.0.1", 50002}},
+      {2, {"127.0.0.1", 50003}},
+  };
+  LaunchAllServers(net_config);
+  sleepMs(10);
+
+  EXPECT_TRUE(ProposeOneEntry(101));
+
+  auto leader1 = GetLeaderId();
+  Disconnect(leader1);
+  LOG(util::kRaft, "----- S%d disconnect -----", leader1);
+
+  // This value should not be committed
+  nodes_[leader1]->Propose(ConstructCommandFromValue(102));
+  nodes_[leader1]->Propose(ConstructCommandFromValue(103));
+  nodes_[leader1]->Propose(ConstructCommandFromValue(104));
+
+  // New leader
+  EXPECT_TRUE(ProposeOneEntry(103));
+
+  // Disconnect new leader
+  auto leader2 = GetLeaderId();
+  ASSERT_NE(leader2, leader1);
+  Disconnect(leader2);
+  LOG(util::kRaft, "----- S%d disconnect -----", leader2);
+
+  // Old leader rejoin
+  Reconnect(net_config, leader1);
+  LOG(util::kRaft, "----- S%d reconnect -----", leader1);
+  EXPECT_TRUE(ProposeOneEntry(104));
+
+  // New leader rejoin, all servers together
+  Reconnect(net_config, leader2);
+  LOG(util::kRaft, "----- S%d reconnect -----", leader2);
+  EXPECT_TRUE(ProposeOneEntry(105));
+
   TestEnd();
 }
 
