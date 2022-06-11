@@ -67,7 +67,7 @@ class StorageTest : public ::testing::Test {
 };
 
 TEST_F(StorageTest, TestPersistRaftState) {
-  Clear();
+  Clear();  // Clear existed files so that it won't affect current status
   const int kTestRun = 100;
   for (int i = 1; i <= kTestRun; ++i) {
     // Open storage and write some thing, then close it

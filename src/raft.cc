@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <ctime>
 #include <mutex>
 #include <vector>
 
@@ -451,8 +452,7 @@ void RaftState::broadcastHeartbeat() {
 }
 
 void RaftState::resetElectionTimer() {
-  uint32_t seed = 19201 * id_ * id_;
-  srand(seed);
+  srand(time(nullptr)); // So that we have "true" random number
   if (electionTimeLimitMin_ == electionTimeLimitMax_) {
     election_time_out_ = electionTimeLimitMin_;
   } else {
