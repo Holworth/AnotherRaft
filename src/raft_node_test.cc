@@ -206,7 +206,9 @@ class RaftNodeTest : public ::testing::Test {
 
   void Reconnect(const NetConfig& net_config, raft_node_id_t id) {
     // std::cout << "Reconnect " << id << std::endl;
-    nodes_[id]->Reconnect();
+    if (nodes_[id]->IsDisconnected()) {
+      nodes_[id]->Reconnect();
+    }
   }
 
   // Calling end will exits all existed raft node thread, and clear all allocated
@@ -237,7 +239,7 @@ void RaftNodeTest::LaunchRaftNodeInstance(const RaftNode::NodeConfig& config) {
   node_thread.detach();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestRequestVoteHasLeader) {
+TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -254,7 +256,7 @@ TEST_F(RaftNodeTest, DISABLED_TestRequestVoteHasLeader) {
 // requires both sender and receiver maintains their state. However, when we shut
 // down the first leader, the rest two may fail to send rpc to the shut-down server
 // and causes some exception
-TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
+TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -278,7 +280,7 @@ TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
+TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
@@ -303,7 +305,7 @@ TEST_F(RaftNodeTest, DISABLED_TestWithDynamicClusterChanges) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestSimplyProposeEntry) {
+TEST_F(RaftNodeTest, TestSimplyProposeEntry) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -320,7 +322,7 @@ TEST_F(RaftNodeTest, DISABLED_TestSimplyProposeEntry) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestProposeEntryWhenServerShutdown) {
+TEST_F(RaftNodeTest, TestProposeEntryWhenServerShutdown) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -344,7 +346,7 @@ TEST_F(RaftNodeTest, DISABLED_TestProposeEntryWhenServerShutdown) {
   TestEnd();
 }
 
-TEST_F(RaftNodeTest, DISABLED_TestFailReachAgreementIfMajorityShutDown) {
+TEST_F(RaftNodeTest, TestFailReachAgreementIfMajorityShutDown) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
@@ -410,6 +412,80 @@ TEST_F(RaftNodeTest, TestOldLeaderRejoin) {
   Reconnect(net_config, leader2);
   LOG(util::kRaft, "----- S%d reconnect -----", leader2);
   EXPECT_TRUE(ProposeOneEntry(105));
+
+  TestEnd();
+}
+
+TEST_F(RaftNodeTest, TestRecoverAfterLongIncorrectLogs) {
+  NetConfig net_config = {
+      {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
+      {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
+  };
+
+  LaunchAllServers(net_config);
+  sleepMs(10);
+
+  int init_value = 100;
+  EXPECT_TRUE(ProposeOneEntry(init_value));
+  // Disconnect another group of servers from the cluster
+  auto leader1 = GetLeaderId();
+  Disconnect((leader1 + 2) % node_num_);
+  Disconnect((leader1 + 3) % node_num_);
+  Disconnect((leader1 + 4) % node_num_);
+  // LOG(util::kRaft, "----- S%d disconnect -----", leader1);
+
+  // Add a few commands that won't be committed
+  for (int i = 1; i <= 50; ++i) {
+    nodes_[leader1]->Propose(ConstructCommandFromValue(init_value + i));
+  }
+  sleepMs(100);
+
+  // Disable old leader and another server, bring the majority into cluster
+  Disconnect((leader1 + 0) % node_num_);
+  Disconnect((leader1 + 1) % node_num_);
+
+  Reconnect(net_config, (leader1 + 2) % node_num_);
+  Reconnect(net_config, (leader1 + 3) % node_num_);
+  Reconnect(net_config, (leader1 + 4) % node_num_);
+
+  // These commands should be properly committed
+  for (int i = 1; i <= 50; ++i) {
+    EXPECT_TRUE(ProposeOneEntry(init_value * 10 + i));
+  }
+
+  // Now get new leader and another server partitioned
+  auto leader2 = GetLeaderId();
+  auto other = (leader1 + 2) % node_num_;
+  if (leader2 == other) {
+    other = (leader1 + 3) % node_num_;
+  }
+  Disconnect(other);
+
+  // These commands should not be committed
+  for (int i = 1; i <= 50; ++i) {
+    nodes_[leader2]->Propose(ConstructCommandFromValue(init_value * 100 + i));
+  }
+  sleepMs(100);
+
+  // Bring original leader back
+  for (int i = 0; i < node_num_; ++i) {
+    Disconnect(i);
+  }
+
+  Reconnect(net_config, (leader1 + 0) % node_num_);
+  Reconnect(net_config, (leader1 + 1) % node_num_);
+  Reconnect(net_config, other);
+
+  // These commands will be properly committed
+  for (int i = 1; i <= 50; ++i) {
+    EXPECT_TRUE(ProposeOneEntry(init_value * 1000 + i));
+  }
+
+  // Bring all servers here
+  for (int node = 0; node < node_num_; ++node) {
+    Reconnect(net_config, node);
+  }
+  EXPECT_TRUE(ProposeOneEntry(init_value));
 
   TestEnd();
 }
