@@ -3,6 +3,7 @@
 #include "RCF/Future.hpp"
 #include "RCF/InitDeinit.hpp"
 #include "RCF/RCF.hpp"
+#include "RCF/UdpEndpoint.hpp"
 #include "log_entry.h"
 #include "raft_struct.h"
 #include "raft_type.h"

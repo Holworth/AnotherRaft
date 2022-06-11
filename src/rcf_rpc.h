@@ -6,14 +6,13 @@
 #include "RCF/Future.hpp"
 #include "RCF/InitDeinit.hpp"
 #include "RCF/RcfServer.hpp"
+#include "raft.h"
 #include "raft_struct.h"
 #include "rpc.h"
 #include "serializer.h"
-#include "raft.h"
 
 namespace raft {
 namespace rpc {
-
 
 RCF_BEGIN(I_RaftRPCService, "I_RaftRPCService")
 RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
@@ -51,6 +50,9 @@ class RCFRpcClient final : public RpcClient {
   void sendMessage(const AppendEntriesArgs &args) override;
   void setState(void *state) override { raft_ = reinterpret_cast<RaftState *>(state); }
 
+  void stop() override { stopped_ = true; };
+  void recover() override { stopped_ = false; };
+
  private:
   // Callback function
   static void onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> buf,
@@ -63,6 +65,7 @@ class RCFRpcClient final : public RpcClient {
   RaftState *raft_;
   RCF::RcfInit rcf_init_;
   NetAddress target_address_;
+  bool stopped_;
 };
 
 class RCFRpcServer final : public RpcServer {
@@ -71,6 +74,7 @@ class RCFRpcServer final : public RpcServer {
 
  public:
   void Start() override;
+  void Stop() override;
   void dealWithMessage(const RequestVoteArgs &reply) override;
   void setState(void *state) override {
     service_.SetRaftState(reinterpret_cast<RaftState *>(state));

@@ -42,11 +42,15 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 }
 
 RCFRpcClient::RCFRpcClient(const NetAddress &target_address)
-    : target_address_(target_address), rcf_init_() {}
+    : target_address_(target_address), rcf_init_(), stopped_(false) {}
 
 void RCFRpcClient::Init() {}
 
 void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
+  if (stopped_) { // Directly return if this client is stopped
+    return;
+  }
+
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
       RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
 
@@ -60,6 +64,9 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
 }
 
 void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
+  if (stopped_) { // Directly return if this client is stopped
+    return;
+  }
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
       RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
 
@@ -98,6 +105,10 @@ RCFRpcServer::RCFRpcServer(const NetAddress &my_address)
 void RCFRpcServer::Start() {
   server_.bind<I_RaftRPCService>(service_);
   server_.start();
+}
+
+void RCFRpcServer::Stop() {
+  server_.stop();
 }
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {

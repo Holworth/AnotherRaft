@@ -8,6 +8,7 @@
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "gtest/gtest.h"
@@ -28,21 +29,27 @@ class RaftNodeTest : public ::testing::Test {
   // This is a simple simulated state machine, it assumes that each command is simply
   // an integer and the applier simply records it with associated log index
   class RsmMock : public Rsm {
+    // (index, term) uniquely identify an entry
+    using CommitResult = std::pair<raft_term_t, int>;
    public:
     void ApplyLogEntry(LogEntry ent) override {
       int val = *reinterpret_cast<int*>(ent.CommandData().data());
-      applied_value_.insert({ent.Index(), val});
+      applied_value_.insert({ent.Index(), {ent.Term(), val}});
     }
 
-    int getValue(raft_index_t raft_index) {
+    int getValue(raft_index_t raft_index, raft_term_t raft_term) {
       if (applied_value_.count(raft_index) == 0) {
         return -1;
       }
-      return applied_value_[raft_index];
+      auto commit_res = applied_value_[raft_index];
+      if (commit_res.first != raft_term) {
+        return -1;
+      }
+      return commit_res.second;
     }
 
    private:
-    std::unordered_map<raft_index_t, int> applied_value_;
+    std::unordered_map<raft_index_t, CommitResult> applied_value_;
   };
 
   static constexpr raft_node_id_t kNoLeader = -1;
@@ -59,11 +66,14 @@ class RaftNodeTest : public ::testing::Test {
   }
 
   // Check that at every fixed term, there is and there is only one leader alive
+  // NOTE: CheckOneLeader may fail under such condition: 
+  //   Say there are 3 servers, the old leader and one is alive, but another one is 
+  //   separate from network and becoming candidate with much higher term.
   bool CheckOneLeader() {
     const int retry_cnt = 5;
     std::unordered_map<raft_term_t, int> leader_cnt;
     auto record = [&](RaftNode* node) {
-      if (!node->Exited()) {
+      if (!node->IsDisconnected()) {
         auto raft_state = node->getRaftState();
         leader_cnt[raft_state->CurrentTerm()] += (raft_state->Role() == kLeader);
       }
@@ -97,8 +107,8 @@ class RaftNodeTest : public ::testing::Test {
     for (int run = 0; run < retry_cnt; ++run) {
       raft_node_id_t leader_id = kNoLeader;
       ProposeResult propose_result;
-      for (int i = 0; i < node_num_; ++i) {
-        if (nodes_[i]->Exited()) {
+      for (int i = 0; i < node_num_; ++i) { // Search for a leader
+        if (!Alive(i)) {
           continue;
         }
         propose_result = nodes_[i]->getRaftState()->Propose(cmd);
@@ -137,32 +147,45 @@ class RaftNodeTest : public ::testing::Test {
     for (int i = 0; i < node_num_; ++i) {
       if (nodes_[i]->getRaftState()->CommitIndex() >= propose_result.propose_index) {
         return reinterpret_cast<RsmMock*>(nodes_[i]->getRsm())
-            ->getValue(propose_result.propose_index);
+            ->getValue(propose_result.propose_index, propose_result.propose_term);
       }
     }
     return -1;
+  }
+
+  bool Alive(int i) {
+    return nodes_[i] != nullptr && !nodes_[i]->Exited() && !nodes_[i]->IsDisconnected();
   }
 
   // Find current leader and returns its associated node id, if there is multiple
   // leader, for example, due to network partition, returns the smallest one
   raft_node_id_t GetLeaderId() {
     for (int i = 0; i < node_num_; ++i) {
-      if (!nodes_[i]->Exited() && nodes_[i]->getRaftState()->Role() == kLeader) {
+      if (Alive(i) && nodes_[i]->getRaftState()->Role() == kLeader) {
         return i;
       }
     }
     return kNoLeader;
   }
 
-  void ShutDown(raft_node_id_t id) {
-    if (!nodes_[id]->Exited()) {
-      nodes_[id]->Exit();
+  // TODO: Use pause to replace shut down. A paused node should not respond to any RPC
+  // call and not makes progress, as if the server is paused at some point
+  // void ShutDown(raft_node_id_t id) {
+  //   if (!nodes_[id]->Exited()) {
+  //     nodes_[id]->Exit();
+  //   }
+  // }
+
+  void Disconnect(raft_node_id_t id) {
+    // std::cout << "Disconnect " << id << std::endl;
+    if (!nodes_[id]->IsDisconnected()) {
+      nodes_[id]->Disconnect();
     }
   }
 
   void Reconnect(const NetConfig& net_config, raft_node_id_t id) { 
-    // nodes_[id]->Start(); 
-    LaunchRaftNodeInstance({id, net_config, "", new RsmMock});
+    // std::cout << "Reconnect " << id << std::endl;
+    nodes_[id]->Reconnect();
   }
 
   // Calling end will exits all existed raft node thread, and clear all allocated
@@ -193,7 +216,7 @@ void RaftNodeTest::LaunchRaftNodeInstance(const RaftNode::NodeConfig& config) {
   node_thread.detach();
 }
 
-TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
+TEST_F(RaftNodeTest, DISABLED_TestRequestVoteHasLeader) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -210,7 +233,7 @@ TEST_F(RaftNodeTest, TestRequestVoteHasLeader) {
 // requires both sender and receiver maintains their state. However, when we shut
 // down the first leader, the rest two may fail to send rpc to the shut-down server
 // and causes some exception
-TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
+TEST_F(RaftNodeTest, DISABLED_TestReElectIfPreviousLeaderExit) {
   NetConfig net_config = {
       {0, {"127.0.0.1", 50001}},
       {1, {"127.0.0.1", 50002}},
@@ -223,7 +246,7 @@ TEST_F(RaftNodeTest, TestReElectIfPreviousLeaderExit) {
   auto leader_id1 = GetLeaderId();
   ASSERT_NE(leader_id1, kNoLeader);
 
-  ShutDown(leader_id1);
+  Disconnect(leader_id1);
 
   ASSERT_TRUE(CheckOneLeader());
 
@@ -240,17 +263,17 @@ TEST_F(RaftNodeTest, TestWithDynamicClusterChanges) {
       {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
   };
   LaunchAllServers(net_config);
-  ASSERT_TRUE(CheckOneLeader());
+  EXPECT_TRUE(CheckOneLeader());
 
   const int iter_cnt = 10;
   for (int i = 0; i < iter_cnt; ++i) {
     raft_node_id_t i1 = rand() % node_num_;
     raft_node_id_t i2 = (i1 + 1) % node_num_;
 
-    ShutDown(i1);
-    ShutDown(i2);
+    Disconnect(i1);
+    Disconnect(i2);
 
-    ASSERT_TRUE(CheckOneLeader());
+    EXPECT_TRUE(CheckOneLeader());
 
     Reconnect(net_config, i1);
     Reconnect(net_config, i2);
@@ -285,17 +308,17 @@ TEST_F(RaftNodeTest, TestProposeEntryWhenServerShutdown) {
   LaunchAllServers(net_config);
   sleepMs(10);
 
-  ASSERT_TRUE(ProposeOneEntry(1));
-  ASSERT_TRUE(ProposeOneEntry(2));
-  ASSERT_TRUE(ProposeOneEntry(3));
+  EXPECT_TRUE(ProposeOneEntry(1));
+  EXPECT_TRUE(ProposeOneEntry(2));
+  EXPECT_TRUE(ProposeOneEntry(3));
 
   auto leader_id1 = GetLeaderId();
 
-  ShutDown(leader_id1);
+  Disconnect(leader_id1);
 
-  ASSERT_TRUE(ProposeOneEntry(4));
-  ASSERT_TRUE(ProposeOneEntry(5));
-  ASSERT_TRUE(ProposeOneEntry(6));
+  EXPECT_TRUE(ProposeOneEntry(4));
+  EXPECT_TRUE(ProposeOneEntry(5));
+  EXPECT_TRUE(ProposeOneEntry(6));
 
   TestEnd();
 }
@@ -314,17 +337,18 @@ TEST_F(RaftNodeTest, TestFailReachAgreementIfMajorityShutDown) {
     raft_node_id_t id2 = (id1 + 1) % node_num_;
     raft_node_id_t id3 = (id1 + 2) % node_num_;
 
-    ShutDown(id1);
-    ShutDown(id2);
-    ShutDown(id3);
+    Disconnect(id1);
+    Disconnect(id2);
+    Disconnect(id3);
 
     // Can not propose and commit an entry since there is only 2 alive servers
-    ASSERT_FALSE(ProposeOneEntry(i + 1));
+    EXPECT_FALSE(ProposeOneEntry(i + 1));
 
     Reconnect(net_config, id1);
     Reconnect(net_config, id2);
     Reconnect(net_config, id3);
   }
+  TestEnd();
 }
 
 }  // namespace raft

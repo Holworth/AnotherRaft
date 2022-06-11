@@ -1,4 +1,5 @@
 #include "RCF/RCF.hpp"
+#include "RCF/ThreadLibrary.hpp"
 #include <iostream>
 // Define the I_PrintService RCF interface.
 RCF_BEGIN(I_PrintService, "I_PrintService")
@@ -22,6 +23,17 @@ int main() {
     server.bind<I_PrintService>(printService);
     // Start the server.
     server.start();
+
+    // Sleep for 5s
+    RCF::sleepMs(5000);
+
+    // Then shutdown the server
+    server.stop();
+    RCF::sleepMs(10000);
+
+    // Then restart the server
+    server.start();
+
     std::cout << "Press Enter to exit..." << std::endl;
     std::cin.get();
   } catch (const RCF::Exception &e) {

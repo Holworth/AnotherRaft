@@ -129,8 +129,9 @@ class RaftElectionTest : public ::testing::Test {
     void sendMessage(const AppendEntriesArgs &args) override {
       appendentries_channel_->push_back(args);
     }
-    void setState(void*) override {
-    }
+    void setState(void *) override {}
+    void stop() override {}
+    void recover() override {}
 
    private:
     RequestVoteMsgChannel *requestvote_channel_;
@@ -285,7 +286,7 @@ TEST_F(RaftHandleRequestVoteReplyTest, TestUpdateTermIfReplyTermIsHigher) {
   delete raft;
 }
 
-// This test has been disabled because we doesn't specify rpc client pointer during 
+// This test has been disabled because we doesn't specify rpc client pointer during
 // construction, which results in segment fault when candidate becomes leader and tend
 // to send heartbeat messages
 TEST_F(RaftHandleRequestVoteReplyTest, DISABLED_TestConvertToBeLeaderIfWinMajorityVote) {

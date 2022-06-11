@@ -38,6 +38,10 @@ void RaftNode::Init() {
   for (auto& [_, client] : rcf_clients_) {
     client->setState(raft_state_);
   }
+
+  // Setup failure state
+  exit_.store(false);
+  disconnected_.store(false);
 }
 
 void RaftNode::Start() {
@@ -77,6 +81,22 @@ void RaftNode::startTickerThread() {
   };
   std::thread ticker_thread(ticker);
   ticker_thread.detach();
+}
+
+void RaftNode::Disconnect() {
+  rcf_server_->Stop();
+  for (auto [_, client_ptr] : rcf_clients_) {
+    client_ptr->stop();
+  }
+  disconnected_.store(true);
+}
+
+void RaftNode::Reconnect() {
+  rcf_server_->Start();
+  for (auto [_, client_ptr] : rcf_clients_) {
+    client_ptr->recover();
+  }
+  disconnected_.store(false);
 }
 
 void RaftNode::startApplierThread() {

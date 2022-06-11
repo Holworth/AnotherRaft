@@ -36,8 +36,22 @@ class RaftNode {
 
   // Calling exit to stop running this raft node, and release all resources
   void Exit();
+
   // Check if current node has exited
   bool Exited() { return exit_.load(); }
+
+  // To stop and continue current node. This is typically an interface for testing
+  // Raft cluster robustness under unstable network condition. We call Pause() on 
+  // this node to make an illusion that this node is separate from the cluster
+  // void Pause();
+  // void Continue();
+
+  // Disconnect this node from cluster, i.e. This node can not receive inbound RPC and
+  // is not able to send outbound RPC, however, the ticker thread may also works.
+  // This function is basically for testing
+  void Disconnect();
+  void Reconnect();
+  bool IsDisconnected() const { return disconnected_.load(); }
 
   // NOTE: This method should only be used in test or debug mod
   RaftState* getRaftState() { return raft_state_; }
@@ -55,12 +69,15 @@ class RaftNode {
   raft_node_id_t node_id_me_;
   std::unordered_map<raft_node_id_t, rpc::NetAddress> servers_;
   RaftState* raft_state_;
+
   // RPC related struct
   rpc::RpcServer* rcf_server_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient*> rcf_clients_;
-  // Inidicating if this server has exited, i.e. Stop running, this is important so that
+
+  // Indicating if this server has exited, i.e. Stop running, this is important so that
   // the ticker thread and applier thread can also exit normally
   std::atomic<bool> exit_;
+  std::atomic<bool> disconnected_;
   Rsm *rsm_;
 };
 }  // namespace raft
