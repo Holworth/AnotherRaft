@@ -452,7 +452,9 @@ void RaftState::broadcastHeartbeat() {
 }
 
 void RaftState::resetElectionTimer() {
-  srand(time(nullptr)); // So that we have "true" random number
+  srand(id_);
+  auto id_rand = rand();
+  srand(time(nullptr) * id_rand * id_rand); // So that we have "true" random number
   if (electionTimeLimitMin_ == electionTimeLimitMax_) {
     election_time_out_ = electionTimeLimitMin_;
   } else {
