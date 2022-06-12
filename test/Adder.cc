@@ -140,13 +140,12 @@ int main(int argc, char* argv[]) {
       for (auto& client : clients) {
         client->CallAdd(1);
       }
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   } else {
     for (;;)
       ;
   }
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(kAddCnt / 100));
   assert(val.load() == 0);
   for (auto& client : clients) {
     assert(client->AddCallCompleteCount() == kAddCnt);
@@ -158,7 +157,7 @@ int main(int argc, char* argv[]) {
     }
     // std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+  std::this_thread::sleep_for(std::chrono::seconds(kAddCnt / 100));
   assert(val.load() == clients.size() * kAddCnt);
   for (auto& client : clients) {
     assert(client->AddCallCompleteCount() == kAddCnt);
