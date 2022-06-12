@@ -21,6 +21,8 @@
 #include "rpc.h"
 #include "util.h"
 
+// #define DEBUG 1
+
 RCF_BEGIN(I_CounterService, "I_CounterService")
 RCF_METHOD_R1(RCF::ByteBuffer, Add, const RCF::ByteBuffer&)
 RCF_END(I_CounterService)
@@ -126,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   // Sleep until all servers have been booted
   std::this_thread::sleep_for(std::chrono::seconds(5));
-  const int kAddCnt = 10;
+  const int kAddCnt = 1000;
 
 
   // In debug mod, only the server marked as id 0 is able to send RPC call to other 
@@ -138,6 +140,7 @@ int main(int argc, char* argv[]) {
       for (auto& client : clients) {
         client->CallAdd(1);
       }
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   } else {
     for (;;)
@@ -153,8 +156,9 @@ int main(int argc, char* argv[]) {
     for (auto& client : clients) {
       client->CallAdd(1);
     }
+    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
-  std::this_thread::sleep_for(std::chrono::seconds(5));
+  std::this_thread::sleep_for(std::chrono::seconds(10));
   assert(val.load() == clients.size() * kAddCnt);
   for (auto& client : clients) {
     assert(client->AddCallCompleteCount() == kAddCnt);
