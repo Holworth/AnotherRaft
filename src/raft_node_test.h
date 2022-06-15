@@ -89,12 +89,17 @@ class RaftNodeTest : public ::testing::Test {
     }
   }
 
-  void LaunchAllServers(const NodesConfig& nodes_config) {
-    node_num_ = nodes_config.size();
+  NetConfig GetNetConfigFromNodesConfig(const NodesConfig& nodes_config) {
     NetConfig net_config;
     for (const auto& [id, config] : nodes_config) {
       net_config.insert({id, config.ip});
     }
+    return net_config;
+  }
+
+  void LaunchAllServers(const NodesConfig& nodes_config) {
+    node_num_ = nodes_config.size();
+    NetConfig net_config = GetNetConfigFromNodesConfig(nodes_config);
     for (const auto& [id, config] : nodes_config) {
       LaunchRaftNodeInstance({id, net_config, config.storage_name, new RsmMock});
     }

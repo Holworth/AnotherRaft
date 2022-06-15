@@ -64,7 +64,7 @@ void RaftNode::Exit() {
   // First ensures ticker thread and applier thread exits, in case they access raft_state
   // field after we release it
   this->exit_.store(true);
-  std::this_thread::sleep_for(std::chrono::milliseconds(20));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
   // TODO: Release storage or state machine if it's necessary
   delete rcf_server_;

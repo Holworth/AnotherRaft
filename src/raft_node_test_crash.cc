@@ -4,20 +4,20 @@
 #include "raft_node_test.h"
 #include "raft_type.h"
 namespace raft {
-class RaftNodeBasicTest : public RaftNodeTest {
- public:
-  static NetConfig ConstructNetConfig(int server_num) {
-    std::string default_ip = "127.0.0.1";
-    uint16_t init_port = 50001;
-    NetConfig ret;
-    for (uint16_t i = 0; i < server_num; ++i) {
-      ret.insert({i, {default_ip, static_cast<uint16_t>(init_port + i)}});
-    }
-    return ret;
-  }
-};
 class RaftNodeCrashTest : public RaftNodeTest {
- public:
-  using StorageConfig = std::unordered_map<raft_node_id_t, std::string>;
+  public:
+  void Crash(raft_node_id_t id) {
+    if (!nodes_[id]->Exited()) {
+      nodes_[id]->Exit();
+    }
+    delete nodes_[id];
+    nodes_[id] = nullptr;
+  }
+
+  void Reboot(const NodesConfig& config, raft_node_id_t id) {
+    auto net_config = GetNetConfigFromNodesConfig(config);
+    auto node_config = config.at(id);
+    LaunchRaftNodeInstance({id, net_config, node_config.storage_name, new RsmMock});
+  }
 };
 }  // namespace raft
