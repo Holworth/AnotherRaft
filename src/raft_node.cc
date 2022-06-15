@@ -67,6 +67,7 @@ void RaftNode::Exit() {
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
   // TODO: Release storage or state machine if it's necessary
+  rcf_server_->Stop();  // Stop running rcf server
   delete rcf_server_;
   delete storage_;
 }

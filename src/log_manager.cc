@@ -38,10 +38,12 @@ LogManager *LogManager::NewLogManager(Storage *storage) {
   if (storage != nullptr) {
     std::vector<LogEntry> vec;
     storage->LogEntries(&vec);
-    for (const auto &entry : vec) {
-      ret->AppendLogEntry(entry);
+    // LOG(util::kRaft, "entry cnt=%d", vec.size());
+    // The first entry of vec is of no means, it's basically for alignement.
+    for (int raft_index = 1; raft_index < vec.size(); ++raft_index) {
+      ret->AppendLogEntry(vec[raft_index]);
     }
-    LOG(util::kRaft, "Recover from storage LI%d", ret->LastLogEntryIndex());
+    // LOG(util::kRaft, "Recover from storage LI%d", ret->LastLogEntryIndex());
     assert(storage->LastIndex() == ret->LastLogEntryIndex());
   }
   return ret;

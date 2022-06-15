@@ -120,6 +120,8 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   assert(args != nullptr && reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
+  LOG(util::kRaft, "S%d Receive AppendEntries From S%d", id_, args->leader_id);
+
   reply->reply_id = id_;
 
   // Reply false immediately if arguments' term is smaller
@@ -147,7 +149,10 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   }
 
   // Step3: Check conflicts and add new entries
-  checkConflictEntryAndAppendNew(args);
+  assert(args->entry_cnt == args->entries.size());
+  if (args->entry_cnt > 0) {
+    checkConflictEntryAndAppendNew(args);
+  }
   reply->expect_index = args->prev_log_index + args->entry_cnt + 1;
 
   // Step4: Update commit index if necessary
@@ -258,6 +263,9 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   lm_->AppendLogEntry(entry);
 
+  LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
+      CurrentTerm(), entry.CommandData().data());
+
   // Persist this new entry: maybe it can be ignored?
   if (storage_ != nullptr) {
     std::vector<LogEntry> persist_ent{entry};
@@ -266,9 +274,6 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   }
 
   int val = *reinterpret_cast<int *>(entry.CommandData().data());
-
-  LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
-      CurrentTerm(), entry.CommandData().data());
 
   // Replicate this entry out
   for (auto &[id, _] : peers_) {
@@ -317,19 +322,24 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
     // Debug -------------------------------------------
     auto old_last_index = lm_->LastLogEntryIndex();
     lm_->AppendLogEntry(args->entries[i]);
-    LOG(util::kRaft, "S%d APPEND(%d->%d)", id_, old_last_index, lm_->LastLogEntryIndex());
+    LOG(util::kRaft, "S%d APPEND(%d->%d) ent cnt=%d", id_, old_last_index,
+        lm_->LastLogEntryIndex(), args->entries.size());
   }
+
   // Persist newly added log entries, or persist the changes to deleted log entries
   if (storage_ != nullptr) {
     std::vector<LogEntry> persist_entries;
     raft_index_t lo =
         (conflict_index == 0) ? (array_index + args->prev_log_index + 1) : conflict_index;
-    lm_->GetLogEntriesFrom(lo, &persist_entries);
-    storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
-    storage_->SetLastIndex(lm_->LastLogEntryIndex());
-
-    LOG(util::kRaft, "S%d Persist Entries Upto(%d->%d)", id_, lo,
-        lm_->LastLogEntryIndex());
+    if (lo <= lm_->LastLogEntryIndex()) {
+      lm_->GetLogEntriesFrom(lo, &persist_entries);
+      LOG(util::kRaft, "S%d Persist Entries (I%d->I%d)", id_, lo,
+          lm_->LastLogEntryIndex());
+      storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
+      storage_->SetLastIndex(lm_->LastLogEntryIndex());
+      LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) Finished", id_, lo,
+          lm_->LastLogEntryIndex());
+    }
   }
 }
 

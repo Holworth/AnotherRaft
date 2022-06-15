@@ -108,10 +108,10 @@ class RaftNodeTest : public ::testing::Test {
   // Create a thread that holds this raft node, and start running this node immediately
   // returns the pointer to that raft node
   void LaunchRaftNodeInstance(const RaftNode::NodeConfig& config) {
+    auto raft_node = new RaftNode(config);
+    this->nodes_[config.node_id_me] = raft_node;
+    raft_node->Init();
     auto node_thread = std::thread([=]() {
-      auto raft_node = new RaftNode(config);
-      this->nodes_[config.node_id_me] = raft_node;
-      raft_node->Init();
       raft_node->Start();
     });
     node_thread.detach();
