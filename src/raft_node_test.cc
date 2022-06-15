@@ -1,5 +1,9 @@
 #include "raft_node_test.h"
 
+#include <_types/_uint16_t.h>
+
+#include <string>
+
 namespace raft {
 class RaftNodeBasicTest : public RaftNodeTest {
  public:
@@ -15,9 +19,10 @@ class RaftNodeBasicTest : public RaftNodeTest {
 };
 
 TEST_F(RaftNodeBasicTest, TestRequestVoteHasLeader) {
-  LaunchAllServers(ConstructNetConfig(3));
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
   ASSERT_TRUE(CheckOneLeader());
-  TestEnd();
+  ClearTestContext(config);
 }
 
 // NOTE: This test may fail due to RPC , the default RPC uses TCP protocol, which
@@ -25,7 +30,9 @@ TEST_F(RaftNodeBasicTest, TestRequestVoteHasLeader) {
 // down the first leader, the rest two may fail to send rpc to the shut-down server
 // and causes some exception
 TEST_F(RaftNodeBasicTest, TestReElectIfPreviousLeaderExit) {
-  LaunchAllServers(ConstructNetConfig(3));
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
+
   EXPECT_TRUE(CheckOneLeader());
 
   auto leader_id1 = GetLeaderId();
@@ -39,15 +46,14 @@ TEST_F(RaftNodeBasicTest, TestReElectIfPreviousLeaderExit) {
   ASSERT_NE(leader_id2, kNoLeader);
   ASSERT_NE(leader_id2, leader_id1);
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestWithDynamicClusterChanges) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
-      {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
-  };
-  LaunchAllServers(net_config);
+
+  auto config = ConstructNodesConfig(5, false);
+  LaunchAllServers(config);
+
   EXPECT_TRUE(CheckOneLeader());
 
   const int iter_cnt = 10;
@@ -60,20 +66,16 @@ TEST_F(RaftNodeBasicTest, TestWithDynamicClusterChanges) {
 
     EXPECT_TRUE(CheckOneLeader());
 
-    Reconnect(net_config, i1);
-    Reconnect(net_config, i2);
+    Reconnect(i1);
+    Reconnect(i2);
   }
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}},
-      {1, {"127.0.0.1", 50002}},
-      {2, {"127.0.0.1", 50003}},
-  };
-  LaunchAllServers(net_config);
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
   sleepMs(10);
 
   // Test propose a few entries
@@ -81,16 +83,12 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   ASSERT_TRUE(ProposeOneEntry(2));
   ASSERT_TRUE(ProposeOneEntry(3));
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestProposeEntryWhenServerShutdown) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}},
-      {1, {"127.0.0.1", 50002}},
-      {2, {"127.0.0.1", 50003}},
-  };
-  LaunchAllServers(net_config);
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
   sleepMs(10);
 
   EXPECT_TRUE(ProposeOneEntry(1));
@@ -105,15 +103,12 @@ TEST_F(RaftNodeBasicTest, TestProposeEntryWhenServerShutdown) {
   EXPECT_TRUE(ProposeOneEntry(5));
   EXPECT_TRUE(ProposeOneEntry(6));
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestFailReachAgreementIfMajorityShutDown) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
-      {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
-  };
-  LaunchAllServers(net_config);
+  auto config = ConstructNodesConfig(5, false);
+  LaunchAllServers(config);
   sleepMs(10);
 
   const int iter_cnt = 1;
@@ -129,20 +124,17 @@ TEST_F(RaftNodeBasicTest, TestFailReachAgreementIfMajorityShutDown) {
     // Can not propose and commit an entry since there is only 2 alive servers
     EXPECT_FALSE(ProposeOneEntry(i + 1));
 
-    Reconnect(net_config, id1);
-    Reconnect(net_config, id2);
-    Reconnect(net_config, id3);
+    Reconnect(id1);
+    Reconnect(id2);
+    Reconnect(id3);
   }
-  TestEnd();
+
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestOldLeaderRejoin) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}},
-      {1, {"127.0.0.1", 50002}},
-      {2, {"127.0.0.1", 50003}},
-  };
-  LaunchAllServers(net_config);
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
   sleepMs(10);
 
   EXPECT_TRUE(ProposeOneEntry(101));
@@ -166,25 +158,21 @@ TEST_F(RaftNodeBasicTest, TestOldLeaderRejoin) {
   LOG(util::kRaft, "----- S%d disconnect -----", leader2);
 
   // Old leader rejoin
-  Reconnect(net_config, leader1);
+  Reconnect(leader1);
   LOG(util::kRaft, "----- S%d reconnect -----", leader1);
   EXPECT_TRUE(ProposeOneEntry(104));
 
   // New leader rejoin, all servers together
-  Reconnect(net_config, leader2);
+  Reconnect(leader2);
   LOG(util::kRaft, "----- S%d reconnect -----", leader2);
   EXPECT_TRUE(ProposeOneEntry(105));
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 TEST_F(RaftNodeBasicTest, TestRecoverAfterLongIncorrectLogs) {
-  NetConfig net_config = {
-      {0, {"127.0.0.1", 50001}}, {1, {"127.0.0.1", 50002}}, {2, {"127.0.0.1", 50003}},
-      {3, {"127.0.0.1", 50004}}, {4, {"127.0.0.1", 50005}},
-  };
-
-  LaunchAllServers(net_config);
+  auto config = ConstructNodesConfig(5, false);
+  LaunchAllServers(config);
   sleepMs(10);
 
   int init_value = 100;
@@ -206,9 +194,9 @@ TEST_F(RaftNodeBasicTest, TestRecoverAfterLongIncorrectLogs) {
   Disconnect((leader1 + 0) % node_num_);
   Disconnect((leader1 + 1) % node_num_);
 
-  Reconnect(net_config, (leader1 + 2) % node_num_);
-  Reconnect(net_config, (leader1 + 3) % node_num_);
-  Reconnect(net_config, (leader1 + 4) % node_num_);
+  Reconnect((leader1 + 2) % node_num_);
+  Reconnect((leader1 + 3) % node_num_);
+  Reconnect((leader1 + 4) % node_num_);
 
   // These commands should be properly committed
   for (int i = 1; i <= 50; ++i) {
@@ -234,9 +222,9 @@ TEST_F(RaftNodeBasicTest, TestRecoverAfterLongIncorrectLogs) {
     Disconnect(i);
   }
 
-  Reconnect(net_config, (leader1 + 0) % node_num_);
-  Reconnect(net_config, (leader1 + 1) % node_num_);
-  Reconnect(net_config, other);
+  Reconnect((leader1 + 0) % node_num_);
+  Reconnect((leader1 + 1) % node_num_);
+  Reconnect(other);
 
   // These commands will be properly committed
   for (int i = 1; i <= 50; ++i) {
@@ -245,11 +233,11 @@ TEST_F(RaftNodeBasicTest, TestRecoverAfterLongIncorrectLogs) {
 
   // Bring all servers here
   for (int node = 0; node < node_num_; ++node) {
-    Reconnect(net_config, node);
+    Reconnect(node);
   }
   EXPECT_TRUE(ProposeOneEntry(init_value));
 
-  TestEnd();
+  ClearTestContext(config);
 }
 
 }  // namespace raft

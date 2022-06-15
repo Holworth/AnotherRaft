@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -29,7 +30,15 @@ namespace raft {
 class RaftNodeTest : public ::testing::Test {
  public:
   static constexpr int kMaxNodeNum = 9;
+  static constexpr raft_node_id_t kNoLeader = -1;
+
+  // Some necessary Test structs
   using NetConfig = std::unordered_map<raft_node_id_t, rpc::NetAddress>;
+  struct TestNodeConfig {
+    rpc::NetAddress ip;
+    std::string storage_name;
+  };
+  using NodesConfig = std::unordered_map<raft_node_id_t, TestNodeConfig>;
 
   // This is a simple simulated state machine, it assumes that each command is simply
   // an integer and the applier simply records it with associated log index
@@ -58,7 +67,38 @@ class RaftNodeTest : public ::testing::Test {
     std::unordered_map<raft_index_t, CommitResult> applied_value_;
   };
 
-  static constexpr raft_node_id_t kNoLeader = -1;
+
+  static NodesConfig ConstructNodesConfig(int server_num, bool with_storage) {
+    std::string default_ip = "127.0.0.1";
+    uint16_t init_port = 50001;
+    NodesConfig ret;
+    for (uint16_t i = 0; i < server_num; ++i) {
+      TestNodeConfig node_config;
+      node_config.ip = {default_ip, static_cast<uint16_t>(init_port + i)};
+      node_config.storage_name =
+          with_storage ? std::string("test_storage") + std::to_string(i) : "";
+      ret.insert({i, node_config});
+    }
+    return ret;
+  }
+
+  void LaunchAllServers(const NetConfig& net_config) {
+    node_num_ = net_config.size();
+    for (const auto& [id, _] : net_config) {
+      LaunchRaftNodeInstance({id, net_config, "", new RsmMock});
+    }
+  }
+
+  void LaunchAllServers(const NodesConfig& nodes_config) {
+    node_num_ = nodes_config.size();
+    NetConfig net_config;
+    for (const auto& [id, config] : nodes_config) {
+      net_config.insert({id, config.ip});
+    }
+    for (const auto& [id, config] : nodes_config) {
+      LaunchRaftNodeInstance({id, net_config, config.storage_name, new RsmMock});
+    }
+  }
 
   // Create a thread that holds this raft node, and start running this node immediately
   // returns the pointer to that raft node
@@ -165,13 +205,6 @@ class RaftNodeTest : public ::testing::Test {
     return false;
   }
 
-  void LaunchAllServers(const NetConfig& net_config) {
-    node_num_ = net_config.size();
-    for (const auto& [id, _] : net_config) {
-      LaunchRaftNodeInstance({id, net_config, "", new RsmMock});
-    }
-  }
-
   void sleepMs(int num) { std::this_thread::sleep_for(std::chrono::milliseconds(num)); }
 
   int checkCommitted(const ProposeResult& propose_result) {
@@ -217,7 +250,7 @@ class RaftNodeTest : public ::testing::Test {
     }
   }
 
-  void Reconnect(const NetConfig& net_config, raft_node_id_t id) {
+  void Reconnect(raft_node_id_t id) {
     // std::cout << "Reconnect " << id << std::endl;
     if (nodes_[id]->IsDisconnected()) {
       nodes_[id]->Reconnect();
@@ -233,6 +266,23 @@ class RaftNodeTest : public ::testing::Test {
       }
     });
     std::for_each(nodes_, nodes_ + node_num_, [](RaftNode* node) { delete node; });
+  }
+
+  void ClearTestContext(const NodesConfig& nodes_config) {
+    auto cmp = [](RaftNode* node) {
+      if (!node->Exited()) {
+        node->Exit();
+        delete node;
+      }
+    };
+    std::for_each(nodes_, nodes_ + node_num_, cmp);
+
+    // Clear created log files
+    for (const auto &[_, config] : nodes_config) {
+      if (config.storage_name != "") {
+        std::filesystem::remove(config.storage_name);
+      }
+    }
   }
 
  public:

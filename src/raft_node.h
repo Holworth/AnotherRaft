@@ -8,6 +8,7 @@
 #include "rcf_rpc.h"
 #include "rpc.h"
 #include "rsm.h"
+#include "storage.h"
 namespace raft {
 
 // A raft node is the collection of raft state runtime, i.e. the raft node is responsible
@@ -79,5 +80,6 @@ class RaftNode {
   std::atomic<bool> exit_;
   std::atomic<bool> disconnected_;
   Rsm *rsm_;
+  Storage *storage_;
 };
 }  // namespace raft

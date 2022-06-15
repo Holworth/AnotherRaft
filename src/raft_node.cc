@@ -8,6 +8,7 @@
 #include "raft.h"
 #include "rcf_rpc.h"
 #include "rsm.h"
+#include "storage.h"
 #include "util.h"
 
 namespace raft {
@@ -16,7 +17,13 @@ RaftNode::RaftNode(const NodeConfig& node_config)
     : node_id_me_(node_config.node_id_me),
       servers_(node_config.servers),
       raft_state_(nullptr),
-      rsm_(node_config.rsm) {}
+      rsm_(node_config.rsm) {
+  if (node_config.storage_filename != "") {
+    storage_ = PersistStorage::Open(node_config.storage_filename);
+  } else {
+    storage_ = nullptr;
+  }
+}
 
 void RaftNode::Init() {
   // Create an RPC server that receives request from remote servers
@@ -30,7 +37,7 @@ void RaftNode::Init() {
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, nullptr, 150, 300, rsm_};
+  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, storage_, 150, 300, rsm_};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct
@@ -61,6 +68,7 @@ void RaftNode::Exit() {
 
   // TODO: Release storage or state machine if it's necessary
   delete rcf_server_;
+  delete storage_;
 }
 
 RaftNode::~RaftNode() {
@@ -75,7 +83,7 @@ void RaftNode::startTickerThread() {
   auto ticker = [=]() {
     while (!this->Exited()) {
       // Tick the raft state for every 10ms so that the raft can make progress
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      // std::this_thread::sleep_for(std::chrono::milliseconds(10));
       this->raft_state_->Tick();
     }
   };
