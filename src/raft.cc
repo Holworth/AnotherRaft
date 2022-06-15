@@ -26,9 +26,13 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
       (state = config.storage->PersistState(), state.valid)) {
     ret->SetCurrentTerm(state.persisted_term);
     ret->SetVoteFor(state.persisted_vote_for);
+    LOG(util::kRaft, "S%d Read Persist Term%d VoteFor%d", ret->id_, ret->CurrentTerm(),
+        ret->VoteFor());
   } else {
     ret->SetCurrentTerm(0);
     ret->SetVoteFor(kNotVoted);
+    LOG(util::kRaft, "S%d Init with Term%d VoteFor%d", ret->id_, ret->CurrentTerm(),
+        ret->VoteFor());
   }
   // On every boot, the raft peer is set to be follower
   ret->SetRole(kFollower);
@@ -43,13 +47,20 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   // Construct log manager from persistence storage
   ret->lm_ = LogManager::NewLogManager(config.storage);
 
+  LOG(util::kRaft, "S%d Log Recover from storage LI%d", ret->id_,
+      ret->lm_->LastLogEntryIndex());
+
   ret->electionTimeLimitMin_ = config.electionTimeMin;
   ret->electionTimeLimitMax_ = config.electionTimeMax;
   ret->rsm_ = config.rsm;
   ret->heartbeatTimeInterval = config::kHeartbeatInterval;
+  ret->storage_ = config.storage;  // might be nullptr
 
   ret->last_applied_ = 0;
   ret->commit_index_ = 0;
+
+  ret->persistVoteFor();
+  ret->persistCurrentTerm();
 
   return ret;
 }
@@ -247,6 +258,13 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   lm_->AppendLogEntry(entry);
 
+  // Persist this new entry: maybe it can be ignored?
+  if (storage_ != nullptr) {
+    std::vector<LogEntry> persist_ent{entry};
+    auto lo = lm_->LastLogEntryIndex();
+    storage_->PersistEntries(lo, lo, persist_ent);
+  }
+
   int val = *reinterpret_cast<int *>(entry.CommandData().data());
 
   LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
@@ -257,10 +275,6 @@ ProposeResult RaftState::Propose(const CommandData &command) {
     sendAppendEntries(id);
   }
 
-  // if (lm_->LastLogEntryIndex() >= 3) {
-  //   LOG(util::kRaft, "S%d detect value=%d ptr=%p after send AE", id_, val,
-  //       lm_->GetSingleLogEntry(3)->CommandData().data());
-  // }
   return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
 
@@ -281,6 +295,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
   assert(args->entry_cnt == args->entries.size());
   auto old_idx = lm_->LastLogEntryIndex();
   auto array_index = 0;
+  raft_index_t conflict_index = 0;
   for (; array_index < args->entries.size(); ++array_index) {
     auto raft_index = array_index + args->prev_log_index + 1;
     if (raft_index > lm_->LastLogEntryIndex()) {
@@ -292,6 +307,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
       lm_->DeleteLogEntriesFrom(raft_index);
       LOG(util::kRaft, "S%d Del Entry (%d->%d)", id_, old_last_index,
           lm_->LastLogEntryIndex());
+      conflict_index = raft_index;
       break;
     }
   }
@@ -302,6 +318,18 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
     auto old_last_index = lm_->LastLogEntryIndex();
     lm_->AppendLogEntry(args->entries[i]);
     LOG(util::kRaft, "S%d APPEND(%d->%d)", id_, old_last_index, lm_->LastLogEntryIndex());
+  }
+  // Persist newly added log entries, or persist the changes to deleted log entries
+  if (storage_ != nullptr) {
+    std::vector<LogEntry> persist_entries;
+    raft_index_t lo =
+        (conflict_index == 0) ? (array_index + args->prev_log_index + 1) : conflict_index;
+    lm_->GetLogEntriesFrom(lo, &persist_entries);
+    storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
+    storage_->SetLastIndex(lm_->LastLogEntryIndex());
+
+    LOG(util::kRaft, "S%d Persist Entries Upto(%d->%d)", id_, lo,
+        lm_->LastLogEntryIndex());
   }
 }
 
@@ -361,11 +389,10 @@ void RaftState::convertToFollower(raft_term_t term) {
   SetRole(kFollower);
   if (term > CurrentTerm()) {
     SetVoteFor(kNotVoted);
+    SetCurrentTerm(term);
+    persistCurrentTerm();
+    persistVoteFor();
   }
-  SetCurrentTerm(term);
-
-  persistCurrentTerm();
-  persistVoteFor();
 }
 
 void RaftState::convertToCandidate() {
@@ -398,11 +425,17 @@ void RaftState::persistVoteFor() {
   // TODO: The persistVoteFor function is basically a wrapper for calling storage to
   // persist the voteFor attribute. This function should be filled when we have a
   // full-functionality persister implementation
+  if (storage_ != nullptr) {
+    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
+  }
 }
 void RaftState::persistCurrentTerm() {
   // TODO: The persistVoteFor function is basically a wrapper for calling storage to
   // persist the currentTerm attribute. This function should be filled when we have a
   // full-functionality persister implementation
+  if (storage_ != nullptr) {
+    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
+  }
 }
 
 // [REQUIRE] Current thread holds the lock of raft state
@@ -454,7 +487,7 @@ void RaftState::broadcastHeartbeat() {
 void RaftState::resetElectionTimer() {
   srand(id_);
   auto id_rand = rand();
-  srand(time(nullptr) * id_rand * id_rand); // So that we have "true" random number
+  srand(time(nullptr) * id_rand * id_rand);  // So that we have "true" random number
   if (electionTimeLimitMin_ == electionTimeLimitMax_) {
     election_time_out_ = electionTimeLimitMin_;
   } else {
@@ -531,8 +564,9 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
       lm_->LastLogEntryIndex());
 
   // if (lm_->LastLogEntryIndex() >= 3) {
-  //   auto val = *reinterpret_cast<int *>(lm_->GetSingleLogEntry(3)->CommandData().data());
-  //   LOG(util::kRaft, "S%d detect value=%d ptr=%p size=%d", id_, val,
+  //   auto val = *reinterpret_cast<int
+  //   *>(lm_->GetSingleLogEntry(3)->CommandData().data()); LOG(util::kRaft, "S%d detect
+  //   value=%d ptr=%p size=%d", id_, val,
   //       lm_->GetSingleLogEntry(3)->CommandData().data(),
   //       lm_->GetSingleLogEntry(3)->CommandData().size());
   // }

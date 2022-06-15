@@ -33,15 +33,16 @@ LogManager::LogManager(Storage *persister, int64_t initial_cap, Deleter deleter)
 }
 
 // Create a new log manager from persisted storage
-LogManager *LogManager::NewLogManager(Storage *persister) {
-  auto ret = new LogManager(persister, 1, nullptr);
-  if (persister != nullptr) {
+LogManager *LogManager::NewLogManager(Storage *storage) {
+  auto ret = new LogManager(storage, 1, nullptr);
+  if (storage != nullptr) {
     std::vector<LogEntry> vec;
-    persister->LogEntries(&vec);
+    storage->LogEntries(&vec);
     for (const auto &entry : vec) {
       ret->AppendLogEntry(entry);
     }
-    assert(persister->LastIndex() == ret->LastLogEntryIndex());
+    LOG(util::kRaft, "Recover from storage LI%d", ret->LastLogEntryIndex());
+    assert(storage->LastIndex() == ret->LastLogEntryIndex());
   }
   return ret;
 }

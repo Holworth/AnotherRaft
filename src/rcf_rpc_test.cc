@@ -16,7 +16,6 @@
 #include "storage.h"
 
 namespace raft {
-class RaftRCFRpcTest : public ::testing::Test {
-  public:
-};
+// class RaftRCFRpcTest : public ::testing::Test {
+// };
 }

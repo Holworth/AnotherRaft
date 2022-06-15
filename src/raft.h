@@ -196,6 +196,7 @@ class RaftState {
 
   // Manage all log entries
   LogManager *lm_;
+  Storage* storage_;
 
  private:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
@@ -212,7 +213,6 @@ class RaftState {
 
  private:
   int vote_me_cnt_;
-
   Rsm* rsm_;
 };
 }  // namespace raft
