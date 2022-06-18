@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <unordered_map>
+#include <cstdarg>
 
 #include "raft_node.h"
 #include "raft_type.h"
