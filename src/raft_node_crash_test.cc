@@ -142,5 +142,6 @@ TEST_F(RaftNodeCrashTest, TestManyCrashOccurs) {
     Reconnect((leader1 + 0) % node_num_);
     Reconnect((leader1 + 4) % node_num_);
   }
+  ClearTestContext(config);
 }
 }  // namespace raft

@@ -20,8 +20,6 @@ if (NOT libuuid)
     MESSAGE(FATAL_ERROR "library uuid Not Found")
 endif()
 
-add_executable(counter counter.cc)
-target_link_libraries(counter raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
 SET(LIBS ${libpthread} ${libdl} ${libuuid})
 
@@ -36,3 +34,6 @@ foreach(test_file_source ${TEST_FILES})
     target_link_libraries(${test_exec_name} rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
   endif()
 endforeach()
+
+add_executable(counter counter.cc)
+target_link_libraries(counter raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
