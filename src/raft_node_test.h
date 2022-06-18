@@ -136,7 +136,7 @@ class RaftNodeTest : public ::testing::Test {
   //   Say there are 3 servers, the old leader and one is alive, but another one is
   //   separate from network and becoming candidate with much higher term.
   bool CheckOneLeader() {
-    const int retry_cnt = 5;
+    const int retry_cnt = 10;
     std::unordered_map<raft_term_t, int> leader_cnt;
     auto record = [&](RaftNode* node) {
       if (!node->IsDisconnected()) {
