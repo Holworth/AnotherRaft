@@ -92,7 +92,7 @@ class CounterBench {
     // Wait for this command to commit, for at most 1000s
     while (timer.ElapseMilliseconds() < 1000) {
       if (stat.propose_index <= raft->CommitIndex()) {
-        agreement_time_ += timer.ElapseMilliseconds();
+        agreement_time_ += timer.ElapseMicroseconds();
         propose_cnt_ += 1;
         return true;
       }
@@ -109,7 +109,7 @@ class CounterBench {
  private:
   RaftNode* node_;
   int cmd_size_;
-  uint64_t agreement_time_ = 0;
+  uint64_t agreement_time_ = 0; // elapse time
   uint16_t propose_cnt_ = 0;
 };
 
