@@ -151,7 +151,7 @@ TEST_F(RaftNodeBasicTest, TestOldLeaderRejoin) {
 
   // Disconnect new leader
   auto leader2 = GetLeaderId();
-  ASSERT_NE(leader2, leader1);
+  EXPECT_NE(leader2, leader1);
   Disconnect(leader2);
   LOG(util::kRaft, "----- S%d disconnect -----", leader2);
 

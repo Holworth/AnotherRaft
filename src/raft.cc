@@ -277,7 +277,9 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   // Replicate this entry out
   for (auto &[id, _] : peers_) {
-    sendAppendEntries(id);
+    if (id != id_) {
+      sendAppendEntries(id);
+    }
   }
 
   return ProposeResult{next_entry_index, CurrentTerm(), true};
