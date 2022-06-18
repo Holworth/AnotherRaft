@@ -38,6 +38,18 @@ target_link_libraries(async_client rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
 target_link_libraries(adder rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
+set(TEST_FILES)
+file(GLOB TEST_FILES ./*.cc)
+
+foreach(test_file_source ${TEST_FILES}) 
+  get_filename_component(test_file_name ${test_file_source} NAME)
+  if(${test_file_name} MATCHES "_test.cc$")
+    string(REPLACE ".cc" "" test_exec_name ${test_file_name})
+    add_executable(${test_exec_name} ${test_file_name})
+    target_link_libraries(${test_exec_name} rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+  endif()
+endforeach()
+
 
 
 

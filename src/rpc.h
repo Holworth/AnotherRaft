@@ -10,6 +10,9 @@ namespace rpc {
 struct NetAddress {
   std::string ip;
   uint16_t port;
+  bool operator==(const NetAddress& rhs) const {
+    return this->ip == rhs.ip && this->port == rhs.port;
+  }
 };
 
 
