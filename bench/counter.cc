@@ -1,7 +1,6 @@
-#include <_types/_uint64_t.h>
-
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <string>
 #include <thread>
@@ -29,18 +28,42 @@ class CounterStateMachine : public Rsm {
 class CounterBench {
  public:
   CounterBench(const RaftNode::NodeConfig& config, int cmd_size)
-      : node_(new RaftNode(config)), cmd_size_(cmd_size) {}
+      : node_(new RaftNode(config)), cmd_size_(cmd_size) {
+    std::printf("Finish creating benchmark\n");
+  }
   ~CounterBench() { delete node_; }
 
   void StartBench() {
+    std::printf("Start benchmarking\n");
     node_->Init();
+    // Wait for other nodes bootsup
+    std::this_thread::sleep_for(std::chrono::seconds(3));
     node_->Start();
-    int test_cnt = 100000;
-    for (int i = 0; i < test_cnt; ++i) {
+    // Wait for leader election
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    auto report_results = [this]() {
+      while (true) {
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        this->BenchResults();
+      }
+    };
+    
+    std::thread report_thread(report_results);
+    report_thread.detach();
+
+    int test_cnt = 1000;
+    int succ_cnt = 0;
+    while (true) {
       bool stat = ProposeOneEntry();
+      // if (stat) {
+      //   succ_cnt += 1;
+      // }
+      // if (succ_cnt >= test_cnt) {
+      //   node_->Exit();
+      //   return;
+      // }
     }
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    node_->Exit();
   }
 
   void BenchResults() {
@@ -49,7 +72,7 @@ class CounterBench {
       std::cout << "[Average Lantency]"
                 << static_cast<double>(agreement_time_) / propose_cnt_ << std::endl;
     } else {
-      std::cout << "[Propose count]" << 0 << std::endl;
+      std::cout << "[Propose count] " << 0 << std::endl;
     }
   }
 
@@ -58,7 +81,8 @@ class CounterBench {
     auto raft = node_->getRaftState();
     auto cmd = ConstructCommand(1);
 
-    auto start_time = std::chrono::high_resolution_clock::now();
+    util::Timer timer;
+    timer.Reset();
     auto stat = raft->Propose(cmd);
     if (!stat.is_leader) {
       delete cmd.command_data.data();
@@ -66,20 +90,14 @@ class CounterBench {
     }
 
     // Wait for this command to commit, for at most 1000s
-    auto raft_index = stat.propose_index;
-    while (true) {
-      auto end_time = std::chrono::high_resolution_clock::now();
-      auto dura =
-          std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-      if (raft_index <= raft->CommitIndex()) {
-        agreement_time_ += dura.count();
+    while (timer.ElapseMilliseconds() < 1000) {
+      if (stat.propose_index <= raft->CommitIndex()) {
+        agreement_time_ += timer.ElapseMilliseconds();
         propose_cnt_ += 1;
         return true;
       }
-      if (dura.count() >= 1000) {  // timeout
-        return false;
-      }
     }
+    return false;
   }
 
   CommandData ConstructCommand(int val) {
@@ -102,11 +120,15 @@ int main(int argc, char* argv[]) {
     exit(1);
   }
 
+  std::printf("Finish parsing parameters\n");
+
+
   RaftNode::NodeConfig config;
   config.node_id_me = parser.GetNodeId();
   config.servers = parser.GetNetConfig();
   config.storage_filename = std::string("raft_log") + std::to_string(config.node_id_me);
   config.rsm = new CounterStateMachine();
+  std::filesystem::remove(std::string("raft_log") + std::to_string(config.node_id_me));
 
   CounterBench bench(config, parser.GetCommandSize());
   bench.StartBench();
