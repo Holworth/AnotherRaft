@@ -48,7 +48,7 @@ class CounterBench {
         this->BenchResults();
       }
     };
-    
+
     std::thread report_thread(report_results);
     report_thread.detach();
 
@@ -122,13 +122,13 @@ int main(int argc, char* argv[]) {
 
   std::printf("Finish parsing parameters\n");
 
-
   RaftNode::NodeConfig config;
   config.node_id_me = parser.GetNodeId();
   config.servers = parser.GetNetConfig();
   config.storage_filename = std::string("raft_log") + std::to_string(config.node_id_me);
   config.rsm = new CounterStateMachine();
-  std::filesystem::remove(std::string("raft_log") + std::to_string(config.node_id_me));
+  // std::filesystem::remove(std::string("raft_log") + std::to_string(config.node_id_me));
+  remove((std::string("raft_log") + std::to_string(config.node_id_me)).c_str());
 
   CounterBench bench(config, parser.GetCommandSize());
   bench.StartBench();

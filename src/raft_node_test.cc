@@ -1,7 +1,5 @@
 #include "raft_node_test.h"
 
-#include <_types/_uint16_t.h>
-
 #include <string>
 
 namespace raft {

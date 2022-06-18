@@ -285,7 +285,8 @@ class RaftNodeTest : public ::testing::Test {
     // Clear created log files
     for (const auto &[_, config] : nodes_config) {
       if (config.storage_name != "") {
-        std::filesystem::remove(config.storage_name);
+        // std::filesystem::remove(config.storage_name);
+        remove(config.storage_name.c_str());
       }
     }
   }
