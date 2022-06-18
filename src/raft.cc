@@ -570,7 +570,8 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
   auto require_entry_cnt = lm_->LastLogEntryIndex() - prev_index;
   args.entries.reserve(require_entry_cnt);
   lm_->GetLogEntriesFrom(next_index, &args.entries);
-  LOG(util::kRaft, "S%d require entry cnt=%d, get entry cnt=%d", require_entry_cnt, args.entries.size());
+  LOG(util::kRaft, "S%d require entry cnt=%d, get entry cnt=%d", id_, require_entry_cnt,
+      args.entries.size());
   LOG(util::kRaft, "S%d AE To S%d (%d->%d)", id_, peer, next_index,
       lm_->LastLogEntryIndex());
 
