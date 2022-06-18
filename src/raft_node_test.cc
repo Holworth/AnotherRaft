@@ -19,7 +19,7 @@ class RaftNodeBasicTest : public RaftNodeTest {
 TEST_F(RaftNodeBasicTest, TestRequestVoteHasLeader) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
-  ASSERT_TRUE(CheckOneLeader());
+  EXPECT_TRUE(CheckOneLeader());
   ClearTestContext(config);
 }
 
@@ -34,15 +34,15 @@ TEST_F(RaftNodeBasicTest, TestReElectIfPreviousLeaderExit) {
   EXPECT_TRUE(CheckOneLeader());
 
   auto leader_id1 = GetLeaderId();
-  ASSERT_NE(leader_id1, kNoLeader);
+  EXPECT_NE(leader_id1, kNoLeader);
 
   Disconnect(leader_id1);
 
-  ASSERT_TRUE(CheckOneLeader());
+  EXPECT_TRUE(CheckOneLeader());
 
   auto leader_id2 = GetLeaderId();
-  ASSERT_NE(leader_id2, kNoLeader);
-  ASSERT_NE(leader_id2, leader_id1);
+  EXPECT_NE(leader_id2, kNoLeader);
+  EXPECT_NE(leader_id2, leader_id1);
 
   ClearTestContext(config);
 }
@@ -77,9 +77,9 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   sleepMs(10);
 
   // Test propose a few entries
-  ASSERT_TRUE(ProposeOneEntry(1));
-  ASSERT_TRUE(ProposeOneEntry(2));
-  ASSERT_TRUE(ProposeOneEntry(3));
+  EXPECT_TRUE(ProposeOneEntry(1));
+  EXPECT_TRUE(ProposeOneEntry(2));
+  EXPECT_TRUE(ProposeOneEntry(3));
 
   ClearTestContext(config);
 }
