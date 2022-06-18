@@ -155,6 +155,7 @@ Status LogManager::DeleteLogEntriesFrom(raft_index_t idx) {
 // shallow copy. The caller of this function must ensure vec is cleared.
 Status LogManager::GetLogEntriesFrom(raft_index_t idx, std::vector<LogEntry> *vec) {
   // std::lock_guard<std::mutex> lock(mtx_);
+  vec->clear();
 
   if (Count() <= 0 || idx > LastLogEntryIndex()) {
     return kIndexBeyondRange;
