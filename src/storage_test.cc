@@ -16,7 +16,10 @@ class StorageTest : public ::testing::Test {
 
  public:
   // Remove created log file in case that created log affect next test
-  void Clear() { std::filesystem::remove(kStorageTestFileName); }
+  void Clear() { 
+    // std::filesystem::remove(kStorageTestFileName); 
+    remove(kStorageTestFileName.c_str()); 
+  }
 
   auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
     auto rand_size = rand() % (max_len - min_len) + min_len;
