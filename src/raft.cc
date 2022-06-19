@@ -184,6 +184,9 @@ void RaftState::Process(AppendEntriesReply *reply) {
   assert(reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
+  LOG(util::kRaft, "S%d receive AE response from S%d (Accept%d Expect I%d)", id_,
+      reply->reply_id, reply->success, reply->expect_index);
+
   // Check if this reply is expired
   if (Role() != kLeader || reply->term < CurrentTerm()) {
     return;
@@ -203,10 +206,12 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
     if (node->NextIndex() < update_nextIndex) {
       node->SetNextIndex(update_nextIndex);
+      LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
     }
 
     if (node->MatchIndex() < update_matchIndex) {
       node->SetMatchIndex(update_matchIndex);
+      LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->NextIndex());
     }
     tryUpdateCommitIndex();
   } else {
@@ -560,6 +565,8 @@ void RaftState::sendHeartBeat(raft_node_id_t peer) {
   auto prev_index = next_index - 1;
   auto prev_term = lm_->TermAt(prev_index);
 
+  LOG(util::kRaft, "S%d send heartbeat to S%d(I%d->I%d)", id_, peer, next_index,
+      next_index);
   auto args = AppendEntriesArgs{CurrentTerm(), id_, prev_index, prev_term,
                                 CommitIndex(), 0,   0,          std::vector<LogEntry>()};
   rpc_clients_[peer]->sendMessage(args);
