@@ -121,9 +121,9 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   std::scoped_lock<std::mutex> lck(mtx_);
 
   LOG(util::kRaft,
-      "S%d Receive AppendEntries From S%d (PI=%d PT=%d EntCnt=%d LCommit=%d)", id_,
-      args->leader_id, args->prev_log_index, args->prev_log_term, args->entries.size(),
-      args->leader_commit);
+      "S%d Receive AppendEntries From S%d (T%d PI=%d PT=%d EntCnt=%d LCommit=%d)", id_,
+      args->term, args->leader_id, args->prev_log_index, args->prev_log_term,
+      args->entries.size(), args->leader_commit);
 
   reply->reply_id = id_;
 
@@ -222,8 +222,12 @@ void RaftState::Process(AppendEntriesReply *reply) {
     // NOTE: Simply set NextIndex to be expect_index might be error since the message
     // comes from reply might not be meaningful message
     // Update nextIndex to be expect index
-    node->SetNextIndex(reply->expect_index);
-    LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
+    // reply->expect_index = 0 means when receiving this AE args, the server has higher
+    // term, thus this expect_index is of no means
+    if (reply->expect_index != 0) {
+      node->SetNextIndex(reply->expect_index);
+      LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
+    }
   }
 
   // TODO: May require applier to apply this log entry
@@ -594,8 +598,8 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
   lm_->GetLogEntriesFrom(next_index, &args.entries);
   LOG(util::kRaft, "S%d require entry cnt=%d, get entry cnt=%d", id_, require_entry_cnt,
       args.entries.size());
-  LOG(util::kRaft, "S%d AE To S%d (I%d->I%d)", id_, peer, next_index,
-      lm_->LastLogEntryIndex());
+  LOG(util::kRaft, "S%d AE To S%d (I%d->I%d) at T%d", id_, peer, next_index,
+      lm_->LastLogEntryIndex(), CurrentTerm());
 
   // if (lm_->LastLogEntryIndex() >= 3) {
   //   auto val = *reinterpret_cast<int

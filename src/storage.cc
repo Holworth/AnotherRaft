@@ -19,7 +19,8 @@ void PersistStorage::persistHeader() {
   }
   this->file_->seekp(0, std::ios::beg);
   this->file_->write(reinterpret_cast<char*>(&header_), kHeaderSize);
-  this->file_->flush();
+  // this->file_->flush();
+  this->file_->sync();
 }
 
 void PersistStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
