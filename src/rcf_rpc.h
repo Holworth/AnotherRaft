@@ -8,6 +8,7 @@
 #include "RCF/RcfServer.hpp"
 #include "raft.h"
 #include "raft_struct.h"
+#include "raft_type.h"
 #include "rpc.h"
 #include "serializer.h"
 
@@ -36,7 +37,7 @@ class RCFRpcClient final : public RpcClient {
 
  public:
   // Construction
-  RCFRpcClient(const NetAddress &target_address);
+  RCFRpcClient(const NetAddress &target_address, raft_node_id_t id);
 
   RCFRpcClient &operator=(const RCFRpcClient &) = delete;
   RCFRpcClient(const RCFRpcClient &) = delete;
@@ -56,16 +57,19 @@ class RCFRpcClient final : public RpcClient {
  private:
   // Callback function
   static void onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> buf,
-                                    ClientPtr client_ptr, RaftState *raft);
+                                    ClientPtr client_ptr, RaftState *raft,
+                                    raft_node_id_t peer);
 
   static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf,
-                                      ClientPtr client_ptr, RaftState *raft);
+                                      ClientPtr client_ptr, RaftState *raft,
+                                      raft_node_id_t peer);
 
  private:
   RaftState *raft_;
   RCF::RcfInit rcf_init_;
   NetAddress target_address_;
   bool stopped_;
+  raft_node_id_t id_;
 };
 
 class RCFRpcServer final : public RpcServer {

@@ -41,8 +41,8 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
   return reply_buf;
 }
 
-RCFRpcClient::RCFRpcClient(const NetAddress &target_address)
-    : target_address_(target_address), rcf_init_(), stopped_(false) {}
+RCFRpcClient::RCFRpcClient(const NetAddress &target_address, raft_node_id_t id)
+    : target_address_(target_address), id_(id), rcf_init_(), stopped_(false) {}
 
 void RCFRpcClient::Init() {}
 
@@ -59,7 +59,9 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
-  auto cmp_callback = [=]() { onRequestVoteComplete(ret, client_ptr, this->raft_); };
+  auto cmp_callback = [=]() {
+    onRequestVoteComplete(ret, client_ptr, this->raft_, this->id_);
+  };
   ret = client_ptr->RequestVote(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
@@ -75,16 +77,20 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
-  auto cmp_callback = [=]() { onAppendEntriesComplete(ret, client_ptr, this->raft_); };
+  auto cmp_callback = [=]() {
+    onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_);
+  };
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
 void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
-                                         ClientPtr client_ptr, RaftState *raft) {
+                                         ClientPtr client_ptr, RaftState *raft,
+                                         raft_node_id_t peer) {
   (void)client_ptr;
   auto ePtr = ret.getAsyncException();
   if (ePtr.get()) {
-    LOG(util::kRPC, "S%d RequestVote RPC Call Error: %s", ePtr->getErrorString().c_str());
+    LOG(util::kRPC, "S%d RequestVote RPC Call Error: %s", peer,
+        ePtr->getErrorString().c_str());
   } else {
     RCF::ByteBuffer ret_buf = *ret;
     RequestVoteReply reply;
@@ -94,12 +100,14 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
 }
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
-                                           ClientPtr client_ptr, RaftState *raft) {
+                                           ClientPtr client_ptr, RaftState *raft,
+                                           raft_node_id_t peer) {
   (void)client_ptr;
 
   auto ePtr = ret.getAsyncException();
   if (ePtr.get()) {
-    LOG(util::kRPC, "AppendEntries RPC Call Error: %s", ePtr->getErrorString().c_str());
+    LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
+        ePtr->getErrorString().c_str());
   } else {
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;

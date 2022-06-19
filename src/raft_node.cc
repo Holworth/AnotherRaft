@@ -33,7 +33,7 @@ void RaftNode::Init() {
   // Create an RPC client that is able to send RPC request to remote server
   for (const auto& [id, addr] : servers_) {
     if (id != node_id_me_) {
-      rcf_clients_.insert({id, new rpc::RCFRpcClient(addr)});
+      rcf_clients_.insert({id, new rpc::RCFRpcClient(addr, id)});
     }
   }
 
