@@ -283,7 +283,10 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   if (storage_ != nullptr) {
     std::vector<LogEntry> persist_ent{entry};
     auto lo = lm_->LastLogEntryIndex();
+    LOG(util::kRaft, "S%d persist entry(I%d->I%d)", id_, lo, lo);
     storage_->PersistEntries(lo, lo, persist_ent);
+    storage_->SetLastIndex(lo);
+    LOG(util::kRaft, "S%d persist entry(I%d->I%d) finished", id_, lo, lo);
   }
 
   int val = *reinterpret_cast<int *>(entry.CommandData().data());

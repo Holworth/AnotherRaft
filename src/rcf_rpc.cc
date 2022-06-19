@@ -84,7 +84,7 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
   (void)client_ptr;
   auto ePtr = ret.getAsyncException();
   if (ePtr.get()) {
-    LOG(util::kRPC, "RequestVote RPC Call Error: %s", ePtr->getErrorString().c_str());
+    LOG(util::kRPC, "S%d RequestVote RPC Call Error: %s", ePtr->getErrorString().c_str());
   } else {
     RCF::ByteBuffer ret_buf = *ret;
     RequestVoteReply reply;
