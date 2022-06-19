@@ -132,6 +132,8 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
     reply->success = false;
     reply->term = CurrentTerm();
     reply->expect_index = 0;
+    LOG(util::kRaft, "S%d reply to S%d with T%d EI%d", id_, args->leader_id, reply->term,
+        reply->expect_index);
     return;
   }
 
@@ -186,8 +188,8 @@ void RaftState::Process(AppendEntriesReply *reply) {
   assert(reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
-  LOG(util::kRaft, "S%d receive AE response from S%d (Accept%d Expect I%d)", id_,
-      reply->reply_id, reply->success, reply->expect_index);
+  LOG(util::kRaft, "S%d receive AE response from S%d (Accept%d Expect I%d Term %d)", id_,
+      reply->reply_id, reply->success, reply->expect_index, reply->term);
 
   // Check if this reply is expired
   if (Role() != kLeader || reply->term < CurrentTerm()) {
@@ -213,11 +215,11 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
     if (node->MatchIndex() < update_matchIndex) {
       node->SetMatchIndex(update_matchIndex);
-      LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->NextIndex());
+      LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->MatchIndex());
     }
     tryUpdateCommitIndex();
   } else {
-    // NOTE: Simply set NextIndex to be expect_index might be error since the message 
+    // NOTE: Simply set NextIndex to be expect_index might be error since the message
     // comes from reply might not be meaningful message
     // Update nextIndex to be expect index
     node->SetNextIndex(reply->expect_index);
@@ -592,7 +594,7 @@ void RaftState::sendAppendEntries(raft_node_id_t peer) {
   lm_->GetLogEntriesFrom(next_index, &args.entries);
   LOG(util::kRaft, "S%d require entry cnt=%d, get entry cnt=%d", id_, require_entry_cnt,
       args.entries.size());
-  LOG(util::kRaft, "S%d AE To S%d (%d->%d)", id_, peer, next_index,
+  LOG(util::kRaft, "S%d AE To S%d (I%d->I%d)", id_, peer, next_index,
       lm_->LastLogEntryIndex());
 
   // if (lm_->LastLogEntryIndex() >= 3) {
