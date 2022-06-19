@@ -42,6 +42,7 @@ class CounterBench {
     // Wait for leader election
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
+    // A thread that periodically reports result
     auto report_results = [this]() {
       while (true) {
         std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -52,17 +53,21 @@ class CounterBench {
     std::thread report_thread(report_results);
     report_thread.detach();
 
-    int test_cnt = 1000;
+    int test_cnt = 100000;
     int succ_cnt = 0;
     while (true) {
+      // Propose at most 100000 entries
+      if (succ_cnt >= test_cnt) {
+        continue;
+      }
       bool stat = ProposeOneEntry();
-      // if (stat) {
-      //   succ_cnt += 1;
-      // }
-      // if (succ_cnt >= test_cnt) {
-      //   node_->Exit();
-      //   return;
-      // }
+      if (stat) {
+        succ_cnt += 1;
+      }
+      if (succ_cnt >= test_cnt) {
+        node_->Exit();
+        return;
+      }
     }
   }
 
