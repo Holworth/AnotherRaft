@@ -122,7 +122,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
 
   LOG(util::kRaft,
       "S%d Receive AppendEntries From S%d (T%d PI=%d PT=%d EntCnt=%d LCommit=%d)", id_,
-      args->term, args->leader_id, args->prev_log_index, args->prev_log_term,
+      args->leader_id, args->term, args->prev_log_index, args->prev_log_term,
       args->entries.size(), args->leader_commit);
 
   reply->reply_id = id_;

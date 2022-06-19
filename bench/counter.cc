@@ -125,7 +125,8 @@ int main(int argc, char* argv[]) {
   RaftNode::NodeConfig config;
   config.node_id_me = parser.GetNodeId();
   config.servers = parser.GetNetConfig();
-  config.storage_filename = std::string("raft_log") + std::to_string(config.node_id_me);
+  // config.storage_filename = std::string("raft_log") + std::to_string(config.node_id_me);
+  config.storage_filename = "";
   config.rsm = new CounterStateMachine();
   // std::filesystem::remove(std::string("raft_log") + std::to_string(config.node_id_me));
   remove((std::string("raft_log") + std::to_string(config.node_id_me)).c_str());
