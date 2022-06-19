@@ -44,6 +44,7 @@ void PersistStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
 
     this->file_->seekp(header_.write_off);
     this->file_->write(this->buf_, write_buf_size);
+    this->file_->sync();
     // printf("write data at %d, len %d\n", header_.write_off, write_buf_size);
     header_.write_off += write_buf_size;
     header_.last_off = header_.write_off;
