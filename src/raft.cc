@@ -120,7 +120,10 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   assert(args != nullptr && reply != nullptr);
   std::scoped_lock<std::mutex> lck(mtx_);
 
-  LOG(util::kRaft, "S%d Receive AppendEntries From S%d", id_, args->leader_id);
+  LOG(util::kRaft,
+      "S%d Receive AppendEntries From S%d (PI=%d PT=%d EntCnt=%d LCommit=%d)", id_,
+      args->leader_id, args->prev_log_index, args->prev_log_term, args->entries.size(),
+      args->leader_commit);
 
   reply->reply_id = id_;
 
