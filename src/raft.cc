@@ -148,6 +148,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
     reply->success = false;
     reply->term = CurrentTerm();
     reply->expect_index = commit_index_ + 1;
+    LOG(util::kRaft, "S%d reply with expect index=%d", id_, reply->expect_index);
     return;
   }
 
@@ -157,6 +158,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
     checkConflictEntryAndAppendNew(args);
   }
   reply->expect_index = args->prev_log_index + args->entry_cnt + 1;
+  LOG(util::kRaft, "S%d reply with expect index=%d", id_, reply->expect_index);
 
   // Step4: Update commit index if necessary
   if (args->leader_commit > CommitIndex()) {
@@ -215,8 +217,11 @@ void RaftState::Process(AppendEntriesReply *reply) {
     }
     tryUpdateCommitIndex();
   } else {
+    // NOTE: Simply set NextIndex to be expect_index might be error since the message 
+    // comes from reply might not be meaningful message
     // Update nextIndex to be expect index
     node->SetNextIndex(reply->expect_index);
+    LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
   }
 
   // TODO: May require applier to apply this log entry
