@@ -47,7 +47,7 @@ RCFRpcClient::RCFRpcClient(const NetAddress &target_address)
 void RCFRpcClient::Init() {}
 
 void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
-  if (stopped_) { // Directly return if this client is stopped
+  if (stopped_) {  // Directly return if this client is stopped
     return;
   }
 
@@ -64,7 +64,7 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
 }
 
 void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
-  if (stopped_) { // Directly return if this client is stopped
+  if (stopped_) {  // Directly return if this client is stopped
     return;
   }
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
@@ -82,19 +82,30 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
 void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
                                          ClientPtr client_ptr, RaftState *raft) {
   (void)client_ptr;
-  RCF::ByteBuffer ret_buf = *ret;
-  RequestVoteReply reply;
-  Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
-  raft->Process(&reply);
+  auto ePtr = ret.getAsyncException();
+  if (ePtr.get()) {
+    LOG(util::kRPC, "RequestVote RPC Call Error: %s", ePtr->getErrorString().c_str());
+  } else {
+    RCF::ByteBuffer ret_buf = *ret;
+    RequestVoteReply reply;
+    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
+    raft->Process(&reply);
+  }
 }
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
                                            ClientPtr client_ptr, RaftState *raft) {
   (void)client_ptr;
-  RCF::ByteBuffer ret_buf = *ret;
-  AppendEntriesReply reply;
-  Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
-  raft->Process(&reply);
+
+  auto ePtr = ret.getAsyncException();
+  if (ePtr.get()) {
+    LOG(util::kRPC, "AppendEntries RPC Call Error: %s", ePtr->getErrorString().c_str());
+  } else {
+    RCF::ByteBuffer ret_buf = *ret;
+    AppendEntriesReply reply;
+    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
+    raft->Process(&reply);
+  }
 }
 
 RCFRpcServer::RCFRpcServer(const NetAddress &my_address)
@@ -107,9 +118,7 @@ void RCFRpcServer::Start() {
   server_.start();
 }
 
-void RCFRpcServer::Stop() {
-  server_.stop();
-}
+void RCFRpcServer::Stop() { server_.stop(); }
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {
   // Nothing to do
