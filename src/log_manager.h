@@ -19,6 +19,8 @@ class Storage;
 // entries in log compaction LogManager uses a ring buffer to store log entries.
 class LogManager {
   static constexpr int kExpandFactor = 4;
+  // initialized capacity, to avoid frequent allocation
+  static constexpr int kInitCapacity = 100000; 
 public:
   // Callback function when an entry is deleted in log manager
   using Deleter = void (*)(LogEntry *);

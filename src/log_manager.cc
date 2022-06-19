@@ -34,7 +34,7 @@ LogManager::LogManager(Storage *persister, int64_t initial_cap, Deleter deleter)
 
 // Create a new log manager from persisted storage
 LogManager *LogManager::NewLogManager(Storage *storage) {
-  auto ret = new LogManager(storage, 1, nullptr);
+  auto ret = new LogManager(storage, 100000, nullptr);
   if (storage != nullptr) {
     std::vector<LogEntry> vec;
     storage->LogEntries(&vec);
