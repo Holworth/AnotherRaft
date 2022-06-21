@@ -1,5 +1,6 @@
 #include "storage_engine.h"
 #include "leveldb/db.h"
+#include "leveldb/options.h"
 
 namespace kv {
 
@@ -19,7 +20,11 @@ class LevelDBStorageEngine final : public StorageEngine {
   }
 
   bool Put(const std::string& key, const std::string& value) override {
-    auto stat = dbptr_->Put(leveldb::WriteOptions(), key, value);
+    // NOTE: Should we use wo.sync=true or wo.sync=false, there is a huge performance
+    // difference between these two choices
+    auto wo = leveldb::WriteOptions();
+    wo.sync = false;
+    auto stat = dbptr_->Put(wo, key, value);
     return stat.ok();
   }
 

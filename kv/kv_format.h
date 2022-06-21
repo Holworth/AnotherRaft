@@ -8,7 +8,7 @@ size_t GetRawBytesSizeForRequest(const Request& request);
 void RequestToRawBytes(const Request& request, char* bytes);
 
 // Deserialize a request from raw bytes
-void RawBytesToRequest(const char* bytes, Request* request);
+void RawBytesToRequest(char* bytes, Request* request);
 
 // Serialize a string to raw bytes specified by buf, returns the next position of 
 // last written bytes
