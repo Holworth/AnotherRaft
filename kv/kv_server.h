@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "kv_format.h"
-#include "kv_rsm.h"
+#include "storage_engine.h"
 #include "raft.h"
 #include "raft_node.h"
 #include "type.h"
@@ -28,7 +28,7 @@ class KvServer {
 
  private:
   raft::RaftNode* raft_;
-  KVRsm* kv_stm_;
+  StorageEngine* engine_;
   // We need a channel that receives apply messages from raft
   // We need a concurrent map to record which entries have been applied, associated with
   // their term and value (if it is a Get operation)

@@ -1,6 +1,8 @@
 #include "kv_server.h"
+
 #include <mutex>
 
+#include "kv_format.h"
 #include "log_entry.h"
 #include "raft_struct.h"
 #include "type.h"
@@ -69,14 +71,29 @@ void KvServer::ApplyRequestCommandThread() {
     // entry yet
     raft::LogEntry ent;
     // Only apply this ent when it is valid
-    kv_stm_->ApplyLogEntry(ent);
-
-    
+    Request req;
+    RawBytesToRequest(ent.CommandData().data(), &req);
+    std::string get_value;
+    KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
+    switch (req.type) {
+      case kPut: 
+        engine_->Put(req.key, req.value);
+        break;
+      case kDelete: 
+        engine_->Delete(req.key);
+        break;
+      case kGet: 
+        if (engine_->Get(req.key, &get_value)) {
+          ar.err = kKeyNotExist;
+          ar.value = "";
+        } else {
+          ar.value = std::move(get_value);
+        }
+        break;
+      default:
+        assert(0);
+    }
     // Add the apply result into map
-    KvRequestApplyResult ar;
-    ar.raft_term = ent.Term();
-    ar.value = std::string("");
-    ar.err = kOk;
     std::scoped_lock<std::mutex> lck(map_mutex_);
     applied_cmds_.insert({ent.Index(), ar});
   }
