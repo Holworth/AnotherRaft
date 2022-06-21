@@ -40,3 +40,5 @@ cmake-build-debug
 neovim.json
 
 RCF/doc
+
+!third-party/leveldb/lib/libleveldb.a
