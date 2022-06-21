@@ -7,11 +7,17 @@ enum RequestType {
   kPut = 1,
   kDelete = 2,
   kGet = 3,
-  kUndetermined = 4,
-  kDetectLeader = 5
+  kDetectLeader = 4,
+  // kUndetermined = 5,
 };
 
-enum ErrorType { kNotLeader = 1, kKeyNotExist = 2, kEntryDeleted = 3, kOk = 4 };
+enum ErrorType {
+  kNotLeader = 1,
+  kKeyNotExist = 2,
+  kEntryDeleted = 3,
+  kRequestExecTimeout = 4,
+  kOk = 5
+};
 
 struct Request {
   RequestType type;

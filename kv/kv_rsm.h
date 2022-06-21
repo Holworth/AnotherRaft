@@ -5,15 +5,15 @@
 #include "storage_engine.h"
 
 namespace kv {
-class KVStateMachine : public raft::Rsm {
+class KVRsm : public raft::Rsm {
  public:
   // Constructor: Opening an existed database or create a new one if the
   // specified database does not exist
-  KVStateMachine(const std::string& dbname) : db_(StorageEngine::Default(dbname)) {}
-  ~KVStateMachine() { delete db_; }
+  KVRsm(const std::string& dbname) : db_(StorageEngine::Default(dbname)) {}
+  ~KVRsm() { delete db_; }
 
-  KVStateMachine(const KVStateMachine&) = delete;
-  KVStateMachine operator=(const KVStateMachine&) = delete;
+  KVRsm(const KVRsm&) = delete;
+  KVRsm operator=(const KVRsm&) = delete;
 
   // Raft state machine apply interface override. The KV state machine parses
   // the apply operation type and Put a key-value pair into local key-value

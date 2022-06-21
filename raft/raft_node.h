@@ -1,8 +1,8 @@
 #pragma once
+#include <atomic>
 #include <cstdio>
 #include <memory>
 #include <unordered_map>
-#include <atomic>
 
 #include "raft.h"
 #include "rcf_rpc.h"
@@ -42,7 +42,7 @@ class RaftNode {
   bool Exited() { return exit_.load(); }
 
   // To stop and continue current node. This is typically an interface for testing
-  // Raft cluster robustness under unstable network condition. We call Pause() on 
+  // Raft cluster robustness under unstable network condition. We call Pause() on
   // this node to make an illusion that this node is separate from the cluster
   // void Pause();
   // void Continue();
@@ -58,9 +58,9 @@ class RaftNode {
   RaftState* getRaftState() { return raft_state_; }
   Rsm* getRsm() { return rsm_; }
 
-  void Propose(const CommandData& cmd) {
-    raft_state_->Propose(cmd);
-  }
+  ProposeResult Propose(const CommandData& cmd) { return raft_state_->Propose(cmd); }
+
+  bool IsLeader() { return raft_state_->Role() == kLeader; }
 
  private:
   void startTickerThread();
@@ -79,7 +79,7 @@ class RaftNode {
   // the ticker thread and applier thread can also exit normally
   std::atomic<bool> exit_;
   std::atomic<bool> disconnected_;
-  Rsm *rsm_;
-  Storage *storage_;
+  Rsm* rsm_;
+  Storage* storage_;
 };
 }  // namespace raft

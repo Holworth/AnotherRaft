@@ -2,7 +2,7 @@
 #include "kv_format.h"
 #include "type.h"
 namespace kv {
-void KVStateMachine::ApplyLogEntry(raft::LogEntry entry) {
+void KVRsm::ApplyLogEntry(raft::LogEntry entry) {
   Request req;
   RawBytesToRequest(entry.CommandData().data(), &req);
   // Currently only deal with Put & Delete request
