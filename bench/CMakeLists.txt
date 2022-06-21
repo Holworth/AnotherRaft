@@ -31,7 +31,7 @@ foreach(test_file_source ${TEST_FILES})
   if(${test_file_name} MATCHES "_test.cc$")
     string(REPLACE ".cc" "" test_exec_name ${test_file_name})
     add_executable(${test_exec_name} ${test_file_name})
-    target_link_libraries(${test_exec_name} rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(${test_exec_name} raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
   endif()
 endforeach()
 

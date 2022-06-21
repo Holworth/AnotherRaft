@@ -17,6 +17,10 @@ TEST(CommandLineParserTest, TestSimpleParsing) {
   ASSERT_EQ(config, net_config);
   ASSERT_EQ(parser.GetNodeId(), 1);
   ASSERT_EQ(parser.GetCommandSize(), 4096);
+
+  args[8] = "64K";
+  ASSERT_TRUE(parser.Parse(9, args));
+  ASSERT_EQ(parser.GetCommandSize(), 64 * 1024);
 }
 
 TEST(CommandLineParserTest, TestDefaultValue) {

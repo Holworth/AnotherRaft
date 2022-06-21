@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 SET(CMAKE_CXX_STANDARD 17)
 
-
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR})
 
@@ -29,12 +28,14 @@ set(
   util.cc
   log_manager.cc
   storage.cc
+  #leveldb_storage.cc
   rcf_rpc.cc
   raft.cc
   raft_node.cc
 )
 
 add_library(raft ${RAFT_SRC})
+target_include_directories(raft PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 set(TEST_FILES)
 file(GLOB TEST_FILES ./*.cc)

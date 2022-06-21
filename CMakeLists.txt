@@ -6,10 +6,13 @@ SET(CMAKE_CXX_STANDARD 17)
 include_directories(${CMAKE_SOURCE_DIR}/RCF/include)
 add_subdirectory(${CMAKE_SOURCE_DIR}/RCF)
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
-add_subdirectory(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_SOURCE_DIR}/third-party/leveldb/include)
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/third-party)
+add_subdirectory(${CMAKE_SOURCE_DIR}/raft)
 add_subdirectory(${CMAKE_SOURCE_DIR}/test)
 add_subdirectory(${CMAKE_SOURCE_DIR}/bench)
+add_subdirectory(${CMAKE_SOURCE_DIR}/kv)
 
 
 

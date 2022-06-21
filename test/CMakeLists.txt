@@ -30,13 +30,13 @@ add_executable(async_client AsyncClient.cc)
 
 add_executable(adder Adder.cc)
 
-target_link_libraries(server rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(client rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(server raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(client raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
-target_link_libraries(async_server rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
-target_link_libraries(async_client rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(async_server raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(async_client raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
-target_link_libraries(adder rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+target_link_libraries(adder raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
 
 set(TEST_FILES)
 file(GLOB TEST_FILES ./*.cc)
@@ -46,7 +46,7 @@ foreach(test_file_source ${TEST_FILES})
   if(${test_file_name} MATCHES "_test.cc$")
     string(REPLACE ".cc" "" test_exec_name ${test_file_name})
     add_executable(${test_exec_name} ${test_file_name})
-    target_link_libraries(${test_exec_name} rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(${test_exec_name} raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
   endif()
 endforeach()
 
