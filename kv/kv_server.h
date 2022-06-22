@@ -27,6 +27,11 @@ class KvServer {
 
  public:
   KvServer() = default;
+  ~KvServer() {
+    delete channel_;
+    delete db_;
+    delete raft_;
+  }
 
  public:
   static KvServer* NewKvServer(const KvServerConfig& kv_server_config);
@@ -45,6 +50,8 @@ class KvServer {
 
   auto Id() const { return id_; }
 
+  bool IsLeader() const { return raft_->IsLeader(); }
+
  private:
   // Check if a log entry has been committed yet
   bool CheckEntryCommitted(const raft::ProposeResult& pr, KvRequestApplyResult* apply);
@@ -59,10 +66,10 @@ class KvServer {
   }
 
  public:
-
   // For test and debug
   void Exit() {
     raft_->Exit();
+    db_->Close();
     exit_.store(true);
   };
 
@@ -75,7 +82,7 @@ class KvServer {
  private:
   raft::RaftNode* raft_;
   Channel* channel_;  // channel is used to interact with lower level raft library
-  StorageEngine* engine_;
+  StorageEngine* db_;
 
   // We need a channel that receives apply messages from raft
   // We need a concurrent map to record which entries have been applied, associated with

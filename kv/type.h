@@ -12,7 +12,7 @@ enum RequestType {
 };
 
 enum ErrorType {
-  kNotLeader = 1,
+  kNotALeader = 1,
   kKeyNotExist = 2,
   kEntryDeleted = 3,
   kRequestExecTimeout = 4,

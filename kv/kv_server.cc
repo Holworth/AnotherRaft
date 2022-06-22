@@ -13,7 +13,7 @@ namespace kv {
 KvServer* KvServer::NewKvServer(const KvServerConfig& config) {
   auto kv_server = new KvServer();
   kv_server->channel_ = Channel::NewChannel(100000);
-  kv_server->engine_ = StorageEngine::Default(config.storage_engine_name);
+  kv_server->db_ = StorageEngine::Default(config.storage_engine_name);
   kv_server->id_ = config.raft_node_config.node_id_me;
 
   // Pass channel as a Rsm into raft
@@ -39,7 +39,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
 
   switch (request->type) {
     case kDetectLeader:
-      resp->err = raft_->IsLeader() ? kOk : kNotLeader;
+      resp->err = raft_->IsLeader() ? kOk : kNotALeader;
       return;
     case kPut:
     case kDelete:
@@ -86,7 +86,7 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
     apply->err = kEntryDeleted;
     apply->value = "";
   } else {
-    apply->err = kOk;
+    apply->err = ar.err;
     apply->value = ar.value;
   }
   return true;
@@ -110,13 +110,13 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
       case kPut:
-        server->engine_->Put(req.key, req.value);
+        server->db_->Put(req.key, req.value);
         break;
       case kDelete:
-        server->engine_->Delete(req.key);
+        server->db_->Delete(req.key);
         break;
       case kGet:
-        if (!server->engine_->Get(req.key, &get_value)) {
+        if (!server->db_->Get(req.key, &get_value)) {
           ar.err = kKeyNotExist;
           ar.value = "";
         } else {

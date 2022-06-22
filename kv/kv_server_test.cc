@@ -9,6 +9,7 @@
 #include <thread>
 
 #include "gtest/gtest.h"
+#include "raft_type.h"
 #include "type.h"
 #include "util.h"
 namespace kv {
@@ -57,6 +58,8 @@ class KvServerTest : public ::testing::Test {
         servers_[i]->DealWithRequest(&req, &resp);
         if (resp.err == kOk) {
           leader_id_ = i;
+          // We might need to also record the term of the "leader" so that we can 
+          // know who is the true leader?
           return i;
         }
       }
@@ -66,6 +69,15 @@ class KvServerTest : public ::testing::Test {
 
   bool Alive(raft::raft_node_id_t id) {
     return !servers_[id]->IsDisconnected() && !servers_[id]->Exited();
+  }
+
+  raft::raft_node_id_t GetCurrentLeaderId() {
+    for (int i = 0; i < node_num_; ++i) {
+      if (Alive(i) && servers_[i]->IsLeader()) {
+        return i;
+      }
+    }
+    return kNoLeader;
   }
 
  private:
@@ -83,10 +95,16 @@ class KvServerTest : public ::testing::Test {
         case kOk:
         case kKeyNotExist:
           return resp->err;
-        case kNotLeader:
-        case kRequestExecTimeout:
+
         case kEntryDeleted:
           break;
+
+        // The leader might be separated from the cluster
+        case kRequestExecTimeout:
+        case kNotALeader:
+          leader_id_ = kNoLeader;
+          break;
+        
         default:
           assert(false);
       }
@@ -184,6 +202,8 @@ TEST_F(KvServerTest, TestDeleteAndOverwrite) {
       {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
   };
 
+  LaunchAllServers(servers_config);
+
   std::string value;
   const int test_cnt = 10;
 
@@ -219,6 +239,31 @@ TEST_F(KvServerTest, TestDeleteAndOverwrite) {
   }
 
   ClearTestContext(servers_config);
+}
+
+TEST_F(KvServerTest, TestGetPreviousValueAfterLeaderCrashes) {
+  auto servers_config = NodesConfig{
+      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
+      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
+      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
+  };
+
+  LaunchAllServers(servers_config);
+
+  std::string value;
+
+  const int phase1_put_cnt = 10;
+  for (int i = 0; i < phase1_put_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    auto value = "value" + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  for (int i = 0; i < phase1_put_cnt; ++i) {
+    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, "value" + std::to_string(i));
+  }
+
 }
 
 }  // namespace kv

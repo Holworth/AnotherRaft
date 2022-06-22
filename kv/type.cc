@@ -16,7 +16,7 @@ const std::string ToString(RequestType type) {
 }
 const std::string ToString(ErrorType type) {
   switch (type) {
-    case kNotLeader:
+    case kNotALeader:
       return "kNotLeader";
     case kKeyNotExist:
       return "KeyNotExist";

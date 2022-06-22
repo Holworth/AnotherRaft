@@ -13,6 +13,9 @@ class StorageEngine {
   // Create and return a storage engine pointer using specified database name
   static StorageEngine* Default(const std::string& dbname);
 
+  // Makes sure the database successfully exits
+  virtual void Close() = 0;
+
   // Put a key-value pair into local storage engine, return true if the
   // operation succeed, returns false if any error occurred. The input key &
   // value must maintain liveness during insertion

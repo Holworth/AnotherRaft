@@ -1,6 +1,7 @@
 #include "storage_engine.h"
 #include "leveldb/db.h"
 #include "leveldb/options.h"
+#include <iostream>
 
 namespace kv {
 
@@ -12,8 +13,12 @@ class LevelDBStorageEngine final : public StorageEngine {
     options.create_if_missing = true;
 
     auto stat = leveldb::DB::Open(options, dbname, &dbptr_);
+    if (!stat.ok()) {
+      std::cout << stat.ToString() << std::endl;
+    }
     assert(stat.ok());
   }
+
 
   ~LevelDBStorageEngine() {
     delete dbptr_;
@@ -37,6 +42,11 @@ class LevelDBStorageEngine final : public StorageEngine {
     auto stat = dbptr_->Get(leveldb::ReadOptions(), key, value);
     return stat.ok();
   }
+
+  void Close() override {
+    // delete dbptr_;
+  }
+
  private:
   leveldb::DB* dbptr_;
 };
