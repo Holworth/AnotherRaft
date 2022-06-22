@@ -8,11 +8,13 @@
 #include "raft_struct.h"
 #include "storage_engine.h"
 #include "type.h"
+#include "util.h"
 namespace kv {
-KvServer* KvServer::NewKvServer(const KvServerConfig &config) {
+KvServer* KvServer::NewKvServer(const KvServerConfig& config) {
   auto kv_server = new KvServer();
   kv_server->channel_ = Channel::NewChannel(100000);
   kv_server->engine_ = StorageEngine::Default(config.storage_engine_name);
+  kv_server->id_ = config.raft_node_config.node_id_me;
 
   // Pass channel as a Rsm into raft
   auto raft_config = config.raft_node_config;
@@ -88,10 +90,11 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
 
 void KvServer::ApplyRequestCommandThread(KvServer* server) {
   while (!server->exit_.load()) {
-    // Read data from concurrent queue, the thread should be blocked if there is no
-    // entry yet
+    // Read committed entry from raft
     raft::LogEntry ent = server->channel_->Pop();
-    // Only apply this ent when it is valid
+    LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", ent.Index(), ent.Term());
+
+    // Apply this entry to state machine(i.e. Storage Engine)
     Request req;
     RawBytesToRequest(ent.CommandData().data(), &req);
     std::string get_value;

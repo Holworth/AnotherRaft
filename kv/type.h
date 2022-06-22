@@ -16,7 +16,10 @@ enum ErrorType {
   kKeyNotExist = 2,
   kEntryDeleted = 3,
   kRequestExecTimeout = 4,
-  kOk = 5
+  kOk = 5,
+  // This error is used in test, in which a request can not be done within 
+  // specified seconds, probably due to no enough servers
+  kKVRequestTimesout = 6,
 };
 
 struct Request {
@@ -42,5 +45,9 @@ inline constexpr size_t RequestHdrSize() {
 inline constexpr size_t ResponseHdrSize() {
   return sizeof(RequestType) + sizeof(uint32_t) * 2 + sizeof(ErrorType);
 }
+
+const std::string ToString(RequestType type);
+const std::string ToString(ErrorType type);
+const std::string ToString(const Request& req);
 
 }  // namespace kv

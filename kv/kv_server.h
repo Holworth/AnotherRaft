@@ -7,6 +7,7 @@
 #include "kv_format.h"
 #include "raft.h"
 #include "raft_node.h"
+#include "raft_type.h"
 #include "storage_engine.h"
 #include "type.h"
 namespace kv {
@@ -24,18 +25,25 @@ class KvServer {
     std::string value;
   };
 
-public:
+ public:
   KvServer() = default;
 
  public:
-  KvServer* NewKvServer(const KvServerConfig& kv_server_config);
+  static KvServer* NewKvServer(const KvServerConfig& kv_server_config);
 
  public:
   void DealWithRequest(const Request* request, Response* resp);
   // Disable this server
-  void Exit();  
+
   // Start running this kv server
-  void Start(); 
+  void Start();
+
+  // Do necessary initialize work, for example, apply existed Snapshot to
+  // storage engine(Not implemented yet), currently just initialize raft
+  // state
+  void Init() { raft_->Init(); }
+
+  auto Id() const { return id_; }
 
  private:
   // Check if a log entry has been committed yet
@@ -50,6 +58,20 @@ public:
     t.detach();
   }
 
+ public:
+
+  // For test and debug
+  void Exit() {
+    raft_->Exit();
+    exit_.store(true);
+  };
+
+  bool Exited() const { return raft_->Exited(); }
+
+  void Disconnect() { raft_->Disconnect(); }
+
+  bool IsDisconnected() const { return raft_->IsDisconnected(); }
+
  private:
   raft::RaftNode* raft_;
   Channel* channel_;  // channel is used to interact with lower level raft library
@@ -63,5 +85,7 @@ public:
 
   // Check if this server has exited
   std::atomic<bool> exit_;
+
+  raft::raft_node_id_t id_;
 };
 }  // namespace kv
