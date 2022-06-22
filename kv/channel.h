@@ -15,6 +15,7 @@ class Channel : public raft::Rsm {
 
   void ApplyLogEntry(raft::LogEntry entry) override {queue_.Push(entry);}
   raft::LogEntry Pop() { return queue_.Pop(); }
+  bool TryPop(raft::LogEntry& ent) { return queue_.TryPop(ent); }
 
  private:
   ConcurrentQueue<raft::LogEntry> queue_;

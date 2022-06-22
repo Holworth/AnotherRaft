@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -57,14 +58,14 @@ class KvServerTest : public ::testing::Test {
         Response resp;
         servers_[i]->DealWithRequest(&req, &resp);
         if (resp.err == kOk) {
-          leader_id_ = i;
-          // We might need to also record the term of the "leader" so that we can 
-          // know who is the true leader?
-          return i;
+          if (resp.raft_term > leader_term) {
+            leader_id_ = i;
+            leader_term = resp.raft_term;
+          }
         }
       }
     }
-    return kNoLeader;
+    return leader_id_;
   }
 
   bool Alive(raft::raft_node_id_t id) {
@@ -103,8 +104,9 @@ class KvServerTest : public ::testing::Test {
         case kRequestExecTimeout:
         case kNotALeader:
           leader_id_ = kNoLeader;
+          leader_term = 0;
           break;
-        
+
         default:
           assert(false);
       }
@@ -134,6 +136,7 @@ class KvServerTest : public ::testing::Test {
 
   void LaunchRaftNodeInstance(const KvServerConfig& config) {
     auto kv_server = KvServer::NewKvServer(config);
+    // std::printf("create server with server=%p db=%p\n", kv_server, kv_server->DB());
     this->servers_[kv_server->Id()] = kv_server;
     kv_server->Init();
     auto kv_thread = std::thread([=]() { kv_server->Start(); });
@@ -167,6 +170,7 @@ class KvServerTest : public ::testing::Test {
   KvServer* servers_[kMaxNodeNum];
   int node_num_;
   raft::raft_node_id_t leader_id_ = kNoLeader;
+  raft::raft_term_t leader_term = 0;
   static const raft::raft_node_id_t kNoLeader = -1;
 };
 
@@ -264,6 +268,45 @@ TEST_F(KvServerTest, TestGetPreviousValueAfterLeaderCrashes) {
     EXPECT_EQ(value, "value" + std::to_string(i));
   }
 
+  auto leader1 = GetCurrentLeaderId();
+  Disconnect(leader1);
+
+  // Previous value should be read from remaining cluster
+  for (int i = 0; i < phase1_put_cnt; ++i) {
+    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, "value" + std::to_string(i));
+  }
+  auto leader2 = GetCurrentLeaderId();
+  ASSERT_NE(leader1, leader2);
+
+  // Delete all keys from phase1 and put some new keys in phase2
+  const int phase2_put_cnt = 10;
+
+  for (int i = 0; i < phase1_put_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    EXPECT_EQ(Delete(key), kOk);
+  }
+
+  for (int i = 0; i < phase2_put_cnt; ++i) {
+    auto key = "key" + std::to_string(i + phase1_put_cnt);
+    auto value = "value" + std::to_string(i + phase1_put_cnt);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  // Check results
+  for (int i = 0; i < phase1_put_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    EXPECT_EQ(Get(key, &value), kKeyNotExist);
+  }
+
+  for (int i = 0; i < phase2_put_cnt; ++i) {
+    auto key = "key" + std::to_string(i + phase1_put_cnt);
+    auto expect_value = "value" + std::to_string(i + phase1_put_cnt);
+    EXPECT_EQ(Get(key, &value), kOk);
+    EXPECT_EQ(value, expect_value);
+  }
+
+  ClearTestContext(servers_config);
 }
 
 }  // namespace kv

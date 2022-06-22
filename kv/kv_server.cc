@@ -36,6 +36,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   resp->type = request->type;
   resp->client_id = request->client_id;
   resp->sequence = request->sequence;
+  resp->raft_term = raft_->getRaftState()->CurrentTerm();
 
   switch (request->type) {
     case kDetectLeader:
@@ -95,7 +96,11 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
 void KvServer::ApplyRequestCommandThread(KvServer* server) {
   while (!server->exit_.load()) {
     // Read committed entry from raft
-    raft::LogEntry ent = server->channel_->Pop();
+    // raft::LogEntry ent = server->channel_->Pop();
+    raft::LogEntry ent;
+    if (!server->channel_->TryPop(ent)) {
+      continue;
+    }
     LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", server->Id(), ent.Index(),
         ent.Term());
 

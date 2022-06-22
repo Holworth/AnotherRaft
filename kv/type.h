@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <string>
 
+#include "raft_type.h"
+
 namespace kv {
 enum RequestType {
   kPut = 1,
@@ -17,7 +19,7 @@ enum ErrorType {
   kEntryDeleted = 3,
   kRequestExecTimeout = 4,
   kOk = 5,
-  // This error is used in test, in which a request can not be done within 
+  // This error is used in test, in which a request can not be done within
   // specified seconds, probably due to no enough servers
   kKVRequestTimesout = 6,
 };
@@ -35,6 +37,7 @@ struct Response {
   uint32_t client_id;
   uint32_t sequence;
   ErrorType err;
+  raft::raft_term_t raft_term;
   std::string value;  // Valid if type is Get
 };
 
@@ -43,7 +46,8 @@ inline constexpr size_t RequestHdrSize() {
 }
 
 inline constexpr size_t ResponseHdrSize() {
-  return sizeof(RequestType) + sizeof(uint32_t) * 2 + sizeof(ErrorType);
+  return sizeof(RequestType) + sizeof(uint32_t) * 2 + sizeof(ErrorType) +
+         sizeof(raft::raft_term_t);
 }
 
 const std::string ToString(RequestType type);

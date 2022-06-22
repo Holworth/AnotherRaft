@@ -68,16 +68,20 @@ class KvServer {
  public:
   // For test and debug
   void Exit() {
+    exit_.store(true);
     raft_->Exit();
     db_->Close();
-    exit_.store(true);
   };
 
-  bool Exited() const { return raft_->Exited(); }
+  bool Exited() const { 
+    return exit_.load();
+  }
 
   void Disconnect() { raft_->Disconnect(); }
 
   bool IsDisconnected() const { return raft_->IsDisconnected(); }
+
+  StorageEngine* DB() { return db_;}
 
  private:
   raft::RaftNode* raft_;
