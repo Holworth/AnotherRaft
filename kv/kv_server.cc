@@ -31,6 +31,8 @@ void KvServer::Start() {
 }
 
 void KvServer::DealWithRequest(const Request* request, Response* resp) {
+  LOG(raft::util::kRaft, "S%d deal with req %s", id_, ToString(*request).c_str());
+
   resp->type = request->type;
   resp->client_id = request->client_id;
   resp->sequence = request->sequence;
@@ -53,12 +55,14 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
 
       // Loop until the propose entry to be applied
       raft::util::Timer timer;
+      timer.Reset();
       KvRequestApplyResult ar;
       while (timer.ElapseMilliseconds() <= 300) {
         // Check if applied
         if (CheckEntryCommitted(pr, &ar)) {
           resp->err = ar.err;
           resp->value = ar.value;
+          LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }
       }
@@ -92,11 +96,16 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
   while (!server->exit_.load()) {
     // Read committed entry from raft
     raft::LogEntry ent = server->channel_->Pop();
-    LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", ent.Index(), ent.Term());
+    LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", server->Id(), ent.Index(),
+        ent.Term());
 
     // Apply this entry to state machine(i.e. Storage Engine)
     Request req;
     RawBytesToRequest(ent.CommandData().data(), &req);
+
+    LOG(raft::util::kRaft, "S%d Apply request(%s) to db", server->Id(),
+        ToString(req).c_str());
+
     std::string get_value;
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
@@ -107,11 +116,14 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
         server->engine_->Delete(req.key);
         break;
       case kGet:
-        if (server->engine_->Get(req.key, &get_value)) {
+        if (!server->engine_->Get(req.key, &get_value)) {
           ar.err = kKeyNotExist;
           ar.value = "";
         } else {
+          ar.err = kOk;
           ar.value = std::move(get_value);
+          LOG(raft::util::kRaft, "S%d apply Get command (get value=%s)", server->Id(),
+              ar.value.c_str());
         }
         break;
       default:

@@ -1,7 +1,10 @@
 #include "kv_server.h"
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <chrono>
+#include <filesystem>
 #include <string>
 #include <thread>
 
@@ -35,7 +38,9 @@ class KvServerTest : public ::testing::Test {
   ErrorType Get(const std::string& key, std::string* value) {
     Request request = Request{kGet, 0, 0, key, std::string("")};
     Response resp;
-    return WaitUntilRequestDone(&request, &resp);
+    auto res = WaitUntilRequestDone(&request, &resp);
+    *value = resp.value;
+    return res;
   }
 
   ErrorType Delete(const std::string& key) {
@@ -69,6 +74,7 @@ class KvServerTest : public ::testing::Test {
     timer.Reset();
     while (timer.ElapseMilliseconds() < kKVRequestTimesout * 1000) {
       if (leader_id_ == kNoLeader && DetectLeader() == kNoLeader) {
+        LOG(raft::util::kRaft, "Detect No Leader");
         sleepMs(300);
         continue;
       }
@@ -99,6 +105,7 @@ class KvServerTest : public ::testing::Test {
   }
 
   void LaunchAllServers(const NodesConfig& nodes_config) {
+    node_num_ = nodes_config.size();
     auto net_config = GetNetConfigFromNodesConfig(nodes_config);
     for (const auto& [id, config] : nodes_config) {
       raft::RaftNode::NodeConfig raft_config = {id, net_config, config.storage_name,
@@ -115,6 +122,26 @@ class KvServerTest : public ::testing::Test {
     kv_thread.detach();
   };
 
+  void ClearTestContext(const NodesConfig& nodes_config) {
+    auto cmp = [](KvServer* node) {
+      if (!node->Exited()) {
+        node->Exit();
+        delete node;
+      }
+    };
+    std::for_each(servers_, servers_ + node_num_, cmp);
+
+    // Clear created log files
+    for (const auto& [_, config] : nodes_config) {
+      if (config.storage_name != "") {
+        remove(config.storage_name.c_str());
+      }
+      if (config.dbname != "") {
+        std::filesystem::remove_all(config.dbname);
+      }
+    }
+  }
+
  public:
   void Disconnect(raft::raft_node_id_t id) { servers_[id]->Disconnect(); }
 
@@ -122,21 +149,76 @@ class KvServerTest : public ::testing::Test {
   KvServer* servers_[kMaxNodeNum];
   int node_num_;
   raft::raft_node_id_t leader_id_ = kNoLeader;
-  const raft::raft_node_id_t kNoLeader = -1;
+  static const raft::raft_node_id_t kNoLeader = -1;
 };
 
 TEST_F(KvServerTest, TestSimplePutAndGet) {
   auto servers_config = NodesConfig{
-    {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
-    {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
-    {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
+      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
+      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
+      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
   };
 
   LaunchAllServers(servers_config);
 
   std::string value;
-  ASSERT_EQ(Put("key1", "value1"), kOk);
-  ASSERT_EQ(Get("key1", &value), kOk);
-  ASSERT_EQ(value, "value1");
+  const int test_cnt = 10;
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    auto value = "value" + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  for (int i = 0; i < test_cnt; ++i) {
+    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, "value" + std::to_string(i));
+  }
+
+  ClearTestContext(servers_config);
 }
+
+TEST_F(KvServerTest, TestDeleteAndOverwrite) {
+  auto servers_config = NodesConfig{
+      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
+      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
+      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
+  };
+
+  std::string value;
+  const int test_cnt = 10;
+
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    auto value = "value" + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  for (int i = 0; i < test_cnt; ++i) {
+    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, "value" + std::to_string(i));
+  }
+
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    if (i % 2 == 0) {
+      EXPECT_EQ(Delete(key), kOk);
+    } else {
+      auto value = "value2-" + std::to_string(i);
+      EXPECT_EQ(Put(key, value), kOk);
+    }
+  }
+
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = "key" + std::to_string(i);
+    if (i % 2 == 0) {
+      EXPECT_EQ(Get(key, &value), kKeyNotExist);
+    } else {
+      EXPECT_EQ(Get(key, &value), kOk);
+      EXPECT_EQ(value, "value2-" + std::to_string(i));
+    }
+  }
+
+  ClearTestContext(servers_config);
+}
+
 }  // namespace kv
