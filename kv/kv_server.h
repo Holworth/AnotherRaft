@@ -7,7 +7,10 @@
 #include "raft.h"
 #include "raft_node.h"
 #include "type.h"
+#include "concurrent_queue.h"
 namespace kv {
+
+
 class KvServer {
  public:
   struct KvRequestApplyResult {
@@ -17,7 +20,11 @@ class KvServer {
   };
 
  public:
+  KvServer* NewKvServer(/* Some configuration struct */);
+
+ public:
   void DealWithRequest(const Request* request, Response* resp);
+  void Exit(); // Exit this server
 
  private:
   // Check if a log entry has been committed yet
@@ -34,5 +41,8 @@ class KvServer {
   // their term and value (if it is a Get operation)
   std::unordered_map<raft::raft_index_t, KvRequestApplyResult> applied_cmds_;
   std::mutex map_mutex_;
+
+  // Check if this server has exited
+  std::atomic<bool> exit_;
 };
 }  // namespace kv

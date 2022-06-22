@@ -126,12 +126,12 @@
 },
 {
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/kv",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/third-party/leveldb/include -I/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/raft -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/kv.dir/kv_rsm.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_rsm.cc",
-  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_rsm.cc"
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/third-party/leveldb/include -I/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/raft -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/kv.dir/kv_server.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_server.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_server.cc"
 },
 {
   "directory": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/build/kv",
-  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/third-party/leveldb/include -I/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/raft -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/kv_rsm_test.dir/kv_rsm_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_rsm_test.cc",
-  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/kv_rsm_test.cc"
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/RCF/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/third-party/leveldb/include -I/include -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv -I/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/raft -isystem /usr/local/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX12.0.sdk -std=gnu++17 -o CMakeFiles/concurrent_queue_test.dir/concurrent_queue_test.cc.o -c /Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/concurrent_queue_test.cc",
+  "file": "/Users/kqh/PostGraduate/RaftWork/Holworth/AnotherRaft/kv/concurrent_queue_test.cc"
 }
 ]
