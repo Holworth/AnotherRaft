@@ -11,6 +11,11 @@
 #include "type.h"
 namespace kv {
 
+struct KvServerConfig {
+  raft::RaftNode::NodeConfig raft_node_config;
+  std::string storage_engine_name;
+};
+
 class KvServer {
  public:
   struct KvRequestApplyResult {
@@ -19,12 +24,18 @@ class KvServer {
     std::string value;
   };
 
+public:
+  KvServer() = default;
+
  public:
-  KvServer* NewKvServer(/* Some configuration struct */);
+  KvServer* NewKvServer(const KvServerConfig& kv_server_config);
 
  public:
   void DealWithRequest(const Request* request, Response* resp);
-  void Exit();  // Exit this server
+  // Disable this server
+  void Exit();  
+  // Start running this kv server
+  void Start(); 
 
  private:
   // Check if a log entry has been committed yet
@@ -35,7 +46,7 @@ class KvServer {
 
  private:
   raft::RaftNode* raft_;
-  Channel channel_;  // channel is used to interact with lower level raft library
+  Channel* channel_;  // channel is used to interact with lower level raft library
   StorageEngine* engine_;
 
   // We need a channel that receives apply messages from raft

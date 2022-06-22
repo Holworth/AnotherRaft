@@ -4,9 +4,25 @@
 
 #include "kv_format.h"
 #include "log_entry.h"
+#include "raft_node.h"
 #include "raft_struct.h"
+#include "storage_engine.h"
 #include "type.h"
 namespace kv {
+KvServer* KvServer::NewKvServer(const KvServerConfig &config) {
+  auto kv_server = new KvServer();
+  kv_server->channel_ = Channel::NewChannel(100000);
+  kv_server->engine_ = StorageEngine::Default(config.storage_engine_name);
+
+  // Pass channel as a Rsm into raft
+  auto raft_config = config.raft_node_config;
+  raft_config.rsm = kv_server->channel_;
+  kv_server->raft_ = new raft::RaftNode(raft_config);
+
+  kv_server->exit_ = false;
+  return kv_server;
+}
+
 void KvServer::DealWithRequest(const Request* request, Response* resp) {
   resp->type = request->type;
   resp->client_id = request->client_id;
@@ -69,7 +85,7 @@ void KvServer::ApplyRequestCommandThread() {
   while (!exit_.load()) {
     // Read data from concurrent queue, the thread should be blocked if there is no
     // entry yet
-    raft::LogEntry ent = channel_.Pop();
+    raft::LogEntry ent = channel_->Pop();
     // Only apply this ent when it is valid
     Request req;
     RawBytesToRequest(ent.CommandData().data(), &req);

@@ -8,6 +8,7 @@ class Channel : public raft::Rsm {
   static Channel* NewChannel(size_t capacity);
 
   Channel(size_t capacity);
+  Channel() = default;
   ~Channel() = default;
 
   void ApplyLogEntry(raft::LogEntry entry) override;
