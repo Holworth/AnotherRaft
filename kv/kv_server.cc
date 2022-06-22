@@ -66,23 +66,23 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
 }
 
 void KvServer::ApplyRequestCommandThread() {
-  while (true) {
+  while (!exit_.load()) {
     // Read data from concurrent queue, the thread should be blocked if there is no
     // entry yet
-    raft::LogEntry ent;
+    raft::LogEntry ent = channel_.Pop();
     // Only apply this ent when it is valid
     Request req;
     RawBytesToRequest(ent.CommandData().data(), &req);
     std::string get_value;
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
-      case kPut: 
+      case kPut:
         engine_->Put(req.key, req.value);
         break;
-      case kDelete: 
+      case kDelete:
         engine_->Delete(req.key);
         break;
-      case kGet: 
+      case kGet:
         if (engine_->Get(req.key, &get_value)) {
           ar.err = kKeyNotExist;
           ar.value = "";

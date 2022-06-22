@@ -14,6 +14,7 @@ class ConcurrentQueue {
   ConcurrentQueue(size_t capacity) : capacity_(capacity), head_(0), tail_(0), size_(0) {
     elems = new T[capacity_];
   }
+  ~ConcurrentQueue() { delete[] elems; }
 
   // [MAY BLOCKED]
   void Push(const T& ent) {
