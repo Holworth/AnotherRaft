@@ -41,8 +41,14 @@ public:
   // Check if a log entry has been committed yet
   bool CheckEntryCommitted(const raft::ProposeResult& pr, KvRequestApplyResult* apply);
 
+ public:
   // A thread that periodically apply committed raft log entries to KVRsm
-  void ApplyRequestCommandThread();
+  static void ApplyRequestCommandThread(KvServer* server);
+
+  void startApplyKvRequestCommandsThread() {
+    std::thread t(ApplyRequestCommandThread, this);
+    t.detach();
+  }
 
  private:
   raft::RaftNode* raft_;

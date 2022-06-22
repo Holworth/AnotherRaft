@@ -23,6 +23,11 @@ KvServer* KvServer::NewKvServer(const KvServerConfig &config) {
   return kv_server;
 }
 
+void KvServer::Start() {
+  raft_->Start();
+  startApplyKvRequestCommandsThread();
+}
+
 void KvServer::DealWithRequest(const Request* request, Response* resp) {
   resp->type = request->type;
   resp->client_id = request->client_id;
@@ -81,11 +86,11 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
   return true;
 }
 
-void KvServer::ApplyRequestCommandThread() {
-  while (!exit_.load()) {
+void KvServer::ApplyRequestCommandThread(KvServer* server) {
+  while (!server->exit_.load()) {
     // Read data from concurrent queue, the thread should be blocked if there is no
     // entry yet
-    raft::LogEntry ent = channel_->Pop();
+    raft::LogEntry ent = server->channel_->Pop();
     // Only apply this ent when it is valid
     Request req;
     RawBytesToRequest(ent.CommandData().data(), &req);
@@ -93,13 +98,13 @@ void KvServer::ApplyRequestCommandThread() {
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
       case kPut:
-        engine_->Put(req.key, req.value);
+        server->engine_->Put(req.key, req.value);
         break;
       case kDelete:
-        engine_->Delete(req.key);
+        server->engine_->Delete(req.key);
         break;
       case kGet:
-        if (engine_->Get(req.key, &get_value)) {
+        if (server->engine_->Get(req.key, &get_value)) {
           ar.err = kKeyNotExist;
           ar.value = "";
         } else {
@@ -110,8 +115,8 @@ void KvServer::ApplyRequestCommandThread() {
         assert(0);
     }
     // Add the apply result into map
-    std::scoped_lock<std::mutex> lck(map_mutex_);
-    applied_cmds_.insert({ent.Index(), ar});
+    std::scoped_lock<std::mutex> lck(server->map_mutex_);
+    server->applied_cmds_.insert({ent.Index(), ar});
   }
 }
 }  // namespace kv
