@@ -30,7 +30,7 @@ RCF_END(I_KvServerRPCService)
 class KvServerRPCService {
  public:
   KvServerRPCService() = default;
-  Response DealWithRequest(const Request& req) { 
+  Response DealWithRequest(const Request& req) {
     Response resp;
     server_->DealWithRequest(&req, &resp);
     return resp;
@@ -55,9 +55,14 @@ class KvServerRPCClient {
 
   Response DealWithRequest(const Request& request);
 
+  // Set timeout for this RPC call, a typical value might be 300ms?
+  void SetRPCTimeOutMs(int cnt) {
+    client_stub_.getClientStub().setRemoteCallTimeoutMs(cnt);
+  }
+
  private:
-  NetAddress address_;
   RCF::RcfInit rcf_init_;
+  NetAddress address_;
   raft::raft_node_id_t id_;
   RcfClient<I_KvServerRPCService> client_stub_;
 };
@@ -78,9 +83,11 @@ class KvServerRPCServer {
     server_.start();
   }
 
+  void SetServiceContext(KvServer* server) { service_.SetKvServer(server); }
+
  private:
-  NetAddress address_;
   RCF::RcfInit rcf_init_;
+  NetAddress address_;
   raft::raft_node_id_t id_;
   RCF::RcfServer server_;
   KvServerRPCService service_;

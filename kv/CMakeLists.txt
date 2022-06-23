@@ -35,6 +35,7 @@ SET(LIBS ${libpthread} ${libdl} ${libuuid})
 SET(
   KV_SRC 
   type.cc
+  config.cc
   kv_format.cc
   storage_engine.cc
   kv_server.cc
