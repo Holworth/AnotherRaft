@@ -38,6 +38,7 @@ SET(
   kv_format.cc
   storage_engine.cc
   kv_server.cc
+  rpc.cc
 )
 
 

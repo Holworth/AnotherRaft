@@ -30,6 +30,7 @@ struct Request {
   uint32_t sequence;
   std::string key;
   std::string value;  // Ignore it if this request is not Put
+  void serialize(SF::Archive& ar) { ar& type& client_id& sequence& key& value; }
 };
 
 struct Response {
@@ -39,6 +40,10 @@ struct Response {
   ErrorType err;
   raft::raft_term_t raft_term;
   std::string value;  // Valid if type is Get
+  //
+  void serialize(SF::Archive& ar) {
+    ar& type& client_id& sequence& err& raft_term& value;
+  }
 };
 
 inline constexpr size_t RequestHdrSize() {
