@@ -134,6 +134,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
       default:
         assert(0);
     }
+    LOG(raft::util::kRaft, "S%d Apply request(%s) to db Done", server->Id(),
+        ToString(req).c_str());
     // Add the apply result into map
     std::scoped_lock<std::mutex> lck(server->map_mutex_);
     server->applied_cmds_.insert({ent.Index(), ar});

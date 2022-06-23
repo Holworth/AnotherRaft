@@ -184,7 +184,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   LaunchAllServers(servers_config);
 
   std::string value;
-  const int test_cnt = 10;
+  const int test_cnt = 1000;
   for (int i = 0; i < test_cnt; ++i) {
     auto key = "key" + std::to_string(i);
     auto value = "value" + std::to_string(i);
@@ -199,7 +199,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   ClearTestContext(servers_config);
 }
 
-TEST_F(KvServerTest, TestDeleteAndOverwrite) {
+TEST_F(KvServerTest, DISABLED_TestDeleteAndOverwrite) {
   auto servers_config = NodesConfig{
       {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
       {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
@@ -245,7 +245,7 @@ TEST_F(KvServerTest, TestDeleteAndOverwrite) {
   ClearTestContext(servers_config);
 }
 
-TEST_F(KvServerTest, TestGetPreviousValueAfterLeaderCrashes) {
+TEST_F(KvServerTest, DISABLED_TestGetPreviousValueAfterLeaderCrashes) {
   auto servers_config = NodesConfig{
       {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
       {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
@@ -256,7 +256,7 @@ TEST_F(KvServerTest, TestGetPreviousValueAfterLeaderCrashes) {
 
   std::string value;
 
-  const int phase1_put_cnt = 10;
+  const int phase1_put_cnt = 100;
   for (int i = 0; i < phase1_put_cnt; ++i) {
     auto key = "key" + std::to_string(i);
     auto value = "value" + std::to_string(i);
@@ -280,7 +280,7 @@ TEST_F(KvServerTest, TestGetPreviousValueAfterLeaderCrashes) {
   ASSERT_NE(leader1, leader2);
 
   // Delete all keys from phase1 and put some new keys in phase2
-  const int phase2_put_cnt = 10;
+  const int phase2_put_cnt = 100;
 
   for (int i = 0; i < phase1_put_cnt; ++i) {
     auto key = "key" + std::to_string(i);

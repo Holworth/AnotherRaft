@@ -19,6 +19,7 @@ if (NOT libuuid)
     MESSAGE(FATAL_ERROR "library uuid Not Found")
 endif()
 
+
 SET(LIBS ${libpthread} ${libdl} ${libuuid})
 
 set(
@@ -36,6 +37,7 @@ set(
 
 add_library(raft ${RAFT_SRC})
 target_include_directories(raft PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+# target_compile_definitions(raft PRIVATE ENABLE_RAFT_LOG="${ENABLE_RAFT_LOG}")
 
 set(TEST_FILES)
 file(GLOB TEST_FILES ./*.cc)

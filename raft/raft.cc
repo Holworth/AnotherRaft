@@ -389,6 +389,8 @@ void RaftState::tryUpdateCommitIndex() {
   }
 }
 
+// TODO: Use a specific thread to commit applied entries to application
+// Do not call this function in RPC, which may results in blocked RPC
 void RaftState::tryApplyLogEntries() {
   while (last_applied_ < commit_index_) {
     auto old_apply_idx = last_applied_;
@@ -407,9 +409,9 @@ void RaftState::tryApplyLogEntries() {
       // }
 
       rsm_->ApplyLogEntry(ent);
+      LOG(util::kRaft, "S%d Push ent(I%d T%d) to channel", id_, ent.Index(), ent.Term());
     }
     last_applied_ += 1;
-
     LOG(util::kRaft, "S%d APPLY(%d->%d)", id_, old_apply_idx, last_applied_);
   }
 }

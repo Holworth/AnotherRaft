@@ -1,5 +1,6 @@
 .PHONY: build
-build: configure
+build: clean configure
+	cmake -B build -DENABLE_RAFT_LOG=false
 	cmake --build build
 
 .PHONY: configure
@@ -11,3 +12,8 @@ configure:
 .PHONY: clean
 clean:
 	rm -rf build
+
+.PHONY: log
+log:
+	cmake -B build -DENABLE_RAFT_LOG=true
+	cmake --build build
