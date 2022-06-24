@@ -6,6 +6,7 @@
 #include "log_entry.h"
 #include "raft_type.h"
 #include "storage.h"
+#include "storage_leveldb.h"
 
 class StorageBench {
  public:
@@ -19,6 +20,8 @@ class StorageBench {
   StorageBench(const BenchmarkParameters& config) : config_(config) {
     if (config.storage_name == "raft") {
       storage_ = raft::PersistStorage::Open("raft.log");
+    } else {
+      storage_ = raft::StorageLevelDB::Open("leveldb.log");
     }
     latency_.reserve(config.entry_cnt);
   }
