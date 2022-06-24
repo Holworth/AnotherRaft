@@ -30,6 +30,7 @@ RCF_END(I_KvServerRPCService)
 class KvServerRPCService {
  public:
   KvServerRPCService() = default;
+  KvServerRPCService(KvServer* server) : server_(server) {}
   Response DealWithRequest(const Request& req) {
     Response resp;
     server_->DealWithRequest(&req, &resp);
@@ -77,11 +78,14 @@ class KvServerRPCServer {
         id_(id),
         server_(RCF::TcpEndpoint(net_addr.ip, net_addr.port)),
         service_(service) {}
+  KvServerRPCServer() = default;
 
   void Start() {
     server_.bind<I_KvServerRPCService>(service_);
     server_.start();
   }
+
+  void Stop() { server_.stop(); }
 
   void SetServiceContext(KvServer* server) { service_.SetKvServer(server); }
 
