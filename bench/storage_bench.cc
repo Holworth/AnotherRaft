@@ -78,4 +78,7 @@ int main(int argc, char* argv[]) {
   auto bench = new StorageBench(config);
   bench->StartBench();
   bench->ShowBenchResults();
+
+  std::filesystem::remove("raft.log");
+  std::filesystem::remove("leveldb.log");
 }
