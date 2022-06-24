@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "log_entry.h"
+#include "raft_type.h"
 #include "storage.h"
 
 class StorageBench {
@@ -22,6 +23,8 @@ class StorageBench {
     latency_.reserve(config.entry_cnt);
   }
 
+  ~StorageBench() { delete storage_; }
+
   void StartBench() {
     PrepareBenchmarkData();
     std::cout << "[Start Running Benchmark]" << std::endl;
@@ -29,7 +32,7 @@ class StorageBench {
       auto start = std::chrono::high_resolution_clock::now();
       storage_->PersistEntries(ent.Index(), ent.Index(), {ent});
       auto end = std::chrono::high_resolution_clock::now();
-      auto dura = std::chrono::duration_cast<std::chrono::microseconds>(start - end);
+      auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
       latency_.push_back(dura.count());
     }
   }
@@ -39,14 +42,15 @@ class StorageBench {
     uint64_t sum = 0;
     std::for_each(latency_.begin(), latency_.end(), [&sum](const auto& i) { sum += i; });
     std::cout << "[Max Latency]" << latency_.back() << "us\n"
-    << "[Min Latency]" << latency_.front() << "us\n"
-              << "[Avg Latency]" << sum / latency_.size() << std::endl;
+              << "[Min Latency]" << latency_.front() << "us\n"
+              << "[Avg Latency]" << sum / latency_.size() << "us" << std::endl;
   }
 
  private:
   void PrepareBenchmarkData() {
     for (int i = 1; i <= config_.entry_cnt; ++i) {
       raft::LogEntry ent;
+      ent.SetType(raft::kNormal);
       ent.SetIndex(static_cast<raft::raft_index_t>(i));
       ent.SetCommandData(raft::Slice(new char[config_.entry_size], config_.entry_size));
       data_.push_back(ent);
