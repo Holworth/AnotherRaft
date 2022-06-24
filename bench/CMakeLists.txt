@@ -37,3 +37,6 @@ endforeach()
 
 add_executable(counter counter.cc)
 target_link_libraries(counter raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+
+add_executable(storage_bench storage_bench.cc)
+target_link_libraries(storage_bench raft rcf ${LIB} ${GTEST_BOTH_LIBRARIES})
