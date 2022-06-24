@@ -41,4 +41,7 @@ neovim.json
 
 RCF/doc
 
+compile_commands.json
+
 !third-party/leveldb/lib/libleveldb.a
+
