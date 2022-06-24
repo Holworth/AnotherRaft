@@ -24,6 +24,7 @@ class StorageBench {
 
   void StartBench() {
     PrepareBenchmarkData();
+    std::cout << "[Start Running Benchmark]" << std::endl;
     for (const auto& ent : data_) {
       auto start = std::chrono::high_resolution_clock::now();
       storage_->PersistEntries(ent.Index(), ent.Index(), {ent});
@@ -66,8 +67,9 @@ int main(int argc, char* argv[]) {
   } else {
     config.storage_name = "leveldb";
   }
-  config.entry_size = 4 * 1024;
-  config.entry_cnt = 1000000;
+
+  config.entry_size = std::atoi(argv[2]) * 1024;
+  config.entry_cnt = std::atoi(argv[3]);
 
   auto bench = new StorageBench(config);
   bench->StartBench();
