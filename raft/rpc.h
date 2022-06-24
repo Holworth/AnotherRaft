@@ -1,8 +1,9 @@
 #pragma once
 
+#include <string>
+
 #include "raft_struct.h"
 #include "raft_type.h"
-#include <string>
 
 namespace raft {
 namespace rpc {
@@ -15,14 +16,13 @@ struct NetAddress {
   }
 };
 
-
 // An interface for sending rpc requests to target remote peer
 class RpcClient {
-public:
+ public:
   virtual ~RpcClient() = default;
   // Do all initialization work, for example, bind to remote target server
   virtual void Init() = 0;
-  virtual void sendMessage(const RequestVoteArgs &args) = 0;
+  virtual void sendMessage(const RequestVoteArgs& args) = 0;
   virtual void sendMessage(const AppendEntriesArgs& args) = 0;
   virtual void setState(void* state) = 0;
   // Temporarily shut down this client stub. After calling this method, any sendMessage()
@@ -33,15 +33,15 @@ public:
 
 // An interface for receiving rpc request and deals with it
 class RpcServer {
-public:
+ public:
   virtual ~RpcServer() = default;
   // Start running the server
   virtual void Start() = 0;
-  // Stop running the rpc server, i.e Refuse process with inbound RPC 
+  // Stop running the rpc server, i.e Refuse process with inbound RPC
   virtual void Stop() = 0;
-  virtual void dealWithMessage(const RequestVoteArgs &reply) = 0;
+  virtual void dealWithMessage(const RequestVoteArgs& reply) = 0;
   virtual void setState(void* state) = 0;
 };
 
-} // namespace rpc
-} // namespace raft
+}  // namespace rpc
+}  // namespace raft

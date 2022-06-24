@@ -24,9 +24,7 @@ class ConcurrentQueueTest : public ::testing::Test {
     });
   }
 
-  void AddThread(std::thread* t) {
-    threads_.push_back(t);
-  }
+  void AddThread(std::thread* t) { threads_.push_back(t); }
 
  private:
   std::vector<std::thread*> threads_;
@@ -38,7 +36,7 @@ TEST_F(ConcurrentQueueTest, TestSingleConsumerSingleProducer) {
   LaunchProducerThread(queue, data);
 
   auto consumer = [=, &data]() {
-    for (const auto &val : data) {
+    for (const auto& val : data) {
       ASSERT_EQ(queue->Pop(), val);
     }
   };
@@ -59,7 +57,7 @@ TEST_F(ConcurrentQueueTest, TestVeryLargeSizeTransfer) {
   LaunchProducerThread(queue, data);
 
   auto consumer = [=, &data]() {
-    for (const auto &val : data) {
+    for (const auto& val : data) {
       ASSERT_EQ(queue->Pop(), val);
     }
   };
@@ -80,7 +78,7 @@ TEST_F(ConcurrentQueueTest, TestIfTryPopWorks) {
   LaunchProducerThread(queue, data);
 
   auto consumer = [=, &data]() {
-    for (const auto &val : data) {
+    for (const auto& val : data) {
       ASSERT_EQ(queue->Pop(), val);
     }
     int val;
@@ -89,6 +87,5 @@ TEST_F(ConcurrentQueueTest, TestIfTryPopWorks) {
   AddThread(new std::thread(consumer));
   WaitThreadsExit();
   delete queue;
-
 }
-}
+}  // namespace kv

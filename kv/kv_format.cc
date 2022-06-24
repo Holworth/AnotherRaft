@@ -1,6 +1,8 @@
 #include "kv_format.h"
+
 #include <cstddef>
 #include <cstring>
+
 #include "type.h"
 
 namespace kv {
@@ -23,4 +25,4 @@ void RawBytesToRequest(char* bytes, Request* request) {
   GetKeyFromPrefixLengthFormat(bytes, &(request->value));
 }
 
-}
+}  // namespace kv

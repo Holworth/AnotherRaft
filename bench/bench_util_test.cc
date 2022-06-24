@@ -1,4 +1,5 @@
 #include "bench_util.h"
+
 #include <algorithm>
 
 #include "gtest/gtest.h"
@@ -25,8 +26,8 @@ TEST(CommandLineParserTest, TestSimpleParsing) {
 
 TEST(CommandLineParserTest, TestDefaultValue) {
   CommandLineParser parser;
-  char* args[] = {
-      "./", "-n", "127.0.0.1:50001", "127.0.0.1:50002", "127.0.0.1:50003", "-i", "1"};
+  char* args[] = {"./", "-n", "127.0.0.1:50001", "127.0.0.1:50002", "127.0.0.1:50003",
+                  "-i", "1"};
   CommandLineParser::NetConfig net_config = {{2, {std::string("127.0.0.1"), 50003}},
                                              {1, {std::string("127.0.0.1"), 50002}},
                                              {0, {std::string("127.0.0.1"), 50001}}};
@@ -39,7 +40,7 @@ TEST(CommandLineParserTest, TestDefaultValue) {
 
 TEST(CommandLineParserTest, TestFailParser) {
   CommandLineParser parser;
-  char* args[] = {
-      "./", "-s", "127.0.0.1:50001", "127.0.0.1:50002", "127.0.0.1:50003", "-i", "1"};
+  char* args[] = {"./", "-s", "127.0.0.1:50001", "127.0.0.1:50002", "127.0.0.1:50003",
+                  "-i", "1"};
   ASSERT_FALSE(parser.Parse(7, args));
 }

@@ -6,7 +6,6 @@
 #include <fstream>
 #include <ios>
 
-
 static inline size_t alignment(size_t size, size_t align) {
   return ((size - 1) / align + 1) * align;
 }

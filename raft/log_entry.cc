@@ -1,4 +1,5 @@
 #include "log_entry.h"
+
 #include "RCF/ByteBuffer.hpp"
 
 namespace raft {
@@ -59,8 +60,7 @@ auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool {
     return false;
   }
 
-  auto fragment_meta_equal = lhs.GetN() == rhs.GetN() &&
-                             lhs.GetK() == rhs.GetK() &&
+  auto fragment_meta_equal = lhs.GetN() == rhs.GetN() && lhs.GetK() == rhs.GetK() &&
                              lhs.FragId() == rhs.FragId();
   if (!fragment_meta_equal) {
     return false;
@@ -76,8 +76,7 @@ auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool {
     return false;
   }
 
-  auto lhs_full_data = lhs.NotEncodedSlice(),
-       rhs_full_data = rhs.NotEncodedSlice();
+  auto lhs_full_data = lhs.NotEncodedSlice(), rhs_full_data = rhs.NotEncodedSlice();
   auto full_data_equal = !lhs_full_data.valid() && !rhs_full_data.valid();
   if (lhs_full_data.valid() && rhs_full_data.valid()) {
     full_data_equal = lhs_full_data.compare(rhs_full_data) == 0;
@@ -93,4 +92,4 @@ auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool {
   }
   return frag_equal;
 }
-} // namespace raft
+}  // namespace raft

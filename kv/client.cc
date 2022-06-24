@@ -66,14 +66,14 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   return resp.err;
 }
 
-ErrorType KvServiceClient::Delete(const std::string &key) {
+ErrorType KvServiceClient::Delete(const std::string& key) {
   Request request = {kDelete, 0, 0, key, ""};
   auto resp = WaitUntilRequestDone(request);
   return resp.err;
 }
 
 raft::raft_node_id_t KvServiceClient::DetectCurrentLeader() {
-  for (auto &[id, stub] : servers_) {
+  for (auto& [id, stub] : servers_) {
     if (stub == nullptr) {
       continue;
     }

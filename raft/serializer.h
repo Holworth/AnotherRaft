@@ -40,8 +40,9 @@ class Serializer {
   char* serialize_logentry_helper(const LogEntry* entry, char* dst);
   const char* deserialize_logentry_helper(const char* src, LogEntry* entry);
 
-  // Parse serialized data within [src, src + len) into a LogEntry, if the parse successed,
-  // returns the next position to parse; otherwise returns nullptr. 
-  const char* deserialize_logentry_withbound(const char* src, size_t len, LogEntry* entry);
+  // Parse serialized data within [src, src + len) into a LogEntry, if the parse
+  // successed, returns the next position to parse; otherwise returns nullptr.
+  const char* deserialize_logentry_withbound(const char* src, size_t len,
+                                             LogEntry* entry);
 };
 }  // namespace raft

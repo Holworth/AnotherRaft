@@ -1,12 +1,12 @@
 #pragma once
 
 #include <cctype>
+#include <cstdarg>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include <cstdarg>
 
 #include "raft_node.h"
 #include "raft_type.h"
@@ -48,9 +48,7 @@ struct CommandLineParser {
     return true;
   };
 
-  void ErrorMsg() {
-    std::cout << buf << std::endl;
-  }
+  void ErrorMsg() { std::cout << buf << std::endl; }
 
  private:
   bool ParseNetConfig(int argc, char* argv[], int& curr_index) {
@@ -106,7 +104,6 @@ struct CommandLineParser {
     vsprintf(buf, fmt, vaList);
     va_end(vaList);
   }
-  
 
  private:
   NetConfig net_config;

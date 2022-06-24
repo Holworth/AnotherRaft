@@ -1,18 +1,19 @@
 #include "serializer.h"
-#include "RCF/ClientStub.hpp"
-#include "RCF/Future.hpp"
-#include "RCF/InitDeinit.hpp"
-#include "RCF/RCF.hpp"
-#include "RCF/UdpEndpoint.hpp"
-#include "log_entry.h"
-#include "raft_struct.h"
-#include "raft_type.h"
-#include "gtest/gtest.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <random>
+
+#include "RCF/ClientStub.hpp"
+#include "RCF/Future.hpp"
+#include "RCF/InitDeinit.hpp"
+#include "RCF/RCF.hpp"
+#include "RCF/UdpEndpoint.hpp"
+#include "gtest/gtest.h"
+#include "log_entry.h"
+#include "raft_struct.h"
+#include "raft_type.h"
 
 // Register RPC call function
 RCF_BEGIN(I_EchoService, "I_EchoService")

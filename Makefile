@@ -17,3 +17,9 @@ clean:
 log:
 	cmake -B build -DENABLE_RAFT_LOG=true
 	cmake --build build
+
+.PHONY: format
+format:
+	clang-format -i raft/*.h raft/*.cc
+	clang-format -i kv/*.h kv/*.cc
+	clang-format -i bench/*.h bench/*.cc

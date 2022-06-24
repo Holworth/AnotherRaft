@@ -1,7 +1,9 @@
 #include "storage_engine.h"
+
+#include <iostream>
+
 #include "leveldb/db.h"
 #include "leveldb/options.h"
-#include <iostream>
 
 namespace kv {
 
@@ -19,10 +21,7 @@ class LevelDBStorageEngine final : public StorageEngine {
     assert(stat.ok());
   }
 
-
-  ~LevelDBStorageEngine() {
-    delete dbptr_;
-  }
+  ~LevelDBStorageEngine() { delete dbptr_; }
 
   bool Put(const std::string& key, const std::string& value) override {
     // NOTE: Should we use wo.sync=true or wo.sync=false, there is a huge performance
@@ -54,4 +53,4 @@ class LevelDBStorageEngine final : public StorageEngine {
 StorageEngine* StorageEngine::Default(const std::string& dbname) {
   return new LevelDBStorageEngine(dbname);
 }
-}
+}  // namespace kv

@@ -1,4 +1,5 @@
 #include "util.h"
+
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
@@ -25,9 +26,8 @@ void Logger::Debug(LogMsgType type, const char* fmt, ...) {
 
   auto now = std::chrono::steady_clock::now();
   // Log in a granularity of 0.1ms
-  auto elaps = std::chrono::duration_cast<std::chrono::microseconds>(
-                   now - startTimePoint_) /
-               100;
+  auto elaps =
+      std::chrono::duration_cast<std::chrono::microseconds>(now - startTimePoint_) / 100;
 
   va_list vaList;
   va_start(vaList, fmt);
@@ -45,5 +45,5 @@ Logger* LoggerInstance() {
   return &logger;
 }
 
-}
-}
+}  // namespace util
+}  // namespace raft

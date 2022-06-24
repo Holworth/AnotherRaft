@@ -316,12 +316,11 @@ TEST_F(RaftAppendEntriesTest, TestDetectConflictLogEntries) {
 }
 
 TEST_F(RaftAppendEntriesTest, TestDropMessagesIfTermIsLower) {
-  // Case: Omit input AppendEntriesArgs since its term is less than current 
+  // Case: Omit input AppendEntriesArgs since its term is less than current
   std::vector<TestCase> tests = {
       TestCase{
           TestRaftState{4, kFollower, 0, {{1, 1}, {2, 2}, {3, 3}, {4, 4}}},
-          AppendEntriesArgs{3, 2, 1, 1, 0, 3, 0,
-                            ConstructLogEntry({{3, 2}, {3, 3}})},
+          AppendEntriesArgs{3, 2, 1, 1, 0, 3, 0, ConstructLogEntry({{3, 2}, {3, 3}})},
           TestRaftState{4, kFollower, 0, {{1, 1}, {2, 2}, {3, 3}, {4, 4}}},
           AppendEntriesReply{4, false, 0, 1},
       },
@@ -380,11 +379,11 @@ TEST_F(RaftHandleAppendEntriesReplyTest, TestConvertToFollowerOnReceivingHigherT
 
 TEST_F(RaftHandleAppendEntriesReplyTest, TestUpdateCommitIndex) {
   std::vector<TestCase> tests = {
-    TestCase {
-      TestRaftState{1, kLeader, 0, {{1, 1}}},
-      AppendEntriesReply{1, true, 2, 2},
-      TestRaftState{1, kLeader, 1, {{1, 1}}},
-    },
+      TestCase{
+          TestRaftState{1, kLeader, 0, {{1, 1}}},
+          AppendEntriesReply{1, true, 2, 2},
+          TestRaftState{1, kLeader, 1, {{1, 1}}},
+      },
   };
   RunAllTests(tests);
 }

@@ -73,15 +73,13 @@ class KvServer {
     db_->Close();
   };
 
-  bool Exited() const { 
-    return exit_.load();
-  }
+  bool Exited() const { return exit_.load(); }
 
   void Disconnect() { raft_->Disconnect(); }
 
   bool IsDisconnected() const { return raft_->IsDisconnected(); }
 
-  StorageEngine* DB() { return db_;}
+  StorageEngine* DB() { return db_; }
 
  private:
   raft::RaftNode* raft_;

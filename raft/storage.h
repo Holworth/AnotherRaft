@@ -5,7 +5,6 @@
 
 #include "log_entry.h"
 #include "raft_type.h"
-
 #include "serializer.h"
 
 namespace raft {
@@ -105,7 +104,7 @@ class PersistStorage : public Storage {
   raft_index_t LastIndex() const { return header_.lastLogIndex; };
 
   PersistRaftState PersistState() const {
-    return  PersistRaftState{true, header_.currentTerm, header_.voteFor};
+    return PersistRaftState{true, header_.currentTerm, header_.voteFor};
   }
 
   void PersistState(const PersistRaftState& state) {

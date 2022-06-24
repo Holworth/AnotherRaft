@@ -114,7 +114,7 @@ class CounterBench {
  private:
   RaftNode* node_;
   int cmd_size_;
-  uint64_t agreement_time_ = 0; // elapse time
+  uint64_t agreement_time_ = 0;  // elapse time
   uint16_t propose_cnt_ = 0;
 };
 
@@ -130,7 +130,8 @@ int main(int argc, char* argv[]) {
   RaftNode::NodeConfig config;
   config.node_id_me = parser.GetNodeId();
   config.servers = parser.GetNetConfig();
-  // config.storage_filename = std::string("raft_log") + std::to_string(config.node_id_me);
+  // config.storage_filename = std::string("raft_log") +
+  // std::to_string(config.node_id_me);
   config.storage_filename = "";
   config.rsm = new CounterStateMachine();
   // std::filesystem::remove(std::string("raft_log") + std::to_string(config.node_id_me));

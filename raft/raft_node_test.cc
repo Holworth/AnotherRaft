@@ -48,7 +48,6 @@ TEST_F(RaftNodeBasicTest, TestReElectIfPreviousLeaderExit) {
 }
 
 TEST_F(RaftNodeBasicTest, TestWithDynamicClusterChanges) {
-
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
 

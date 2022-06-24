@@ -5,8 +5,8 @@
 #include "raft_struct.h"
 #include "raft_type.h"
 #include "rpc.h"
-#include "util.h"
 #include "rsm.h"
+#include "util.h"
 
 namespace raft {
 
@@ -38,7 +38,7 @@ struct RaftConfig {
 
   int64_t electionTimeMin, electionTimeMax;
 
-  Rsm* rsm;
+  Rsm *rsm;
 };
 
 struct ProposeResult {
@@ -85,8 +85,8 @@ class RaftState {
   void Process(AppendEntriesReply *reply);
 
   // This is a command from upper level application, the raft instance is supposed to
-  // copy this entry to its own log and replicate it to other followers 
-  ProposeResult Propose(const CommandData& command);
+  // copy this entry to its own log and replicate it to other followers
+  ProposeResult Propose(const CommandData &command);
 
  public:
   // Init all necessary status of raft state, including reset election timer
@@ -196,7 +196,7 @@ class RaftState {
 
   // Manage all log entries
   LogManager *lm_;
-  Storage* storage_;
+  Storage *storage_;
 
  private:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
@@ -213,6 +213,6 @@ class RaftState {
 
  private:
   int vote_me_cnt_;
-  Rsm* rsm_;
+  Rsm *rsm_;
 };
 }  // namespace raft

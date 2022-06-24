@@ -9,8 +9,9 @@
 #include "type.h"
 namespace kv {
 class KvServiceClient {
- // If a KV Request is not done within 10 seconds
- static const int kKVRequestTimesoutCnt = 10;
+  // If a KV Request is not done within 10 seconds
+  static const int kKVRequestTimesoutCnt = 10;
+
  public:
   KvServiceClient(const KvClusterConfig& config);
   ~KvServiceClient();

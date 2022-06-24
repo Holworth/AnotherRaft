@@ -1,4 +1,5 @@
 #include "rpc.h"
+
 #include "kv_server.h"
 #include "type.h"
 
@@ -13,5 +14,5 @@ namespace rpc {
 Response KvServerRPCClient::DealWithRequest(const Request& request) {
   return client_stub_.DealWithRequest(request);
 }
-}
-}
+}  // namespace rpc
+}  // namespace kv

@@ -16,9 +16,9 @@ class StorageTest : public ::testing::Test {
 
  public:
   // Remove created log file in case that created log affect next test
-  void Clear() { 
-    // std::filesystem::remove(kStorageTestFileName); 
-    remove(kStorageTestFileName.c_str()); 
+  void Clear() {
+    // std::filesystem::remove(kStorageTestFileName);
+    remove(kStorageTestFileName.c_str());
   }
 
   auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
@@ -132,7 +132,7 @@ TEST_F(StorageTest, TestOverwriteLogEntries) {
   Clear();
   const size_t kPutCnt = 10000;
 
-  // Stage1: Persist and check all old entries 
+  // Stage1: Persist and check all old entries
   auto sets1 = GenerateRandomEntrySets(kPutCnt);
   std::vector<LogEntry> entries;
   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
@@ -165,7 +165,7 @@ TEST_F(StorageTest, TestOverwriteLogEntries) {
   storage->PersistEntries(1, kPutCnt, entries);
   delete storage;
 
-  // Check new entries 
+  // Check new entries
   storage = PersistStorage::Open(kStorageTestFileName);
   EXPECT_EQ(storage->LastIndex(), kPutCnt);
 

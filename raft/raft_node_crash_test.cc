@@ -31,7 +31,7 @@ class RaftNodeCrashTest : public RaftNodeTest {
   }
 
   void PreRemoveFiles(const NodesConfig& config) {
-    for (const auto& [_, config]:config) {
+    for (const auto& [_, config] : config) {
       // std::filesystem::remove(config.storage_name);
       remove(config.storage_name.c_str());
     }
@@ -77,7 +77,7 @@ TEST_F(RaftNodeCrashTest, TestSomeCrashOccurs) {
   sleepMs(10);
 
   EXPECT_TRUE(ProposeOneEntry(101));
-  
+
   for (int i = 0; i < node_num_; ++i) {
     Restart(config, i);
   }

@@ -20,13 +20,14 @@ class Storage;
 class LogManager {
   static constexpr int kExpandFactor = 4;
   // initialized capacity, to avoid frequent allocation
-  static constexpr int kInitCapacity = 100000; 
-public:
+  static constexpr int kInitCapacity = 100000;
+
+ public:
   // Callback function when an entry is deleted in log manager
   using Deleter = void (*)(LogEntry *);
   friend void ReadLogFromPersister(LogManager *lm, Storage *persister);
 
-public:
+ public:
   // Default constructor is not allowed, one LogManager needs at least one
   // persister in order to guarantee crash safety
   LogManager() = delete;
@@ -35,17 +36,16 @@ public:
   LogManager(const LogManager &) = delete;
   LogManager &operator=(const LogManager &) = delete;
 
-  LogManager(Storage *persister, int64_t initial_size = 1,
-             Deleter deleter = nullptr);
+  LogManager(Storage *persister, int64_t initial_size = 1, Deleter deleter = nullptr);
 
   ~LogManager();
 
-public:
+ public:
   // Allocate a LogManager with capacity of initial_size Use "delete" to release
   // this logmananger object
-  static LogManager* NewLogManager(Storage* persister);
+  static LogManager *NewLogManager(Storage *persister);
 
-public:
+ public:
   int Capacity() const { return capacity_; }
 
   int Count() const { return count_; }
@@ -60,7 +60,7 @@ public:
 
   raft_term_t TermAt(raft_index_t idx) const;
 
-public:
+ public:
   /// Public interface
   Status AppendLogEntry(const LogEntry &entry);
 
@@ -88,7 +88,7 @@ public:
   raft_index_t LastSnapshotIndex() const { return last_snapshot_index_; }
   raft_term_t LastSnapshotTerm() const { return last_snapshot_term_; }
 
-private:
+ private:
   // Check if there is still enough room for next a few log entries
   // If there is, returns 0 to indicate ok; otherwise do allocation
   // and movement. Return 1 if any error occurs
@@ -101,7 +101,7 @@ private:
   // Append an entry to in-memory log buffer without persistence
   Status appendEntryHelper(const LogEntry &entry);
 
-private:
+ private:
   // Dealing with concurrency control, might be used
   std::mutex mtx_;
 
@@ -141,7 +141,7 @@ inline int LogManager::raftIndexToArrayIndex(raft_index_t idx) const {
 }
 
 inline raft_index_t LogManager::LastLogEntryIndex() const {
-  if (Count() == 0) { // No available in-memory log entries
+  if (Count() == 0) {  // No available in-memory log entries
     return last_snapshot_index_;
   }
   // Remember to add Capacity in case this value is negative
@@ -150,7 +150,7 @@ inline raft_index_t LogManager::LastLogEntryIndex() const {
 }
 
 inline raft_index_t LogManager::LastLogEntryTerm() const {
-  if (Count() == 0) { // No available in-memory log entries
+  if (Count() == 0) {  // No available in-memory log entries
     return last_snapshot_term_;
   }
   auto idx = (back_ - 1 + Capacity()) % Capacity();
@@ -161,4 +161,4 @@ inline raft_index_t LogManager::LastLogEntryTerm() const {
 // from a persister.
 // NOTE: Only use this function when a persister is initialized
 void ReadLogFromPersister(LogManager *lm, Storage *persister);
-} // namespace raft
+}  // namespace raft

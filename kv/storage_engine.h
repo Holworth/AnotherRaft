@@ -29,4 +29,4 @@ class StorageEngine {
   // deleted, otherwise return false
   virtual bool Delete(const std::string& key) = 0;
 };
-}
+}  // namespace kv

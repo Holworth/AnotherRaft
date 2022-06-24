@@ -67,7 +67,6 @@ class RaftNodeTest : public ::testing::Test {
     std::unordered_map<raft_index_t, CommitResult> applied_value_;
   };
 
-
   static NodesConfig ConstructNodesConfig(int server_num, bool with_storage) {
     std::string default_ip = "127.0.0.1";
     uint16_t init_port = 50001;
@@ -111,9 +110,7 @@ class RaftNodeTest : public ::testing::Test {
     auto raft_node = new RaftNode(config);
     this->nodes_[config.node_id_me] = raft_node;
     raft_node->Init();
-    auto node_thread = std::thread([=]() {
-      raft_node->Start();
-    });
+    auto node_thread = std::thread([=]() { raft_node->Start(); });
     node_thread.detach();
   };
 
@@ -283,7 +280,7 @@ class RaftNodeTest : public ::testing::Test {
     std::for_each(nodes_, nodes_ + node_num_, cmp);
 
     // Clear created log files
-    for (const auto &[_, config] : nodes_config) {
+    for (const auto& [_, config] : nodes_config) {
       if (config.storage_name != "") {
         // std::filesystem::remove(config.storage_name);
         remove(config.storage_name.c_str());

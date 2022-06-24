@@ -1,19 +1,19 @@
 #pragma once
 
-#include "SF/Archive.hpp"
-#include "raft_type.h"
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <string>
+
+#include "SF/Archive.hpp"
+#include "raft_type.h"
 
 namespace raft {
 
 class Serializer;
 
 class Slice {
-public:
+ public:
   Slice(char *data, size_t size) : data_(data), size_(size) {}
   Slice(const std::string &s) : data_(new char[s.size()]), size_(s.size()) {
     std::memcpy(data_, s.c_str(), size_);
@@ -39,7 +39,7 @@ public:
     return size() > slice.size() ? 1 : -1;
   }
 
-private:
+ private:
   char *data_ = nullptr;
   size_t size_ = 0;
 };
@@ -47,7 +47,7 @@ private:
 class LogEntry {
   friend class Serializer;
 
-public:
+ public:
   LogEntry() = default;
   LogEntry &operator=(const LogEntry &) = default;
 
@@ -95,11 +95,11 @@ public:
   // Serialization function required by RCF
   // void serialize(SF::Archive &ar);
 
-private:
+ private:
   // These three attributes are allocated when creating a command
   raft_term_t term;
   raft_index_t index;
-  raft_entry_type type; // Full entry or fragments
+  raft_entry_type type;  // Full entry or fragments
   raft_sequence_t seq;
 
   // k+m in ec mode
@@ -115,10 +115,10 @@ private:
   // data for encoding
   int start_fragment_offset;
 
-  Slice command_data_;      // Spcified by user, valid iff type = normal
-  Slice not_encoded_slice_; // Command data not being encoded
-  Slice fragment_slice_;    // Fragments of encoded data
+  Slice command_data_;       // Spcified by user, valid iff type = normal
+  Slice not_encoded_slice_;  // Command data not being encoded
+  Slice fragment_slice_;     // Fragments of encoded data
 };
 
 auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool;
-} // namespace raft
+}  // namespace raft

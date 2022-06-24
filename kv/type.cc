@@ -1,4 +1,5 @@
 #include "type.h"
+
 #include <string>
 namespace kv {
 const std::string ToString(RequestType type) {
