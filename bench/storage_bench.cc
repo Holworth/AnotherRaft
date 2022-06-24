@@ -39,6 +39,7 @@ class StorageBench {
     uint64_t sum = 0;
     std::for_each(latency_.begin(), latency_.end(), [&sum](const auto& i) { sum += i; });
     std::cout << "[Max Latency]" << latency_.back() << "us\n"
+    << "[Min Latency]" << latency_.front() << "us\n"
               << "[Avg Latency]" << sum / latency_.size() << std::endl;
   }
 
