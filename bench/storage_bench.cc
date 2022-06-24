@@ -1,7 +1,6 @@
-#include <_types/_uint64_t.h>
-
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 
 #include "gtest/gtest.h"
 #include "log_entry.h"
@@ -27,7 +26,7 @@ class StorageBench {
     PrepareBenchmarkData();
     for (const auto& ent : data_) {
       auto start = std::chrono::high_resolution_clock::now();
-      storage_->PersistEntries(1, 1, {ent});
+      storage_->PersistEntries(ent.Index(), ent.Index(), {ent});
       auto end = std::chrono::high_resolution_clock::now();
       auto dura = std::chrono::duration_cast<std::chrono::microseconds>(start - end);
       latency_.push_back(dura.count());
@@ -45,8 +44,9 @@ class StorageBench {
 
  private:
   void PrepareBenchmarkData() {
-    for (int i = 0; i < config_.entry_cnt; ++i) {
+    for (int i = 1; i <= config_.entry_cnt; ++i) {
       raft::LogEntry ent;
+      ent.SetIndex(static_cast<raft::raft_index_t>(i));
       ent.SetCommandData(raft::Slice(new char[config_.entry_size], config_.entry_size));
       data_.push_back(ent);
     }
