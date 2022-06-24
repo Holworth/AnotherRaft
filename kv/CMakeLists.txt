@@ -40,6 +40,8 @@ SET(
   storage_engine.cc
   kv_server.cc
   rpc.cc
+  kv_node.cc
+  client.cc
 )
 
 
