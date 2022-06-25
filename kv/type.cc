@@ -15,6 +15,7 @@ const std::string ToString(RequestType type) {
   }
   return "UnderterminedRequestType";
 }
+
 const std::string ToString(ErrorType type) {
   switch (type) {
     case kNotALeader:
@@ -29,6 +30,8 @@ const std::string ToString(ErrorType type) {
       return "kOk";
     case kKVRequestTimesout:
       return "KVRequestTimesout";
+    case kRPCCallFailed:
+      return "RPCCallFailed";
   }
   return "UndeterminedErrorType";
 }

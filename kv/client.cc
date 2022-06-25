@@ -37,12 +37,12 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
         return resp;
 
       case kEntryDeleted:
-        break;
-
       // The leader might be separated from the cluster
       case kRequestExecTimeout:
       case kNotALeader:
       case kRPCCallFailed:
+        LOG(raft::util::kRaft, "Client Receive Response(err=%s), fallback to nonleader",
+            ToString(resp.err).c_str());
         curr_leader_ = kNoDetectLeader;
         curr_leader_term_ = 0;
         break;
