@@ -190,10 +190,7 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
 
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
 
-  // Leader3 should not be leader1 since it has older log
-  // Leader3 should not be leader2 since leader2 has been disabled
   auto leader3 = GetLeaderId();
-  ASSERT_NE(leader3, leader1);
   ASSERT_NE(leader3, leader2);
 
   CheckBatchPut(client, "key3-", "value3-", 1, put_cnt);

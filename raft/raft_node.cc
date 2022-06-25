@@ -93,6 +93,7 @@ void RaftNode::startTickerThread() {
 }
 
 void RaftNode::Disconnect() {
+  LOG(util::kRaft, "S%d stop running raft node", node_id_me_);
   rcf_server_->Stop();
   for (auto [_, client_ptr] : rcf_clients_) {
     client_ptr->stop();
