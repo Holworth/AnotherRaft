@@ -10,6 +10,7 @@
 #include "kv_server.h"
 #include "raft_type.h"
 #include "type.h"
+#include "util.h"
 namespace kv {
 class KvServer;
 namespace rpc {
@@ -85,7 +86,10 @@ class KvServerRPCServer {
     server_.start();
   }
 
-  void Stop() { server_.stop(); }
+  void Stop() { 
+    LOG(raft::util::kRaft, "S%d stop RPC server", id_);
+    server_.stop(); 
+  }
 
   void SetServiceContext(KvServer* server) { service_.SetKvServer(server); }
 

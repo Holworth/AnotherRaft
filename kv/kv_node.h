@@ -29,8 +29,8 @@ class KvServiceNode {
 
   void Reconnect() {
     LOG(raft::util::kRaft, "S%d Reconnect", id_);
-    rpc_server_->Start();
     kv_server_->Reconnect();
+    rpc_server_->Start();
   }
 
   bool IsDisconnected() const { return kv_server_->IsDisconnected(); }

@@ -20,6 +20,11 @@ int main() {
     PrintService printService;
     server.bind<I_PrintService>(printService);
     server.start();
+    server.stop();
+    {
+      server.bind<I_PrintService>(printService);
+      server.start();
+    }
     std::cout << "Press Enter to exit..." << std::endl;
     std::cin.get();
   } catch (const RCF::Exception &e) {
