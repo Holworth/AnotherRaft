@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <string>
 #include <thread>
 
@@ -30,6 +31,14 @@ class KvClusterTest : public ::testing::Test {
   void ClearTestContext(const KvClusterConfig& config) {
     for (int i = 0; i < node_num_; ++i) {
       nodes_[i]->StopServiceNode();
+    }
+    for (const auto& [id, conf] : config) {
+      if (conf.raft_log_filename != "") {
+        std::filesystem::remove(conf.raft_log_filename);
+      }
+      if (conf.kv_dbname != "") {
+        std::filesystem::remove_all(conf.kv_dbname);
+      }
     }
   }
 
