@@ -78,7 +78,10 @@ class KvServerRPCServer {
       : address_(net_addr),
         id_(id),
         server_(RCF::TcpEndpoint(net_addr.ip, net_addr.port)),
-        service_(service) {}
+        service_(service) {
+    LOG(raft::util::kRaft, "S%d RPC init with (ip=%s port=%d)", id_, net_addr.ip.c_str(),
+        net_addr.port);
+  }
   KvServerRPCServer() = default;
 
   void Start() {
@@ -86,9 +89,9 @@ class KvServerRPCServer {
     server_.start();
   }
 
-  void Stop() { 
+  void Stop() {
     LOG(raft::util::kRaft, "S%d stop RPC server", id_);
-    server_.stop(); 
+    server_.stop();
   }
 
   void SetServiceContext(KvServer* server) { service_.SetKvServer(server); }
