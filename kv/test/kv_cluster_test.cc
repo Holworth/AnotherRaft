@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <filesystem>
 #include <string>
 #include <thread>
@@ -8,6 +9,7 @@
 #include "kv_node.h"
 #include "raft_type.h"
 #include "type.h"
+#include "util.h"
 namespace kv {
 // This test should be running on a multi-core machine, so that each thread can run
 // smoothly without interpretation
@@ -168,6 +170,7 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
 
   auto leader1 = GetLeaderId();
+  LOG(raft::util::kRaft, "Leader1 = %d", leader1);
   Disconnect(leader1);
 
   // Check get after leader transfer
@@ -175,6 +178,7 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
 
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
   auto leader2 = GetLeaderId();
+  LOG(raft::util::kRaft, "Leader2 = %d", leader2);
   ASSERT_NE(leader2, leader1);
 
   // Write some values as new leader
@@ -191,6 +195,7 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
 
   auto leader3 = GetLeaderId();
+  LOG(raft::util::kRaft, "Leader3 = %d", leader3);
   ASSERT_NE(leader3, leader2);
 
   CheckBatchPut(client, "key3-", "value3-", 1, put_cnt);
