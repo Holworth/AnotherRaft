@@ -79,6 +79,8 @@ class KvServer {
 
   bool IsDisconnected() const { return raft_->IsDisconnected(); }
 
+  void Reconnect() { raft_->Reconnect(); }
+
   StorageEngine* DB() { return db_; }
 
  private:

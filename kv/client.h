@@ -21,6 +21,8 @@ class KvServiceClient {
   ErrorType Get(const std::string&, std::string* value);
   ErrorType Delete(const std::string& key);
 
+  raft::raft_node_id_t LeaderId() const { return curr_leader_; }
+
  private:
   raft::raft_node_id_t DetectCurrentLeader();
   Response WaitUntilRequestDone(const Request& request);

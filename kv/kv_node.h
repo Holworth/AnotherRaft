@@ -19,6 +19,21 @@ class KvServiceNode {
   void StartServiceNode();
   void StopServiceNode();
 
+  // This is for debug and test
+  void Disconnect() {
+    rpc_server_->Stop();
+    kv_server_->Disconnect();
+  }
+
+  void Reconnect() {
+    rpc_server_->Start();
+    kv_server_->Reconnect();
+  }
+
+  bool IsDisconnected() const { return kv_server_->IsDisconnected(); }
+
+  bool IsLeader() const { return kv_server_->IsLeader(); }
+
  private:
   KvClusterConfig config_;
   raft::raft_node_id_t id_;
