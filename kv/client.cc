@@ -42,6 +42,7 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
       // The leader might be separated from the cluster
       case kRequestExecTimeout:
       case kNotALeader:
+      case kRPCCallFailed:
         curr_leader_ = kNoDetectLeader;
         curr_leader_term_ = 0;
         break;

@@ -22,6 +22,7 @@ enum ErrorType {
   // This error is used in test, in which a request can not be done within
   // specified seconds, probably due to no enough servers
   kKVRequestTimesout = 6,
+  kRPCCallFailed = 7,
 };
 
 struct Request {

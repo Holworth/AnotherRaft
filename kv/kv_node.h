@@ -3,6 +3,7 @@
 #include "kv_server.h"
 #include "raft_type.h"
 #include "rpc.h"
+#include "util.h"
 namespace kv {
 
 // A KvServiceNode is basically an adapter that combines the KvServer and
@@ -23,11 +24,13 @@ class KvServiceNode {
   void Disconnect() {
     rpc_server_->Stop();
     kv_server_->Disconnect();
+    LOG(raft::util::kRaft, "S%d Disconnect", id_);
   }
 
   void Reconnect() {
     rpc_server_->Start();
     kv_server_->Reconnect();
+    LOG(raft::util::kRaft, "S%d Reconnect", id_);
   }
 
   bool IsDisconnected() const { return kv_server_->IsDisconnected(); }
