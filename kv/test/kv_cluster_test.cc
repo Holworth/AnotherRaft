@@ -69,8 +69,7 @@ class KvClusterTest : public ::testing::Test {
   void CheckBatchPut(KvServiceClient* client, const std::string& key_prefix,
                      const std::string& value_prefix, int key_lo, int key_hi) {
     for (int i = key_lo; i <= key_hi; ++i) {
-      auto key = key_prefix + std::to_string(i);
-      auto value = value_prefix + std::to_string(i);
+      auto key = key_prefix + std::to_string(i); auto value = value_prefix + std::to_string(i);
       EXPECT_EQ(client->Put(key, value), kOk);
     }
   }
@@ -160,9 +159,9 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
   sleepMs(1000);
 
   auto client = new KvServiceClient(cluster_config);
-  int put_cnt = 10;
-  CheckBatchPut(client, "key1-", "value1-", 1, 10);
-  CheckBatchGet(client, "key1-", "value1-", 1, 10);
+  const int put_cnt = 10;
+  CheckBatchPut(client, "key1-", "value1-", 1, put_cnt);
+  CheckBatchGet(client, "key1-", "value1-", 1, put_cnt);
 
   // The client returns the leader id exactly the same as the true leader id
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
@@ -171,22 +170,22 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
   Disconnect(leader1);
 
   // Check get after leader transfer
-  CheckBatchGet(client, "key1-", "value1-", 1, 10);
+  CheckBatchGet(client, "key1-", "value1-", 1, put_cnt);
 
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
   auto leader2 = GetLeaderId();
   ASSERT_NE(leader2, leader1);
 
   // Write some values as new leader
-  CheckBatchPut(client, "key2-", "value2-", 1, 10);
-  CheckBatchGet(client, "key2-", "value2-", 1, 10);
+  CheckBatchPut(client, "key2-", "value2-", 1, put_cnt);
+  CheckBatchGet(client, "key2-", "value2-", 1, put_cnt);
 
   // Disable the new leader and bring the old leader back to cluster
   Disconnect(leader2);
   Reconnect(leader1);
 
-  CheckBatchGet(client, "key1-", "value1-", 1, 10);
-  CheckBatchGet(client, "key2-", "value2-", 1, 10);
+  CheckBatchGet(client, "key1-", "value1-", 1, put_cnt);
+  CheckBatchGet(client, "key2-", "value2-", 1, put_cnt);
 
   EXPECT_EQ(GetLeaderId(), client->LeaderId());
 
@@ -196,8 +195,8 @@ TEST_F(KvClusterTest, TestLeaderTransfer) {
   ASSERT_NE(leader3, leader1);
   ASSERT_NE(leader3, leader2);
 
-  CheckBatchPut(client, "key3-", "value3-", 1, 10);
-  CheckBatchGet(client, "key3-", "value3-", 1, 10);
+  CheckBatchPut(client, "key3-", "value3-", 1, put_cnt);
+  CheckBatchGet(client, "key3-", "value3-", 1, put_cnt);
 
   ClearTestContext(cluster_config);
 }
