@@ -31,6 +31,7 @@ class KvClusterTest : public ::testing::Test {
   void ClearTestContext(const KvClusterConfig& config) {
     for (int i = 0; i < node_num_; ++i) {
       nodes_[i]->StopServiceNode();
+      delete nodes_[i];
     }
     for (const auto& [id, conf] : config) {
       if (conf.raft_log_filename != "") {
