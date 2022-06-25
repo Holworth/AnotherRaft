@@ -1,3 +1,4 @@
+#pragma once
 #include "config.h"
 #include "kv_server.h"
 #include "raft_type.h"
@@ -16,6 +17,7 @@ class KvServiceNode {
   KvServiceNode(const KvClusterConfig& config, raft::raft_node_id_t id);
   void InitServiceNodeState();
   void StartServiceNode();
+  void StopServiceNode();
 
  private:
   KvClusterConfig config_;

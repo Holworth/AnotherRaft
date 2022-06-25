@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "type.h"
+#include "util.h"
 namespace kv {
 KvServiceClient::KvServiceClient(const KvClusterConfig& config) {
   for (const auto& [id, conf] : config) {
@@ -19,12 +20,16 @@ KvServiceClient::~KvServiceClient() {
 Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
   raft::util::Timer timer;
   timer.Reset();
+  LOG(raft::util::kRaft, "Client start deal with request (%s)",
+      ToString(request).c_str());
   while (timer.ElapseMilliseconds() < kKVRequestTimesoutCnt * 1000) {
     if (curr_leader_ == kNoDetectLeader && DetectCurrentLeader() == kNoDetectLeader) {
       LOG(raft::util::kRaft, "Detect No Leader");
       sleepMs(300);
       continue;
     }
+    LOG(raft::util::kRaft, "Client send request (%s) to %d", ToString(request).c_str(),
+        curr_leader_);
     auto resp = GetRPCStub(curr_leader_)->DealWithRequest(request);
     switch (resp.err) {
       case kOk:

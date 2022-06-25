@@ -33,4 +33,11 @@ void KvServiceNode::StartServiceNode() {
   rpc_server_->Start();
 }
 
+void KvServiceNode::StopServiceNode() {
+  if (!kv_server_->Exited()) {
+    kv_server_->Exit();
+  }
+  rpc_server_->Stop();
+}
+
 };  // namespace kv
