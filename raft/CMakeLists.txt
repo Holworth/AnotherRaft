@@ -37,6 +37,7 @@ set(
 
 add_library(raft ${RAFT_SRC})
 target_include_directories(raft PUBLIC ${CMAKE_CURRENT_LIST_DIR})
+target_link_libraries(raft rcf ${LIBS})
 # target_compile_definitions(raft PRIVATE ENABLE_RAFT_LOG="${ENABLE_RAFT_LOG}")
 
 set(TEST_FILES)
@@ -47,6 +48,6 @@ foreach(test_file_source ${TEST_FILES})
   if(${test_file_name} MATCHES "_test.cc$")
     string(REPLACE ".cc" "" test_exec_name ${test_file_name})
     add_executable(${test_exec_name} ${test_file_name})
-    target_link_libraries(${test_exec_name} raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+    target_link_libraries(${test_exec_name} raft ${GTEST_BOTH_LIBRARIES})
   endif()
 endforeach()
