@@ -22,15 +22,15 @@ class KvServiceNode {
 
   // This is for debug and test
   void Disconnect() {
+    LOG(raft::util::kRaft, "S%d Disconnect", id_);
     rpc_server_->Stop();
     kv_server_->Disconnect();
-    LOG(raft::util::kRaft, "S%d Disconnect", id_);
   }
 
   void Reconnect() {
+    LOG(raft::util::kRaft, "S%d Reconnect", id_);
     rpc_server_->Start();
     kv_server_->Reconnect();
-    LOG(raft::util::kRaft, "S%d Reconnect", id_);
   }
 
   bool IsDisconnected() const { return kv_server_->IsDisconnected(); }
