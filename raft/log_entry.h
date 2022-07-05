@@ -44,6 +44,7 @@ class Slice {
   size_t size_ = 0;
 };
 
+class Stripe;
 class LogEntry {
   friend class Serializer;
 

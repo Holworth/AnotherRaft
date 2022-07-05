@@ -117,7 +117,7 @@ bool Encoder::DecodeEntry(Stripe* stripe, LogEntry* entry) {
   assert(entry != nullptr);
 
   // First check if there is already a complete entry:
-  for (const auto&  ent : stripe->fragments_) {
+  for (const auto& ent : stripe->fragments_) {
     if (ent.Type() == kNormal) {
       *entry = ent;
       return true;
@@ -143,7 +143,7 @@ bool Encoder::DecodeEntry(Stripe* stripe, LogEntry* entry) {
     missing_rows_.push_back(i);
   }
 
-  for (const auto&  frag : stripe->fragments_) {
+  for (const auto& frag : stripe->fragments_) {
     if (frag.FragId() < k) {
       missing_rows_.erase(
           std::remove(missing_rows_.begin(), missing_rows_.end(), frag.FragId()));
@@ -168,7 +168,7 @@ bool Encoder::DecodeEntry(Stripe* stripe, LogEntry* entry) {
   entry->SetFragId(0);
 
   auto cmd_length = const_cast<Stripe*>(stripe)->CommandLength();
-  char* data = new char[cmd_length + 16]; 
+  char* data = new char[cmd_length + 16];
   entry->SetCommandData(Slice(data, cmd_length));
 
   // First copy the complete data part
@@ -275,4 +275,4 @@ void Stripe::Filter() {
   // SetFragRecoverCnt(-1);
   // return;
 }
-}
+}  // namespace raft

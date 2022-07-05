@@ -1,6 +1,5 @@
 #pragma once
 #include <algorithm>
-#include <sstream>
 #include <unordered_map>
 #include <vector>
 
@@ -9,19 +8,6 @@
 
 namespace raft {
 // Version is used in FlexibleK to mark the status of a stripe
-struct Version {
-  raft_index_t idx;
-  uint64_t sequence;
-  int k, m;
-
-  // Dump the important information
-  std::string toString() const {
-    std::stringstream ss;
-    ss << "Version {index:" << idx << ", sequence:" << sequence << ", k:" << k
-       << ", m:" << m << "}";
-    return ss.str();
-  }
-};
 
 class Stripe {
   friend class Encoder;
@@ -124,6 +110,9 @@ class Encoder {
     errors_matrix_ = new unsigned char[kMaxK * kMaxK];
     invert_matrix_ = new unsigned char[kMaxK * kMaxK];
   }
+
+  // Default constructor
+  Encoder() : Encoder(0, 0){};
 
   ~Encoder() {
     delete[] encode_matrix_;

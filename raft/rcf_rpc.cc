@@ -1,4 +1,5 @@
 #include "rcf_rpc.h"
+
 #include <sys/_types/_id_t.h>
 
 #include "RCF/ClientStub.hpp"
@@ -130,9 +131,9 @@ void RCFRpcServer::Start() {
   server_.start();
 }
 
-void RCFRpcServer::Stop() { 
+void RCFRpcServer::Stop() {
   LOG(util::kRaft, "stop running raft rpc server");
-  server_.stop(); 
+  server_.stop();
 }
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {

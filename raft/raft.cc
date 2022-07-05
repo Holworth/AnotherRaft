@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -61,6 +62,10 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
 
   ret->persistVoteFor();
   ret->persistCurrentTerm();
+
+  // FlexibleK: Init liveness monitor state
+  ret->live_monitor_.init_num = config.rpc_clients.size();
+  ret->live_monitor_.id = ret->id_;
 
   return ret;
 }
@@ -121,8 +126,8 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   std::scoped_lock<std::mutex> lck(mtx_);
 
   LOG(util::kRaft,
-      "S%d Receive AppendEntries From S%d (T%d PI=%d PT=%d EntCnt=%d LCommit=%d)", id_,
-      args->leader_id, args->term, args->prev_log_index, args->prev_log_term,
+      "S%d Receive AppendEntries From S%d(EC) (T%d PI=%d PT=%d EntCnt=%d LCommit=%d)",
+      id_, args->leader_id, args->term, args->prev_log_index, args->prev_log_term,
       args->entries.size(), args->leader_commit);
 
   reply->reply_id = id_;
@@ -157,7 +162,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   // Step3: Check conflicts and add new entries
   assert(args->entry_cnt == args->entries.size());
   if (args->entry_cnt > 0) {
-    checkConflictEntryAndAppendNew(args);
+    checkConflictEntryAndAppendNew(args, reply);
   }
   reply->expect_index = args->prev_log_index + args->entry_cnt + 1;
   LOG(util::kRaft, "S%d reply with expect index=%d", id_, reply->expect_index);
@@ -191,6 +196,8 @@ void RaftState::Process(AppendEntriesReply *reply) {
   LOG(util::kRaft, "S%d receive AE response from S%d (Accept%d Expect I%d Term %d)", id_,
       reply->reply_id, reply->success, reply->expect_index, reply->term);
 
+  live_monitor_.SetResponse(reply->reply_id);
+
   // Check if this reply is expired
   if (Role() != kLeader || reply->term < CurrentTerm()) {
     return;
@@ -205,17 +212,35 @@ void RaftState::Process(AppendEntriesReply *reply) {
   auto node = peers_[peer_id];
   if (reply->success) {  // Requested entries are successfully replicated
     // Update nextIndex and matchIndex for this server
-    auto update_nextIndex = reply->expect_index;
-    auto update_matchIndex = update_nextIndex - 1;
+    // auto update_nextIndex = reply->expect_index;
+    // auto update_matchIndex = update_nextIndex - 1;
+    //
+    // if (node->NextIndex() < update_nextIndex) {
+    //   node->SetNextIndex(update_nextIndex);
+    //   LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
+    // }
+    //
+    // if (node->MatchIndex() < update_matchIndex) {
+    //   node->SetMatchIndex(update_matchIndex);
+    //   LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->MatchIndex());
+    // }
+    //
 
-    if (node->NextIndex() < update_nextIndex) {
-      node->SetNextIndex(update_nextIndex);
-      LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
-    }
+    for (int i = 0; i < reply->version_cnt; ++i) {
+      auto raft_index = reply->prev_entry_index + i + 1;
+      auto reply_version = reply->versions[i];
+      assert(reply_version.idx == raft_index);
 
-    if (node->MatchIndex() < update_matchIndex) {
-      node->SetMatchIndex(update_matchIndex);
-      LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->MatchIndex());
+      if (node->matchVersion.count(raft_index) == 0 ||
+          node->matchVersion[raft_index].sequence < reply_version.sequence) {
+        node->matchVersion[raft_index] = reply_version;
+
+        // Debug:
+        // -----------------------------------------------------------------
+        LOG(util::kRaft, "S%d update Node%d match Version: seq:%llu k:%d", id_, peer_id,
+            reply_version.sequence, reply_version.k);
+        // -----------------------------------------------------------------
+      }
     }
     tryUpdateCommitIndex();
   } else {
@@ -320,7 +345,8 @@ bool RaftState::isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term) {
   return false;
 }
 
-void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
+void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
+                                               AppendEntriesReply *reply) {
   assert(args->entry_cnt == args->entries.size());
   auto old_idx = lm_->LastLogEntryIndex();
   auto array_index = 0;
@@ -339,16 +365,47 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
       conflict_index = raft_index;
       break;
     }
-  }
 
+    // Third case: even for entries with same index and term, the follower needs
+    // to check the sequence number and then decides if overwrite old entries
+    auto ent = lm_->GetSingleLogEntry(raft_index);
+    if (ent->Sequence() < args->entries[array_index].Sequence()) {
+      auto new_ent = args->entries[array_index];
+      lm_->OverWriteLogEntry(args->entries[array_index], raft_index);
+
+      // Debug:
+      // --------------------------------------------------------------------------
+      LOG(util::kRaft, "S%d overwrite I%d Version(seq=%d K=%d)", id_, raft_index,
+          new_ent.Sequence(), new_ent.GetK());
+      // --------------------------------------------------------------------------
+      reply->versions.push_back(
+          {raft_index, new_ent.Sequence(), new_ent.GetK(), new_ent.GetN()});
+    } else {
+      // Debug:
+      // --------------------------------------------------------------------------
+      LOG(util::kRaft, "S%d maintain I%d Version(seq=%d K=%d)", id_, raft_index,
+          ent->Sequence(), ent->GetK());
+      // --------------------------------------------------------------------------
+      reply->versions.push_back({raft_index, ent->Sequence(), ent->GetK(), ent->GetN()});
+    }
+  }
+  // For those new entries
+  auto old_last_index = lm_->LastLogEntryIndex();
   for (auto i = array_index; i < args->entries.size(); ++i) {
     auto raft_index = args->prev_log_index + i + 1;
     // Debug -------------------------------------------
-    auto old_last_index = lm_->LastLogEntryIndex();
     lm_->AppendLogEntry(args->entries[i]);
-    LOG(util::kRaft, "S%d APPEND(%d->%d) ent cnt=%d", id_, old_last_index,
-        lm_->LastLogEntryIndex(), args->entries.size());
+
+    LOG(util::kRaft, "S%d append I%d Version(seq=%d k=%d)", id_, raft_index,
+        args->entries[i].Sequence(), args->entries[i].GetK());
+    reply->versions.push_back({raft_index, args->entries[i].Sequence(),
+                               args->entries[i].GetK(), args->entries[i].GetN()});
   }
+
+  LOG(util::kRaft, "S%d APPEND(%d->%d) ent cnt=%d", id_, old_last_index,
+      lm_->LastLogEntryIndex(), args->entries.size());
+
+  reply->version_cnt = reply->versions.size();
 
   // Persist newly added log entries, or persist the changes to deleted log entries
   if (storage_ != nullptr) {
@@ -368,23 +425,46 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
 }
 
 void RaftState::tryUpdateCommitIndex() {
-  for (auto N = lm_->LastLogEntryIndex(); N > CommitIndex(); --N) {
-    // For each log entry, traverse all peers to check agreement count
+  for (auto N = CommitIndex() + 1; N <= lm_->LastLogEntryIndex(); ++N) {
+    // The entry at index N has not been replicated yet, which means index >=
+    // N has not been replicated neither, directly return
+    if (encoded_stripe_.count(N) == 0) {
+      return;
+    }
+    auto request_version = last_replicate_[N];
+
     int agree_cnt = 1;
-    for (const auto &[id, peer] : peers_) {
-      if (id != id_ && peer->MatchIndex() >= N) {
+    for (auto &[id, node] : peers_) {
+      // If the node's last response version matches the last requested
+      // version by leader
+      if (node->matchVersion.count(N) == 0) {
+        continue;
+      }
+
+      // Debug:
+      // ------------------------------------------------------------------------------
+      LOG(util::kRaft, "S%d request version: %s node%d replicate version: %s", id,
+          request_version.toString().c_str(), id,
+          node->matchVersion[N].toString().c_str());
+      // ------------------------------------------------------------------------------
+
+      if (node->matchVersion[N].sequence == request_version.sequence) {
         agree_cnt++;
       }
     }
 
-    int require_agree_cnt = livenessLevel() + 1;
-    if (agree_cnt >= require_agree_cnt && lm_->TermAt(N) == CurrentTerm()) {
-      // For Debug --------------------------------------------
-      auto old_commit_idx = CommitIndex();
+    // Debug:
+    // ---------------------------------------------------------------------------------
+    LOG(util::kRaft, "S%d commit require cnt%d, has %d", id_,
+        request_version.k + livenessLevel(), agree_cnt);
+    // ---------------------------------------------------------------------------------
+
+    if (agree_cnt >= request_version.k + livenessLevel() &&
+        lm_->GetSingleLogEntry(N)->Term() == CurrentTerm()) {
       SetCommitIndex(N);
-      LOG(util::kRaft, "S%d Update CommitIndex (%d->%d)", id_, old_commit_idx,
-          CommitIndex());
-      break;
+      // Index N is committed, no need to track them any more
+      removeLastReplicateVersionAt(N);
+      removeTrackVersionOfAll(N);
     }
   }
 }
@@ -443,6 +523,10 @@ void RaftState::convertToLeader() {
       lm_->LastLogEntryIndex());
   SetRole(kLeader);
   resetNextIndexAndMatchIndex();
+
+  // reset liveness monitor status
+  initLivenessMonitorState();
+
   broadcastHeartbeat();
   resetHeartbeatTimer();
 }
@@ -574,6 +658,104 @@ void RaftState::tickOnLeader() {
   }
   broadcastHeartbeat();
   resetHeartbeatTimer();
+}
+
+void RaftState::replicateEntries() {
+  LOG(util::kRaft, "S%d replicate entries", id_);
+  auto live_servers = live_monitor_.LiveNumber();
+  // F+K = # of live servers
+  encoder_.SetK(live_servers - livenessLevel());
+  encoder_.SetM(livenessLevel());
+
+  LOG(util::kRaft, "S%d estimate live server:%d K:%d M:%d", id_, live_servers,
+      encoder_.GetK(), encoder_.GetM());
+
+  // Records the map between node id and fragement id, i.e. which server should receive
+  // which fragment
+  std::map<raft_node_id_t, int> frag_map;
+  int start_frag_id = 0;
+  for (const auto &[id, _] : peers_) {
+    if (live_monitor_.IsAlive(id)) {
+      frag_map[id] = start_frag_id++;
+    }
+  }
+
+  // Generate a sequence number for next round of heartbeat messages
+  auto seq = seq_gen_.Next();
+
+  for (const auto &[id, _] : peers_) {
+    if (id == id_) {
+      continue;
+    }
+    if (!live_monitor_.IsAlive(id)) {
+      LOG(util::kRaft, "S%d detect S%d is not alive, skip it", id_, id);
+      continue;
+    }
+
+    AppendEntriesArgs args;
+    args.term = CurrentTerm();
+    args.leader_id = id_;
+    args.leader_commit = CommitIndex();
+    // In FlexibleK, we need to set prev_log_index to be exactly commit index since each
+    // round of sending messages, we need to send all entries from commit Index to last
+    // log entries
+    args.prev_log_index = CommitIndex();
+    args.prev_log_term = lm_->TermAt(args.prev_log_index);
+    args.seq = seq;
+
+    auto idx = args.prev_log_index + 1;
+    for (; idx <= lm_->LastLogEntryIndex(); ++idx) {
+      auto ent = lm_->GetSingleLogEntry(idx);
+      if (encoded_stripe_.count(idx) == 0) {
+        // This log entry has not been encoded yet, encode it
+        auto new_stripe = new Stripe();
+        LOG(util::kRaft, "S%d encode ent(I%d T%d K%d M%d)", id_, ent->Index(),
+            ent->Term(), encoder_.GetK(), encoder_.GetM());
+        encoder_.EncodeEntry(*ent, new_stripe);
+        new_stripe->UpdateVersion({ent->Index(), seq, encoder_.GetK(), encoder_.GetM()});
+        last_replicate_[ent->Index()] = {ent->Index(), seq, encoder_.GetK(),
+                                         encoder_.GetM()};
+        encoded_stripe_.insert({idx, new_stripe});
+      } else {
+        // This log entry has been encoded, but the K+M parameter might be different
+        auto stripe = encoded_stripe_[idx];
+        assert(stripe != nullptr);
+        if (stripe->GetK() != encoder_.GetK() ||
+            stripe->GetN() != (encoder_.GetK() + encoder_.GetM())) {
+          // Debug:
+          // ---------------------------------------------------------------
+          LOG(util::kRaft,
+              "S%d ReEncode Entry(I%d T%d) Seq%d Previous(K:%d M:%d), Now(K:%d, "
+              "M:%d)",
+              id_, ent->Index(), ent->Term(), seq, stripe->GetK(),
+              stripe->GetN() - stripe->GetK(), encoder_.GetK(), encoder_.GetM());
+          // ---------------------------------------------------------------
+          encoder_.EncodeEntry(*ent, stripe);
+          stripe->UpdateVersion({ent->Index(), seq, encoder_.GetK(), encoder_.GetM()});
+          last_replicate_[ent->Index()] = {ent->Index(), seq, encoder_.GetK(),
+                                           encoder_.GetM()};
+        }
+      }
+
+      // This entry is replicated as the following version
+      last_replicate_[ent->Index()] = {ent->Index(), seq, encoder_.GetK(),
+                                       encoder_.GetM()};
+
+      auto stripe = encoded_stripe_[idx];
+      auto frag_id = frag_map[id];
+      auto send_ent = stripe->GetFragment(frag_id);
+      send_ent.SetSequence(stripe->GetVersion().sequence);
+      args.entries.push_back(send_ent);
+
+      // Debug:
+      // -----------------------------------------------------------------------
+      LOG(util::kRaft, "S%d send (I%d, Frag%d) to S%d", id_, idx, frag_id, id);
+      // -----------------------------------------------------------------------
+    }
+    args.entry_cnt = args.entries.size();
+    // Send this message out
+    rpc_clients_[id]->sendMessage(args);
+  }
 }
 
 void RaftState::sendHeartBeat(raft_node_id_t peer) {

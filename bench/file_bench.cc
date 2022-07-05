@@ -80,7 +80,6 @@ class FileBench {
 };
 
 int main(int argc, char* argv[]) {
-
   FileBench::BenchmarkParameters config;
 
   config.entry_size = std::atoi(argv[1]) * 1024;

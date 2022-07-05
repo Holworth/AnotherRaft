@@ -1,6 +1,9 @@
 #pragma once
+#include <cstring>
+#include <map>
 #include <unordered_map>
 
+#include "encoder.h"
 #include "log_manager.h"
 #include "raft_struct.h"
 #include "raft_type.h"
@@ -47,6 +50,42 @@ struct ProposeResult {
   bool is_leader;
 };
 
+// A monitor that records the number of server that is still alive in current cluster
+struct LivenessMonitor {
+  static constexpr int kMaxNodeNum = 10;
+  int init_num;
+  bool response[kMaxNodeNum];
+  raft_node_id_t id;  // current server's id
+
+  void Init() { std::memset(response, true, sizeof(response)); }
+
+  void Reset() {
+    std::memset(response, false, sizeof(response));
+    response[id] = true;
+  }
+
+  void SetResponse(raft_node_id_t id) { response[id] = true; }
+
+  int LiveNumber() const {
+    int cnt = 0;
+    for (int i = 0; i < init_num; ++i) {
+      cnt += (response[i]);
+    }
+    return cnt;
+  }
+
+  bool IsAlive(raft_node_id_t target_id) const { return response[target_id]; }
+};
+
+struct SequenceGenerator {
+ public:
+  void Reset() { seq = 1; }
+  uint64_t Next() { return seq++; }
+
+ private:
+  uint64_t seq;
+};
+
 // A raft peer maintains the necessary information in terms of "Logic" state
 // of raft algorithm
 class RaftPeer {
@@ -59,8 +98,13 @@ class RaftPeer {
   raft_index_t MatchIndex() const { return match_index_; }
   void SetMatchIndex(raft_index_t match_index) { match_index_ = match_index; }
 
- private:
+  void RemoveMatchVersionAt(raft_index_t idx) {
+    matchVersion.erase(matchVersion.find(idx));
+  }
+
+ public:
   raft_index_t next_index_, match_index_;
+  std::unordered_map<raft_index_t, Version> matchVersion;
 };
 
 class RaftState {
@@ -132,7 +176,7 @@ class RaftState {
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
   // Add any new entries that are not in raft's log
-  void checkConflictEntryAndAppendNew(AppendEntriesArgs *args);
+  void checkConflictEntryAndAppendNew(AppendEntriesArgs *args, AppendEntriesReply *reply);
 
   // Reset the next index and match index fields when current server becomes leader
   void resetNextIndexAndMatchIndex();
@@ -170,6 +214,21 @@ class RaftState {
   // Send appendEntries messages to target raft peer
   void sendAppendEntries(raft_node_id_t peer);
 
+  void initLivenessMonitorState();
+
+  void removeLastReplicateVersionAt(raft_index_t idx) {
+    last_replicate_.erase(last_replicate_.find(idx));
+  };
+  void removeTrackVersionOfAll(raft_index_t idx) {
+    for (auto &[id, node] : peers_) {
+      node->RemoveMatchVersionAt(idx);
+    }
+  };
+
+  // In flexibleK, the leader needs to send AppendEntries arguments in every
+  // heartbeat round
+  void replicateEntries();
+
  private:
   // For concurrency control. A raft state instance might be accessed via
   // multiple threads, e.g. RPC thread that receives request; The state machine
@@ -197,6 +256,15 @@ class RaftState {
   // Manage all log entries
   LogManager *lm_;
   Storage *storage_;
+
+  // For FlexibleK and CRaft: We need to detect the number of live servers
+  LivenessMonitor live_monitor_;
+  Encoder encoder_;
+  SequenceGenerator seq_gen_;
+  // For each index, there is an associated stripe that contains the encoded data
+  std::map<raft_index_t, Stripe *> encoded_stripe_;
+  // For each index, last_replicate contains the recent replicate version
+  std::unordered_map<raft_index_t, Version> last_replicate_;
 
  private:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;

@@ -66,6 +66,13 @@ struct AppendEntriesReply {
 
   // The raft node id of the server that makes this reply
   raft_node_id_t reply_id;
+
+  // The context for prev_entry_index that will be used in handle reply
+  raft_index_t prev_entry_index;
+
+  int version_cnt;
+
+  std::vector<Version> versions;
 };
 
 // A struct that indicates the command specified by user of the raft cluster
