@@ -86,7 +86,9 @@ struct CommandData {
 enum {
   // kAppendEntriesArgsHdrSize = sizeof(raft_term_t) * 2 + sizeof(raft_index_t) * 2 +
   // sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
-  kAppendEntriesArgsHdrSize = 40
+  kAppendEntriesArgsHdrSize = 40,
+  kAppendEntriesReplyHdrSize = sizeof(raft_term_t) + sizeof(int) + sizeof(raft_index_t) +
+                               sizeof(raft_node_id_t) + sizeof(raft_index_t) + sizeof(int)
 };
 
 }  // namespace raft

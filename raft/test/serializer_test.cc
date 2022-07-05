@@ -232,12 +232,14 @@ void SerializerTest::TestSerializeAppendEntriesArgs(bool async) {
 }
 
 void SerializerTest::TestSerializeAppendEntriesReply(bool async) {
-  AppendEntriesReply reply = AppendEntriesReply{
-      static_cast<raft_term_t>(rand()),
-      rand(),
-      static_cast<raft_index_t>(rand()),
-      static_cast<raft_node_id_t>(rand()),
-  };
+  AppendEntriesReply reply =
+      AppendEntriesReply{static_cast<raft_term_t>(rand()),
+                         rand(),
+                         static_cast<raft_index_t>(rand()),
+                         static_cast<raft_node_id_t>(rand()),
+                         static_cast<raft_index_t>(rand()),
+                         3,
+                         {Version{1, 1, 1, 2}, Version{2, 1, 1, 1}, Version{3, 1, 1, 1}}};
 
   auto cmp = [](const AppendEntriesReply &lhs, const AppendEntriesReply &rhs) -> bool {
     return std::memcmp(&lhs, &rhs, sizeof(AppendEntriesReply)) == 0;

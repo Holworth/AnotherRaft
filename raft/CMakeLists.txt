@@ -26,6 +26,7 @@ set(
   RAFT_SRC 
   log_entry.cc 
   serializer.cc
+  encoder.cc
   util.cc
   log_manager.cc
   storage.cc

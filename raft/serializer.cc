@@ -110,13 +110,26 @@ void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesArgs *a
 }
 
 void Serializer::Serialize(const AppendEntriesReply *reply, RCF::ByteBuffer *buffer) {
+  assert(reply->version_cnt == reply->versions.size());
   auto dst = buffer->getPtr();
-  std::memcpy(dst, reply, sizeof(AppendEntriesReply));
+  // std::memcpy(dst, reply, sizeof(AppendEntriesReply));
+  std::memcpy(dst, reply, kAppendEntriesReplyHdrSize);
+  dst += kAppendEntriesReplyHdrSize;
+  for (const auto &version: reply->versions) {
+    std::memcpy(dst, &version, sizeof(Version));
+    dst += sizeof(Version);
+  }
 }
 
 void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesReply *reply) {
   auto src = buffer->getPtr();
-  std::memcpy(reply, src, sizeof(AppendEntriesReply));
+  std::memcpy(reply, src, kAppendEntriesReplyHdrSize);
+  src += kAppendEntriesReplyHdrSize;
+  for (int i = 0; i < reply->version_cnt; ++i) {
+    Version version;
+    std::memcpy(&version, src, sizeof(Version));
+    reply->versions.push_back(version);
+  }
 }
 
 char *Serializer::PutPrefixLengthSlice(const Slice &slice, char *buf) {
