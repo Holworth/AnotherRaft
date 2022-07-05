@@ -33,7 +33,7 @@ class EncoderTest : public ::testing::Test {
   }
 };
 
-TEST_F(EncoderTest, DISABLED_TestSimpleEncodingDecoding) {
+TEST_F(EncoderTest, TestSimpleEncodingDecoding) {
   const int kTestK = 2;
   const int kTestM = 1;
   const raft_index_t kTestRaftIndex = 1;
@@ -57,7 +57,7 @@ TEST_F(EncoderTest, DISABLED_TestSimpleEncodingDecoding) {
   ASSERT_EQ(recover_ent, ent);
 }
 
-TEST_F(EncoderTest, DISABLED_TestDecodingAfterRemovingOneFragment) {
+TEST_F(EncoderTest, TestDecodingAfterRemovingOneFragment) {
   const int kTestK = 2;
   const int kTestM = 1;
   const raft_index_t kTestRaftIndex = 1;
@@ -85,7 +85,7 @@ TEST_F(EncoderTest, DISABLED_TestDecodingAfterRemovingOneFragment) {
   ASSERT_EQ(recover_ent, ent);
 }
 
-TEST_F(EncoderTest, DISABLED_TestEncodingDecodingWithNonZeroOffset) {
+TEST_F(EncoderTest, TestEncodingDecodingWithNonZeroOffset) {
   const int kTestK = 9;
   const int kTestM = 9;
   const raft_index_t kTestRaftIndex = 1;

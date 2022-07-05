@@ -25,6 +25,14 @@ struct Version {
        << ", m:" << m << "}";
     return ss.str();
   }
+
+  bool operator==(const Version& rhs) const {
+    return std::memcmp(this, &rhs, sizeof(Version)) == 0;
+  }
+
+  bool operator!=(const Version& rhs) const {
+    return !(*this == rhs);
+  }
 };
 
 // Structs that are related to raft core algorithm

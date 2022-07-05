@@ -128,6 +128,7 @@ void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesReply *
   for (int i = 0; i < reply->version_cnt; ++i) {
     Version version;
     std::memcpy(&version, src, sizeof(Version));
+    src += sizeof(Version);
     reply->versions.push_back(version);
   }
 }
@@ -189,7 +190,9 @@ size_t Serializer::getSerializeSize(const AppendEntriesArgs &args) {
 }
 
 size_t Serializer::getSerializeSize(const AppendEntriesReply &reply) {
-  return sizeof(reply);
+  size_t ret = kAppendEntriesReplyHdrSize;
+  ret += reply.version_cnt * sizeof(Version);
+  return ret;
 }
 
 }  // namespace raft

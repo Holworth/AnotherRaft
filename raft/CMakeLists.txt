@@ -19,8 +19,13 @@ if (NOT libuuid)
     MESSAGE(FATAL_ERROR "library uuid Not Found")
 endif()
 
+find_library(libisal NAMES isal)
+if (NOT libisal)
+    MESSAGE(FATAL_ERROR "libraryl isa Not Found")
+endif()
 
-SET(LIBS ${libpthread} ${libdl} ${libuuid})
+
+SET(LIBS ${libpthread} ${libdl} ${libuuid} ${libisal})
 
 set(
   RAFT_SRC 

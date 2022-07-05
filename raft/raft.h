@@ -214,7 +214,9 @@ class RaftState {
   // Send appendEntries messages to target raft peer
   void sendAppendEntries(raft_node_id_t peer);
 
-  void initLivenessMonitorState();
+  void initLivenessMonitorState() {
+    live_monitor_.Init();
+  }
 
   void removeLastReplicateVersionAt(raft_index_t idx) {
     last_replicate_.erase(last_replicate_.find(idx));

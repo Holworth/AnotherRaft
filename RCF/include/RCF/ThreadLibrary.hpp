@@ -24,6 +24,7 @@
 #include <thread>
 
 #include <cstdint>
+#include <condition_variable>
 
 #include <RCF/Export.hpp>
 
