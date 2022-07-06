@@ -691,8 +691,10 @@ void RaftState::replicateEntries() {
   encoder_.SetK(live_servers - livenessLevel());
   encoder_.SetM(livenessLevel());
 
-  LOG(util::kRaft, "S%d estimate live server:%d K:%d M:%d", id_, live_servers,
-      encoder_.GetK(), encoder_.GetM());
+  auto seq = seq_gen_.Next();
+
+  LOG(util::kRaft, "S%d estimate live server:%d K:%d M:%d seq:%d", id_, live_servers,
+      encoder_.GetK(), encoder_.GetM(), seq);
 
   // Records the map between node id and fragement id, i.e. which server should receive
   // which fragment
@@ -705,7 +707,6 @@ void RaftState::replicateEntries() {
   }
 
   // Generate a sequence number for next round of heartbeat messages
-  auto seq = seq_gen_.Next();
 
   for (const auto &[id, _] : peers_) {
     if (id == id_) {
@@ -764,6 +765,10 @@ void RaftState::replicateEntries() {
       // This entry is replicated as the following version
       last_replicate_[ent->Index()] = {ent->Index(), seq, encoder_.GetK(),
                                        encoder_.GetM()};
+
+      // Remember to update encoded stripe sequence number
+      encoded_stripe_[ent->Index()]->UpdateVersion(
+          {ent->Index(), seq, encoder_.GetK(), encoder_.GetM()});
 
       auto stripe = encoded_stripe_[idx];
       auto frag_id = frag_map[id];
