@@ -53,26 +53,56 @@ struct ProposeResult {
 // A monitor that records the number of server that is still alive in current cluster
 struct LivenessMonitor {
   static constexpr int kMaxNodeNum = 10;
-  int init_num;
+  static constexpr int kLivenessTimeoutInterval = 500;
+  int node_num;
   bool response[kMaxNodeNum];
-  raft_node_id_t id;  // current server's id
+  uint64_t response_time[kMaxNodeNum];
+  raft_node_id_t me;  // current server's id
+  util::Timer timer;
 
-  void Init() { std::memset(response, true, sizeof(response)); }
+  // void Init() { std::memset(response, true, sizeof(response)); }
 
-  void Reset() {
-    std::memset(response, false, sizeof(response));
-    response[id] = true;
+  void Init() {
+    timer.Reset();
+    response[me] = true;
+    response_time[me] = 0;
   }
 
-  void SetResponse(raft_node_id_t id) { response[id] = true; }
+  void UpdateLiveness(raft_node_id_t id) {
+    response[id] = true;
+    response_time[id] = timer.ElapseMilliseconds();
+
+    // Update other server's state
+    auto elapsed = response_time[id];
+    for (int i = 0; i < node_num; ++i) {
+      if (response[i] && (elapsed - response_time[i]) < kLivenessTimeoutInterval) {
+        response[i] = true;
+      } else {
+        response[i] = false;
+      }
+    }
+    response[me] = true;
+  }
 
   int LiveNumber() const {
     int cnt = 0;
-    for (int i = 0; i < init_num; ++i) {
+    for (int i = 0; i < node_num; ++i) {
       cnt += (response[i]);
     }
     return cnt;
   }
+
+  // void UpdateLivenessState() {
+  //   auto elapsed = timer.ElapseMilliseconds();
+  //   for (int i = 0; i < node_num; ++i) {
+  //     if (response[i] && (elapsed - response_time[i]) < 100) {
+  //       response[i] = true;
+  //     } else {
+  //       response[i] = false;
+  //     }
+  //   }
+  //   response[me] = true;
+  // }
 
   bool IsAlive(raft_node_id_t target_id) const { return response[target_id]; }
 };
@@ -214,9 +244,7 @@ class RaftState {
   // Send appendEntries messages to target raft peer
   void sendAppendEntries(raft_node_id_t peer);
 
-  void initLivenessMonitorState() {
-    live_monitor_.Init();
-  }
+  void initLivenessMonitorState() { live_monitor_.Init(); }
 
   void removeLastReplicateVersionAt(raft_index_t idx) {
     last_replicate_.erase(last_replicate_.find(idx));

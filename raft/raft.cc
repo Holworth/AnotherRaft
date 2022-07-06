@@ -64,19 +64,24 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->persistCurrentTerm();
 
   // FlexibleK: Init liveness monitor state
-  ret->live_monitor_.init_num = config.rpc_clients.size() + 1;
-  ret->live_monitor_.id = ret->id_;
+  ret->live_monitor_.node_num = config.rpc_clients.size() + 1;
+  ret->live_monitor_.me = ret->id_;
 
   return ret;
 }
 
-void RaftState::Init() { resetElectionTimer(); }
+void RaftState::Init() {
+  resetElectionTimer();
+  live_monitor_.Init();
+}
 
 // RequestVote RPC call
 void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
   assert(args != nullptr && reply != nullptr);
-  std::scoped_lock<std::mutex> lck(mtx_);
 
+  live_monitor_.UpdateLiveness(args->candidate_id);
+
+  std::scoped_lock<std::mutex> lck(mtx_);
   LOG(util::kRaft, "S%d RequestVote From S%d AT%d", id_, args->candidate_id, args->term);
 
   reply->reply_id = id_;
@@ -123,6 +128,8 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
 
 void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   assert(args != nullptr && reply != nullptr);
+  live_monitor_.UpdateLiveness(args->leader_id);
+
   std::scoped_lock<std::mutex> lck(mtx_);
 
   LOG(util::kRaft,
@@ -193,12 +200,14 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
 
 void RaftState::Process(AppendEntriesReply *reply) {
   assert(reply != nullptr);
+
+  // Note: Liveness monitor must be processed without exclusive access
+  live_monitor_.UpdateLiveness(reply->reply_id);
+
   std::scoped_lock<std::mutex> lck(mtx_);
 
   LOG(util::kRaft, "S%d receive AE response from S%d (Accept%d Expect I%d Term %d)", id_,
       reply->reply_id, reply->success, reply->expect_index, reply->term);
-
-  live_monitor_.SetResponse(reply->reply_id);
 
   // Check if this reply is expired
   if (Role() != kLeader || reply->term < CurrentTerm()) {
@@ -265,6 +274,9 @@ void RaftState::Process(AppendEntriesReply *reply) {
 // Hello
 void RaftState::Process(RequestVoteReply *reply) {
   assert(reply != nullptr);
+
+  live_monitor_.UpdateLiveness(reply->reply_id);
+
   std::scoped_lock<std::mutex> lck(mtx_);
 
   LOG(util::kRaft, "S%d HandleVoteResp from S%d term=%d grant=%d", id_, reply->reply_id,
@@ -674,6 +686,7 @@ void RaftState::tickOnLeader() {
 void RaftState::replicateEntries() {
   LOG(util::kRaft, "S%d replicate entries", id_);
   auto live_servers = live_monitor_.LiveNumber();
+
   // F+K = # of live servers
   encoder_.SetK(live_servers - livenessLevel());
   encoder_.SetM(livenessLevel());
