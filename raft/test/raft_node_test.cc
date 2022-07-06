@@ -29,4 +29,23 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   ClearTestContext(config);
 }
 
+TEST_F(RaftNodeBasicTest, TestOneFollowerCrash) {
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
+  sleepMs(10);
+
+  EXPECT_TRUE(ProposeOneEntry(1));
+  // EXPECT_TRUE(ProposeOneEntry(2));
+  // EXPECT_TRUE(ProposeOneEntry(3));
+
+  auto leader = GetLeaderId();
+
+  // Disconnect a follower
+  Disconnect((leader + 1) % node_num_);
+
+  EXPECT_TRUE(ProposeOneEntry(4));
+  EXPECT_TRUE(ProposeOneEntry(5));
+  EXPECT_TRUE(ProposeOneEntry(6));
+}
+
 }  // namespace raft

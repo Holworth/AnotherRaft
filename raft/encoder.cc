@@ -11,6 +11,14 @@ bool Encoder::EncodeEntry(const LogEntry& entry, Stripe* stripe) {
   assert(stripe != nullptr);
   stripe->fragments_.clear();
 
+  // No need to encoding entries, just simply add normal log entries
+  if (GetK() == 0) {  
+    for (int i = 0; i < GetK() + GetM(); ++i) {
+      stripe->AddFragments(entry);
+    }
+    return true;
+  }
+
   auto encode_size = entry.CommandData().size() - entry.StartOffset();
 
   // If total_size % k_ == 0, fragmentSize would be exactly total_size / k_
