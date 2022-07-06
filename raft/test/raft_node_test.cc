@@ -30,7 +30,7 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
 }
 
 TEST_F(RaftNodeBasicTest, TestOneFollowerCrash) {
-  auto config = ConstructNodesConfig(3, false);
+  auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);
 
@@ -46,6 +46,12 @@ TEST_F(RaftNodeBasicTest, TestOneFollowerCrash) {
   EXPECT_TRUE(ProposeOneEntry(4));
   EXPECT_TRUE(ProposeOneEntry(5));
   EXPECT_TRUE(ProposeOneEntry(6));
+
+  Disconnect((leader + 2) % node_num_);
+
+  EXPECT_TRUE(ProposeOneEntry(7));
+  EXPECT_TRUE(ProposeOneEntry(8));
+  EXPECT_TRUE(ProposeOneEntry(9));
 }
 
 }  // namespace raft

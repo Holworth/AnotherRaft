@@ -53,7 +53,7 @@ class RaftNodeTest : public ::testing::Test {
       applied_entries_.insert({ent.Index(), ent});
     }
 
-    // Return the applied entry at particular index, return true if there is such 
+    // Return the applied entry at particular index, return true if there is such
     // an index, otherwise returns false
     bool getEntry(raft_index_t raft_index, LogEntry* ent) {
       if (applied_entries_.count(raft_index) == 0) {
@@ -193,6 +193,7 @@ class RaftNodeTest : public ::testing::Test {
         for (int run2 = 0; run2 < 10; ++run2) {
           bool succ = checkCommitted(propose_result, value);
           if (succ) {
+            LOG(util::kRaft, "[SUCC] Check Value Done: %d", value);
             return true;
           } else {
             sleepMs(20);
@@ -206,6 +207,7 @@ class RaftNodeTest : public ::testing::Test {
           // }
         }
       }
+      LOG(util::kRaft, "[FAILED] Wait a propose entry to be committed");
 
       // Sleep for 50ms so that the entry will be committed
       sleepMs(500);
@@ -215,7 +217,7 @@ class RaftNodeTest : public ::testing::Test {
 
   void sleepMs(int num) { std::this_thread::sleep_for(std::chrono::milliseconds(num)); }
 
-  // Check if propose_val has been committed and applied, return true if committed and 
+  // Check if propose_val has been committed and applied, return true if committed and
   // applied, i.e. we can read the applied fragments from corresponding state machine
   bool checkCommitted(const ProposeResult& propose_result, int propose_val) {
     Stripe stripe;
