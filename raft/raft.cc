@@ -132,6 +132,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
 
   reply->reply_id = id_;
   reply->prev_entry_index = args->prev_log_index;
+  reply->version_cnt = 0;
 
   // Reply false immediately if arguments' term is smaller
   if (args->term < CurrentTerm()) {
