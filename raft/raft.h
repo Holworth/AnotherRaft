@@ -129,7 +129,9 @@ class RaftPeer {
   void SetMatchIndex(raft_index_t match_index) { match_index_ = match_index; }
 
   void RemoveMatchVersionAt(raft_index_t idx) {
-    matchVersion.erase(matchVersion.find(idx));
+    if (matchVersion.count(idx) != 0) {
+      matchVersion.erase(matchVersion.find(idx));
+    }
   }
 
  public:
