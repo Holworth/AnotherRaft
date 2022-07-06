@@ -324,12 +324,12 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   int val = *reinterpret_cast<int *>(entry.CommandData().data());
 
   // Replicate this entry out
-  for (auto &[id, _] : peers_) {
-    if (id != id_) {
-      sendAppendEntries(id);
-    }
-  }
-
+  // for (auto &[id, _] : peers_) {
+  //   if (id != id_) {
+  //     sendAppendEntries(id);
+  //   }
+  // }
+  replicateEntries();
   return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
 
@@ -598,11 +598,12 @@ void RaftState::startElection() {
 }
 
 void RaftState::broadcastHeartbeat() {
-  for (auto &[id, peer] : peers_) {
-    if (id != id_) {
-      sendHeartBeat(id);
-    }
-  }
+  // for (auto &[id, peer] : peers_) {
+  //   if (id != id_) {
+  //     sendHeartBeat(id);
+  //   }
+  // }
+  replicateEntries();
 }
 
 void RaftState::resetElectionTimer() {
