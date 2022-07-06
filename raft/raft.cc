@@ -238,8 +238,8 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
         // Debug:
         // -----------------------------------------------------------------
-        LOG(util::kRaft, "S%d update Node%d match Version: seq:%llu k:%d", id_, peer_id,
-            reply_version.sequence, reply_version.k);
+        LOG(util::kRaft, "S%d update Node%d match Version: seq%llu K%d M%d", id_, peer_id,
+            reply_version.sequence, reply_version.k, reply_version.m);
         // -----------------------------------------------------------------
       }
     }
@@ -374,20 +374,24 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
       auto new_ent = args->entries[array_index];
       lm_->OverWriteLogEntry(args->entries[array_index], raft_index);
 
+      auto reply_version = Version{raft_index, new_ent.Sequence(), new_ent.GetK(),
+                                   new_ent.GetN() - new_ent.GetK()};
+
       // Debug:
       // --------------------------------------------------------------------------
-      LOG(util::kRaft, "S%d overwrite I%d Version(seq=%d K=%d)", id_, raft_index,
-          new_ent.Sequence(), new_ent.GetK());
+      LOG(util::kRaft, "S%d overwrite I%d Version(%s)", id_, raft_index,
+          reply_version.toString().c_str());
       // --------------------------------------------------------------------------
-      reply->versions.push_back(
-          {raft_index, new_ent.Sequence(), new_ent.GetK(), new_ent.GetN()});
+      reply->versions.push_back(reply_version);
     } else {
+      auto reply_version =
+          Version{raft_index, ent->Sequence(), ent->GetK(), ent->GetN() - ent->GetK()};
       // Debug:
       // --------------------------------------------------------------------------
-      LOG(util::kRaft, "S%d maintain I%d Version(seq=%d K=%d)", id_, raft_index,
-          ent->Sequence(), ent->GetK());
+      LOG(util::kRaft, "S%d maintain I%d Version(%s)", id_, raft_index,
+          reply_version.toString().c_str());
       // --------------------------------------------------------------------------
-      reply->versions.push_back({raft_index, ent->Sequence(), ent->GetK(), ent->GetN()});
+      reply->versions.push_back(reply_version);
     }
   }
   // For those new entries
@@ -397,10 +401,13 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     // Debug -------------------------------------------
     lm_->AppendLogEntry(args->entries[i]);
 
-    LOG(util::kRaft, "S%d append I%d Version(seq=%d k=%d)", id_, raft_index,
-        args->entries[i].Sequence(), args->entries[i].GetK());
-    reply->versions.push_back({raft_index, args->entries[i].Sequence(),
-                               args->entries[i].GetK(), args->entries[i].GetN()});
+    auto reply_version =
+        Version{raft_index, args->entries[i].Sequence(), args->entries[i].GetK(),
+                args->entries[i].GetN() - args->entries[i].GetK()};
+
+    LOG(util::kRaft, "S%d append I%d Version(%s)", id_, raft_index,
+        reply_version.toString().c_str());
+    reply->versions.push_back(reply_version);
   }
 
   LOG(util::kRaft, "S%d APPEND(%d->%d) ent cnt=%d", id_, old_last_index,
@@ -444,11 +451,12 @@ void RaftState::tryUpdateCommitIndex() {
 
       // Debug:
       // ------------------------------------------------------------------------------
-      LOG(util::kRaft, "S%d request version: %s node%d replicate version: %s", id,
+      LOG(util::kRaft, "S%d request version: %s node%d replicate version: %s", id_,
           request_version.toString().c_str(), id,
           node->matchVersion[N].toString().c_str());
       // ------------------------------------------------------------------------------
 
+      // TODO: Is it ok to only check the version number?
       if (node->matchVersion[N].sequence == request_version.sequence) {
         agree_cnt++;
       }
