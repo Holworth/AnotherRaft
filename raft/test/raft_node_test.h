@@ -238,6 +238,10 @@ class RaftNodeTest : public ::testing::Test {
 
     stripe.SetK(alive_number - LivenessLevel());
     stripe.SetN(alive_number);
+    if (stripe.FragmentNum() == 0) {
+      return false;
+    }
+    stripe.SetFragLength(stripe.GetFragment(0).FragmentSlice().size());
 
     Encoder encoder;
     LogEntry ent;

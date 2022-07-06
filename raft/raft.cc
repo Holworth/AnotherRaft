@@ -64,7 +64,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->persistCurrentTerm();
 
   // FlexibleK: Init liveness monitor state
-  ret->live_monitor_.init_num = config.rpc_clients.size();
+  ret->live_monitor_.init_num = config.rpc_clients.size() + 1;
   ret->live_monitor_.id = ret->id_;
 
   return ret;
