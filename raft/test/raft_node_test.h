@@ -12,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "encoder.h"
 #include "gtest/gtest.h"
 #include "log_entry.h"
 #include "raft.h"
@@ -48,23 +49,21 @@ class RaftNodeTest : public ::testing::Test {
 
    public:
     void ApplyLogEntry(LogEntry ent) override {
-      int val = *reinterpret_cast<int*>(ent.CommandData().data());
-      applied_value_.insert({ent.Index(), {ent.Term(), val}});
+      applied_entries_.insert({ent.Index(), ent});
     }
 
-    int getValue(raft_index_t raft_index, raft_term_t raft_term) {
-      if (applied_value_.count(raft_index) == 0) {
-        return -1;
+    // Return the applied entry at particular index, return true if there is such 
+    // an index, otherwise returns false
+    bool getEntry(raft_index_t raft_index, LogEntry* ent) {
+      if (applied_entries_.count(raft_index) == 0) {
+        return false;
       }
-      auto commit_res = applied_value_[raft_index];
-      if (commit_res.first != raft_term) {
-        return CONFLICT_TERM;
-      }
-      return commit_res.second;
+      *ent = applied_entries_[raft_index];
+      return true;
     }
 
    private:
-    std::unordered_map<raft_index_t, CommitResult> applied_value_;
+    std::unordered_map<raft_index_t, LogEntry> applied_entries_;
   };
 
   static NodesConfig ConstructNodesConfig(int server_num, bool with_storage) {
@@ -123,9 +122,10 @@ class RaftNodeTest : public ::testing::Test {
   }
 
   CommandData ConstructCommandFromValue(int val) {
-    auto data = new char[64];
+    const int command_data_len = 1024;
+    auto data = new char[command_data_len + 10];
     *reinterpret_cast<int*>(data) = val;
-    return CommandData{sizeof(int), Slice(data, sizeof(int))};
+    return CommandData{sizeof(int), Slice(data, command_data_len)};
   }
 
   // Check that at every fixed term, there is and there is only one leader alive
@@ -189,15 +189,19 @@ class RaftNodeTest : public ::testing::Test {
 
         // Retry 10 times
         for (int run2 = 0; run2 < 10; ++run2) {
-          int val = checkCommitted(propose_result);
-          if (val == CONFLICT_TERM) {
-            break;
-          } else if (val == -1) {
-            sleepMs(20);
+          bool succ = checkCommitted(propose_result, value);
+          if (succ) {
+            return true;
           } else {
-            LOG(util::kRaft, "Check Propose value: Expect %d Get %d", value, val);
-            return val == value;
+            sleepMs(20);
           }
+          // if (val == CONFLICT_TERM) {
+          //   break;
+          // } else if (val == -1) {
+          // } else {
+          //   LOG(util::kRaft, "Check Propose value: Expect %d Get %d", value, val);
+          //   return val == value;
+          // }
         }
       }
 
@@ -209,18 +213,45 @@ class RaftNodeTest : public ::testing::Test {
 
   void sleepMs(int num) { std::this_thread::sleep_for(std::chrono::milliseconds(num)); }
 
-  int checkCommitted(const ProposeResult& propose_result) {
+  // Check if propose_val has been committed and applied, return true if committed and 
+  // applied, i.e. we can read the applied fragments from corresponding state machine
+  bool checkCommitted(const ProposeResult& propose_result, int propose_val) {
+    Stripe stripe;
+    int alive_number = 0;
     for (int i = 0; i < node_num_; ++i) {
       if (Alive(i)) {
+        alive_number += 1;
         auto rsm = reinterpret_cast<RsmMock*>(nodes_[i]->getRsm());
         auto raft = nodes_[i]->getRaftState();
         if (raft->CommitIndex() >= propose_result.propose_index) {
-          return rsm->getValue(propose_result.propose_index, propose_result.propose_term);
+          LogEntry ent;
+          auto stat = rsm->getEntry(propose_result.propose_index, &ent);
+          if (ent.Term() != propose_result.propose_term) {
+            continue;
+          }
+          if (ent.Type() == kFragments) {
+            stripe.AddFragments(ent);
+          }
         }
       }
     }
-    return -1;
+
+    stripe.SetK(alive_number - LivenessLevel());
+    stripe.SetN(alive_number);
+
+    Encoder encoder;
+    LogEntry ent;
+    // Failed decoding: may due to insufficient fragments
+    auto decode_stat = encoder.DecodeEntry(&stripe, &ent);
+    if (!decode_stat) {
+      return false;
+    }
+    EXPECT_EQ(ent.Type(), kNormal);
+    auto val = *reinterpret_cast<int*>(ent.CommandData().data());
+    return val == propose_val;
   }
+
+  int LivenessLevel() const { return node_num_ / 2; }
 
   bool Alive(int i) {
     return nodes_[i] != nullptr && !nodes_[i]->Exited() && !nodes_[i]->IsDisconnected();
