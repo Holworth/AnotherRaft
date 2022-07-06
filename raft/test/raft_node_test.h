@@ -32,6 +32,7 @@ class RaftNodeTest : public ::testing::Test {
  public:
   static constexpr int kMaxNodeNum = 9;
   static constexpr raft_node_id_t kNoLeader = -1;
+  static constexpr int kCommandDataLength = 1024;
 
   // Some necessary Test structs
   using NetConfig = std::unordered_map<raft_node_id_t, rpc::NetAddress>;
@@ -122,10 +123,11 @@ class RaftNodeTest : public ::testing::Test {
   }
 
   CommandData ConstructCommandFromValue(int val) {
-    const int command_data_len = 1024;
-    auto data = new char[command_data_len + 10];
+    auto data = new char[kCommandDataLength + 10];
     *reinterpret_cast<int*>(data) = val;
-    return CommandData{sizeof(int), Slice(data, command_data_len)};
+    // For more strict test on encoding/decoding
+    *reinterpret_cast<int*>(data + kCommandDataLength - 4) = val;
+    return CommandData{sizeof(int), Slice(data, kCommandDataLength)};
   }
 
   // Check that at every fixed term, there is and there is only one leader alive
@@ -251,7 +253,13 @@ class RaftNodeTest : public ::testing::Test {
       return false;
     }
     EXPECT_EQ(ent.Type(), kNormal);
-    auto val = *reinterpret_cast<int*>(ent.CommandData().data());
+    EXPECT_EQ(ent.CommandData().size(), kCommandDataLength);
+
+    auto data_ptr = ent.CommandData().data();
+    auto data_size = ent.CommandData().size();
+    auto val = *reinterpret_cast<int*>(data_ptr);
+    auto val_tail = *reinterpret_cast<int*>(data_ptr + data_size - 4);
+    EXPECT_EQ(val, val_tail);
     return val == propose_val;
   }
 
