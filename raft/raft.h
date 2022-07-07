@@ -136,6 +136,12 @@ struct PreLeaderStripeStore {
     this->me = me;
     stripes.clear();
     stripes.reserve(end - start + 1);
+
+    // Initiate stripe
+    for (auto stripe: stripes) {
+      stripe.Init();
+    }
+
     memset(response_, false, sizeof(response_));
     response_[me] = true;
   }

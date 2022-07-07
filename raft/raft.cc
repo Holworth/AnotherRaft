@@ -381,13 +381,13 @@ void RaftState::Process(RequestFragmentsReply *reply) {
   int check_idx = 0;
   for (const auto &entry : reply->fragments) {
     assert(check_idx + reply->start_index == entry.Index());
-    preleader_stripe_store_.AddFragments(entry.Index(), entry);
 
     // Debug:
     // --------------------------------------------------------------------
     LOG(util::kRaft, "S%d add frag at I%d info:%s", id_, entry.Index(),
         entry.ToString().c_str());
     // --------------------------------------------------------------------
+    preleader_stripe_store_.AddFragments(entry.Index(), entry);
     check_idx++;
   }
 

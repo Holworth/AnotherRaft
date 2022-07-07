@@ -13,6 +13,8 @@ class Stripe {
   friend class Encoder;
 
  public:
+  Stripe() = default;
+
   const LogEntry& GetFragment(int i) { return fragments_[i]; }
 
   int FragmentNum() const { return fragments_.size(); }
@@ -59,6 +61,8 @@ class Stripe {
   void UpdateVersion(const Version& v) { version_ = v; }
 
   const Version& GetVersion() const { return version_; }
+
+  void Init() { fragments_.clear(); }
 
   void Remove(int i) {
     // Delete an entry with specific frag id
