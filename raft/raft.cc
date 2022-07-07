@@ -794,6 +794,7 @@ void RaftState::resetElectionTimer() {
 }
 
 void RaftState::resetHeartbeatTimer() { heartbeat_timer_.Reset(); }
+void RaftState::resetPreLeaderTimer() { preleader_timer_.Reset(); }
 
 void RaftState::Tick() {
   std::scoped_lock<std::mutex> lck(mtx_);
@@ -803,6 +804,9 @@ void RaftState::Tick() {
       return;
     case kCandidate:
       tickOnCandidate();
+      return;
+    case kPreLeader:
+      tickOnPreLeader();
       return;
     case kLeader:
       tickOnLeader();
@@ -834,6 +838,14 @@ void RaftState::tickOnLeader() {
   }
   broadcastHeartbeat();
   resetHeartbeatTimer();
+}
+
+void RaftState::tickOnPreLeader() {
+  if (preleader_timer_.ElapseMilliseconds() < config::kCollectFragmentsInterval) {
+    return;
+  }
+  collectFragments();
+  resetPreLeaderTimer();
 }
 
 void RaftState::replicateEntries() {

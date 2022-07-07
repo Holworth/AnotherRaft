@@ -24,6 +24,7 @@ enum RaftRole {
 
 namespace config {
 const int64_t kHeartbeatInterval = 100;  // 100ms
+const int64_t kCollectFragmentsInterval = 100;  // 100ms
 };
 
 struct RaftConfig {
@@ -271,6 +272,7 @@ class RaftState {
 
   void resetElectionTimer();
   void resetHeartbeatTimer();
+  void resetPreLeaderTimer();
 
   void convertToFollower(raft_term_t term);
   void convertToCandidate();
