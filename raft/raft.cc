@@ -735,6 +735,8 @@ void RaftState::collectFragments() {
   // Initiate a fragments collection task
   LOG(util::kRaft, "S%d Collect Fragments(I%d->I%d)", id_, CommitIndex() + 1,
       lm_->LastLogEntryIndex());
+
+  // Initiate a request fragments task
   preleader_stripe_store_.InitRequestFragmentsTask(
       CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size(), id_);
   preleader_timer_.Reset();

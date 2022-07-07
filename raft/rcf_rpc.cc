@@ -72,6 +72,8 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
       RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
 
+  setMaxTransportLength(client_ptr);
+
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
@@ -89,6 +91,8 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   }
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
       RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
+
+  setMaxTransportLength(client_ptr);
 
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
@@ -108,6 +112,8 @@ void RCFRpcClient::sendMessage(const RequestFragmentsArgs &args) {
 
   ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
       RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
+
+  setMaxTransportLength(client_ptr);
 
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
@@ -176,6 +182,7 @@ RCFRpcServer::RCFRpcServer(const NetAddress &my_address)
       service_() {}
 
 void RCFRpcServer::Start() {
+  server_.getServerTransport().setMaxIncomingMessageLength(config::kMaxMessageLength);
   server_.bind<I_RaftRPCService>(service_);
   server_.start();
 }
