@@ -639,7 +639,7 @@ void RaftState::convertToLeader() {
   resetNextIndexAndMatchIndex();
 
   // reset liveness monitor status
-  initLivenessMonitorState();
+  // initLivenessMonitorState();
 
   broadcastHeartbeat();
   resetHeartbeatTimer();
@@ -653,6 +653,7 @@ void RaftState::convertToPreLeader() {
   // If there is no entry need to be collected, become leader immediately
   if (CommitIndex() == lm_->LastLogEntryIndex()) {
     convertToLeader();
+    return;
   }
   collectFragments();
 }
