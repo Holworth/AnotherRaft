@@ -78,4 +78,27 @@ TEST_F(RaftNodeBasicTest, TestLeaderCrash) {
   ClearTestContext(config);
 }
 
+TEST_F(RaftNodeBasicTest, TestNewLeaderGetFullLogEntry) {
+  auto config = ConstructNodesConfig(3, false);
+  LaunchAllServers(config);
+  sleepMs(10);
+
+  EXPECT_TRUE(ProposeOneEntry(1));
+  EXPECT_TRUE(ProposeOneEntry(2));
+  EXPECT_TRUE(ProposeOneEntry(3));
+
+  auto leader1 = GetLeaderId();
+
+  auto cmd = ConstructCommandFromValue(4);
+  auto pr = nodes_[leader1]->Propose(cmd);
+  EXPECT_TRUE(pr.is_leader);
+
+  // Disconnect old leader before this entry is committed
+  Disconnect(leader1);
+
+  sleepMs(1000);
+
+  EXPECT_TRUE(checkCommitted(pr, 4));
+}
+
 }  // namespace raft
