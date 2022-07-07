@@ -546,6 +546,7 @@ void RaftState::tryUpdateCommitIndex() {
     }
     auto request_version = last_replicate_[N];
 
+    // Get number of agreement
     int agree_cnt = 1;
     for (auto &[id, node] : peers_) {
       // If the node's last response version matches the last requested
@@ -765,6 +766,7 @@ void RaftState::collectFragments() {
     // Add current server's saved fragments(It might be a complete log entry as well)
     stripe.AddFragments(
         *(lm_->GetSingleLogEntry(preleader_stripe_store_.start_index + i)));
+    LOG(util::kRaft, "S%d Add Its Fragments into Stripe I%d", id_, ent->Index());
   }
 
   RequestFragmentsArgs args;

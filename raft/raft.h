@@ -137,6 +137,11 @@ struct PreLeaderStripeStore {
     stripes.clear();
     stripes.reserve(end - start + 1);
 
+    int stripe_cnt = end - start + 1;
+    for (int i = 0; i < stripe_cnt; ++i) {
+      stripes.push_back(Stripe());
+    }
+
     // Initiate stripe
     for (auto stripe: stripes) {
       stripe.Init();

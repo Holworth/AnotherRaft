@@ -96,8 +96,10 @@ TEST_F(RaftNodeBasicTest, TestNewLeaderGetFullLogEntry) {
   // Disconnect old leader before this entry is committed
   Disconnect(leader1);
 
-  sleepMs(1000);
+  sleepMs(500);
 
+  // Must commit another entry
+  EXPECT_TRUE(ProposeOneEntry(5));
   EXPECT_TRUE(checkCommitted(pr, 4));
 
   ClearTestContext(config);
