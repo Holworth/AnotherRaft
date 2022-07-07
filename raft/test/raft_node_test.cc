@@ -52,6 +52,30 @@ TEST_F(RaftNodeBasicTest, TestFollowersCrash) {
   EXPECT_TRUE(ProposeOneEntry(7));
   EXPECT_TRUE(ProposeOneEntry(8));
   EXPECT_TRUE(ProposeOneEntry(9));
+
+  ClearTestContext(config);
+}
+
+TEST_F(RaftNodeBasicTest, TestLeaderCrash) {
+  auto config = ConstructNodesConfig(5, false);
+  LaunchAllServers(config);
+  sleepMs(10);
+
+  EXPECT_TRUE(ProposeOneEntry(1));
+  EXPECT_TRUE(ProposeOneEntry(2));
+  EXPECT_TRUE(ProposeOneEntry(3));
+
+  auto leader1 = GetLeaderId();
+
+  // Disconnect leader
+  Disconnect(leader1);
+
+  // The cluster should continue to run despite one server down
+  EXPECT_TRUE(ProposeOneEntry(4));
+  EXPECT_TRUE(ProposeOneEntry(5));
+  EXPECT_TRUE(ProposeOneEntry(6));
+
+  ClearTestContext(config);
 }
 
 }  // namespace raft
