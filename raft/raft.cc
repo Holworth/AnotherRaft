@@ -740,7 +740,7 @@ void RaftState::collectFragments() {
 
   // Initiate a request fragments task
   preleader_stripe_store_.InitRequestFragmentsTask(
-      CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size(), id_);
+      CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size() + 1, id_);
   preleader_timer_.Reset();
 
   for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
@@ -775,7 +775,7 @@ void RaftState::collectFragments() {
   args.start_index = CommitIndex() + 1;
   args.last_index = lm_->LastLogEntryIndex();
 
-  for (auto& [id, rpc] : rpc_clients_) {
+  for (auto &[id, rpc] : rpc_clients_) {
     if (id == id_) {
       continue;
     }
@@ -1011,9 +1011,10 @@ bool RaftState::containEntry(raft_index_t raft_index, raft_term_t raft_term) {
 }
 
 void RaftState::PreLeaderBecomeLeader() {
+  LOG(util::kRaft, "S%d PreLeaderStore Response: %d", id_,
+      preleader_stripe_store_.CollectedFragmentsCnt());
   if (preleader_stripe_store_.CollectedFragmentsCnt() >= livenessLevel() + 1) {
-    LOG(util::kRaft, "S%d has %d response, rebuild fragments", id_,
-        preleader_stripe_store_.CollectedFragmentsCnt());
+    LOG(util::kRaft, "S%d Rebuild fragments", id_);
     EncodeCollectedStripe();
     convertToLeader();
   }
