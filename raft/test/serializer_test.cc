@@ -1,3 +1,4 @@
+#include "RCF/ThreadLibrary.hpp"
 #include "serializer.h"
 
 #include <cstdlib>
@@ -34,6 +35,7 @@ class SerializerTest : public ::testing::Test {
       RCF::RcfInit rcfInit;
       RCF::RcfServer server(RCF::TcpEndpoint(kLocalTestIp, kLocalTestPort));
       EchoService echoServrice;
+      server.getServerTransport().setMaxIncomingMessageLength(100 * 1024 * 1024);
       server.bind<I_EchoService>(echoServrice);
       server.start();
       // Wait until this echo service is executed at least once
@@ -43,6 +45,7 @@ class SerializerTest : public ::testing::Test {
     };
     auto thread = std::thread(server_work);
     thread.detach();
+    RCF::sleepMs(100);
   }
 
   template <typename T, typename Cmp>
@@ -73,6 +76,8 @@ class SerializerTest : public ::testing::Test {
 
     // Remote call failed if pass 1s
     client.getClientStub().setRemoteCallTimeoutMs(1000);
+    client.getClientStub().getTransport().setMaxOutgoingMessageLength(100 * 1024 * 1024);
+    client.getClientStub().getTransport().setMaxIncomingMessageLength(100 * 1024 * 1024);
 
     // Construct the call back function
     RCF::Future<RCF::ByteBuffer> ret;
@@ -134,7 +139,7 @@ class SerializerTest : public ::testing::Test {
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime * 2));
   }
 
-  void WaitWorkDone() { std::this_thread::sleep_for(std::chrono::milliseconds(2000)); }
+  void WaitWorkDone() { std::this_thread::sleep_for(std::chrono::milliseconds(1000)); }
 
   void TestNoDataLogEntryTransfer(bool async);
   void TestCompleteCommandDataLogEntryTransfer(bool async);
@@ -149,7 +154,7 @@ class SerializerTest : public ::testing::Test {
  private:
   const std::string kLocalTestIp = "127.0.0.1";
   const int kLocalTestPort = 50001;
-  const int kMaxDataSize = 512 * 1024;
+  const int kMaxDataSize = 10 * 1024 * 1024;
   const int kSleepTime = 10000;
 };
 
