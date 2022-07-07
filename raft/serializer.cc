@@ -115,7 +115,7 @@ void Serializer::Serialize(const AppendEntriesReply *reply, RCF::ByteBuffer *buf
   // std::memcpy(dst, reply, sizeof(AppendEntriesReply));
   std::memcpy(dst, reply, kAppendEntriesReplyHdrSize);
   dst += kAppendEntriesReplyHdrSize;
-  for (const auto &version: reply->versions) {
+  for (const auto &version : reply->versions) {
     std::memcpy(dst, &version, sizeof(Version));
     dst += sizeof(Version);
   }
@@ -130,6 +130,38 @@ void Serializer::Deserialize(const RCF::ByteBuffer *buffer, AppendEntriesReply *
     std::memcpy(&version, src, sizeof(Version));
     src += sizeof(Version);
     reply->versions.push_back(version);
+  }
+}
+
+void Serializer::Serialize(const RequestFragmentsArgs* args, RCF::ByteBuffer *buffer) {
+  auto dst = buffer->getPtr();
+  std::memcpy(dst, args, sizeof(RequestFragmentsArgs));
+}
+
+void Serializer::Deserialize(const RCF::ByteBuffer* buffer, RequestFragmentsArgs* args) {
+  auto src = buffer->getPtr();
+  std::memcpy(args, src, sizeof(RequestFragmentsArgs));
+}
+
+void Serializer::Serialize(const RequestFragmentsReply* reply, RCF::ByteBuffer* buffer) {
+  assert(reply->entry_cnt == reply->fragments.size());
+  auto dst = buffer->getPtr();
+  std::memcpy(dst, reply, kRequestFragmentsReplyHdrSize);
+  dst += kRequestFragmentsReplyHdrSize;
+  for (const auto& ent : reply->fragments) {
+    dst = serialize_logentry_helper(&ent, dst);
+  }
+}
+
+void Serializer::Deserialize(const RCF::ByteBuffer* buffer, RequestFragmentsReply* reply) {
+  const char *src = buffer->getPtr();
+  std::memcpy(reply, src, kRequestFragmentsReplyHdrSize);
+  src += kRequestFragmentsReplyHdrSize;
+  reply->fragments.reserve(reply->entry_cnt);
+  for (decltype(reply->entry_cnt) i = 0; i < reply->entry_cnt; ++i) {
+    LogEntry ent;
+    src = deserialize_logentry_helper(src, &ent);
+    reply->fragments.push_back(ent);
   }
 }
 
@@ -192,6 +224,18 @@ size_t Serializer::getSerializeSize(const AppendEntriesArgs &args) {
 size_t Serializer::getSerializeSize(const AppendEntriesReply &reply) {
   size_t ret = kAppendEntriesReplyHdrSize;
   ret += reply.version_cnt * sizeof(Version);
+  return ret;
+}
+
+size_t Serializer::getSerializeSize(const RequestFragmentsArgs &args) {
+  return sizeof(args);
+}
+
+size_t Serializer::getSerializeSize(const RequestFragmentsReply &reply) {
+  size_t ret = kRequestFragmentsReplyHdrSize;
+  for (const auto &ent : reply.fragments) {
+    ret += getSerializeSize(ent);
+  }
   return ret;
 }
 

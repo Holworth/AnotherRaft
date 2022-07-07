@@ -271,7 +271,6 @@ void RaftState::Process(AppendEntriesReply *reply) {
   return;
 }
 
-// Hello
 void RaftState::Process(RequestVoteReply *reply) {
   assert(reply != nullptr);
 
@@ -298,9 +297,102 @@ void RaftState::Process(RequestVoteReply *reply) {
     LOG(util::kRaft, "S%d voteMeCnt=%d", id_, vote_me_cnt_);
     // Win votes of the majority of the cluster
     if (vote_me_cnt_ >= livenessLevel() + 1) {
-      convertToLeader();
+      convertToPreLeader();
     }
   }
+  return;
+}
+
+void RaftState::Process(RequestFragmentsArgs *args, RequestFragmentsReply *reply) {
+  assert(args != nullptr && reply != nullptr);
+
+  live_monitor_.UpdateLiveness(args->leader_id);
+
+  std::scoped_lock<std::mutex> lck(mtx_);
+
+  LOG(util::kRaft, "S%d Receive RequestFragments From S%d(EC) (T%d SI=%d EI=%d)", id_,
+      args->leader_id, args->term, args->start_index, args->last_index);
+
+  reply->reply_id = id_;
+  reply->start_index = args->start_index;
+
+  if (args->term < CurrentTerm()) {
+    reply->term = CurrentTerm();
+    reply->entry_cnt = 0;
+    reply->fragments.clear();
+    reply->success = false;
+
+    LOG(util::kRaft, "S%d refuse RequestFragments: Higher Term(%d>%d)", id_,
+        CurrentTerm(), args->term);
+    return;
+  }
+
+  if (args->term > CurrentTerm() || Role() == kCandidate) {
+    convertToFollower(args->term);
+  }
+  resetElectionTimer();
+
+  raft_index_t raft_index = args->start_index;
+  for (; raft_index <= args->last_index; ++raft_index) {
+    if (auto ptr = lm_->GetSingleLogEntry(raft_index); ptr) {
+      reply->fragments.push_back(*ptr);
+    } else {
+      break;
+    }
+  }
+  LOG(util::kRaft, "S%d Submit fragments(I%d->I%d)", id_, args->start_index,
+      raft_index - 1);
+
+  reply->term = CurrentTerm();
+  reply->success = true;
+  reply->entry_cnt = reply->fragments.size();
+  return;
+}
+
+void RaftState::Process(RequestFragmentsReply *reply) {
+  assert(reply != nullptr);
+
+  live_monitor_.UpdateLiveness(reply->reply_id);
+
+  std::scoped_lock<std::mutex> lck(mtx_);
+
+  LOG(util::kRaft, "S%d receive RequestFragmentsReply From S%d", id_, reply->reply_id);
+
+  if (Role() != kPreLeader || reply->term < CurrentTerm()) {
+    return;
+  }
+
+  if (reply->term > CurrentTerm()) {
+    convertToFollower(reply->term);
+    return;
+  }
+
+  LOG(util::kRaft, "S%d ReqFrag Resp (Cnt=%d)", id_, reply->entry_cnt);
+
+  if (preleader_stripe_store_.IsCollected(reply->reply_id)) {
+    LOG(util::kRaft, "S%d ommit RequestFragmentsReply from S%d", id_, reply->reply_id);
+    return;
+  }
+
+  // TODO: RequestFragments may occur multiple times
+  // TODO: Store collected fragments into some place and decode them to get the
+  // complete entry
+  //
+  int check_idx = 0;
+  for (const auto &entry : reply->fragments) {
+    assert(check_idx + reply->start_index == entry.Index());
+    preleader_stripe_store_.AddFragments(entry.Index(), entry);
+
+    // Debug:
+    // --------------------------------------------------------------------
+    LOG(util::kRaft, "S%d add frag at I%d info:%s", id_, entry.Index(),
+        entry.ToString().c_str());
+    // --------------------------------------------------------------------
+    check_idx++;
+  }
+
+  preleader_stripe_store_.UpdateResponseState(reply->reply_id);
+  PreLeaderBecomeLeader();
   return;
 }
 
@@ -553,6 +645,18 @@ void RaftState::convertToLeader() {
   resetHeartbeatTimer();
 }
 
+void RaftState::convertToPreLeader() {
+  LOG(util::kRaft, "S%d ToPreLeader(T%d) COMMIT I%d LI%d", id_, CurrentTerm(),
+      CommitIndex(), lm_->LastLogEntryIndex());
+  SetRole(kPreLeader);
+
+  // If there is no entry need to be collected, become leader immediately
+  if (CommitIndex() == lm_->LastLogEntryIndex()) {
+    convertToLeader();
+  }
+  collectFragments();
+}
+
 void RaftState::resetNextIndexAndMatchIndex() {
   auto next_index = lm_->LastLogEntryIndex() + 1;
   LOG(util::kRaft, "S%d set NI=%d MI=%d", id_, next_index, 0);
@@ -625,6 +729,53 @@ void RaftState::broadcastHeartbeat() {
   //   }
   // }
   replicateEntries();
+}
+
+void RaftState::collectFragments() {
+  // Initiate a fragments collection task
+  LOG(util::kRaft, "S%d Collect Fragments(I%d->I%d)", id_, CommitIndex() + 1,
+      lm_->LastLogEntryIndex());
+  preleader_stripe_store_.InitRequestFragmentsTask(
+      CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size(), id_);
+  preleader_timer_.Reset();
+
+  for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
+    raft_index_t r_idx = i + preleader_stripe_store_.start_index;
+    auto ent = lm_->GetSingleLogEntry(r_idx);
+    assert(ent != nullptr);
+
+    // NOTE: The stripe meta data is set by current leader, however, that might
+    // be invalid since a collected stripe may contain multiple kind of entries
+    // i.e. with different k and m parameters
+    Stripe &stripe = preleader_stripe_store_.stripes[i];
+    stripe.SetIndex(ent->Index());
+    stripe.SetTerm(ent->Term());
+    /*
+    // K + M
+    // TODO: Set k after filtering fragments, use the smaller k
+    stripe.SetFragmentCnt(ent->FragmentsCnt());
+    // K
+    stripe.SetFragRecoverCnt(ent->FragmentRequireCnt());
+    stripe.SetFragLength(ent->FragmentLength());
+    */
+
+    // Add current server's saved fragments(It might be a complete log entry as well)
+    stripe.AddFragments(
+        *(lm_->GetSingleLogEntry(preleader_stripe_store_.start_index + i)));
+  }
+
+  RequestFragmentsArgs args;
+  args.term = CurrentTerm();
+  args.leader_id = id_;
+  args.start_index = CommitIndex() + 1;
+  args.last_index = lm_->LastLogEntryIndex();
+
+  for (auto& [id, rpc] : rpc_clients_) {
+    if (id == id_) {
+      continue;
+    }
+    rpc->sendMessage(args);
+  }
 }
 
 void RaftState::resetElectionTimer() {
@@ -840,6 +991,43 @@ bool RaftState::containEntry(raft_index_t raft_index, raft_term_t raft_term) {
     return false;
   }
   return true;
+}
+
+void RaftState::PreLeaderBecomeLeader() {
+  if (preleader_stripe_store_.CollectedFragmentsCnt() >= livenessLevel() + 1) {
+    LOG(util::kRaft, "S%d has %d response, rebuild fragments", id_,
+        preleader_stripe_store_.CollectedFragmentsCnt());
+    EncodeCollectedStripe();
+    convertToLeader();
+  }
+}
+
+void RaftState::EncodeCollectedStripe() {
+  // Debug:
+  // ------------------------------------------------------------------
+  LOG(util::kRaft, "S%d decode collected stripes", id_);
+  // ------------------------------------------------------------------
+  for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
+    auto &stripe = preleader_stripe_store_.stripes[i];
+
+    stripe.Filter();
+
+    // Debug:
+    // ------------------------------------------------------------------
+    LOG(util::kRaft, "S%d decode stripe I%d", id_, stripe.GetIndex());
+    // ------------------------------------------------------------------
+
+    LogEntry entry;
+    auto succ = encoder_.DecodeEntry(&stripe, &entry);
+    auto r_idx = i + preleader_stripe_store_.start_index;
+    if (succ) {
+      lm_->OverWriteLogEntry(entry, r_idx);
+    } else {
+      // Failed to decode a full entry, delete all preceding log entries
+      lm_->DeleteLogEntriesFrom(r_idx);
+      return;
+    }
+  }
 }
 
 }  // namespace raft

@@ -25,11 +25,19 @@ class Serializer {
   void Serialize(const AppendEntriesReply* reply, RCF::ByteBuffer* buffer);
   void Deserialize(const RCF::ByteBuffer* buffer, AppendEntriesReply* reply);
 
+  void Serialize(const RequestFragmentsArgs* args, RCF::ByteBuffer* buffer);
+  void Deserialize(const RCF::ByteBuffer* buffer, RequestFragmentsArgs* args);
+
+  void Serialize(const RequestFragmentsReply* reply, RCF::ByteBuffer* buffer);
+  void Deserialize(const RCF::ByteBuffer* buffer, RequestFragmentsReply* reply);
+
   size_t getSerializeSize(const LogEntry& entry);
   size_t getSerializeSize(const RequestVoteArgs& args);
   size_t getSerializeSize(const RequestVoteReply& reply);
   size_t getSerializeSize(const AppendEntriesArgs& args);
   size_t getSerializeSize(const AppendEntriesReply& reply);
+  size_t getSerializeSize(const RequestFragmentsArgs& args);
+  size_t getSerializeSize(const RequestFragmentsReply& reply);
 
   // Put/Parse a slice in prefix-length format at specified buf position and returns
   // with a pointer to the next position

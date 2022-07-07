@@ -12,7 +12,7 @@ bool Encoder::EncodeEntry(const LogEntry& entry, Stripe* stripe) {
   stripe->fragments_.clear();
 
   // No need to encoding entries, just simply add normal log entries
-  if (GetK() == 0) {  
+  if (GetK() == 0) {
     for (int i = 0; i < GetK() + GetM(); ++i) {
       stripe->AddFragments(entry);
     }
@@ -238,49 +238,48 @@ bool Encoder::DecodeEntry(Stripe* stripe, LogEntry* entry) {
 void Stripe::Filter() {
   // key: The pair of (k, n), it uniquely determines an encoded stripe
   // value: A vector that records the stripe fragments' index
-  // std::map<std::pair<int, int>, std::vector<int>> m;
-  //
-  // for (decltype(fragments_.size()) i = 0; i < fragments_.size(); ++i) {
-  //   const auto& fragment = fragments_[i];
-  //   // First checks index and term pair
-  //   if (fragment.Index() != this->index_ || fragment.Term() != this->term_) {
-  //     continue;
-  //   }
-  //
-  //   if (fragment.Type() == kFragments) {
-  //     m[{fragment.FragmentRequireCnt(), fragment.FragmentsCnt()}].push_back(
-  //         static_cast<int>(i));
-  //   }
-  //
-  //   if (fragment.Type() == kNormal) {
-  //     m[{1, 0}].push_back(static_cast<int>(i));
-  //   }
-  // }
-  //
-  // // Check if we can decode a full entry:
-  // for (const auto& k_stripe : m) {
-  //   auto k = k_stripe.first.first;
-  //   if (k_stripe.second.size() < k) {
-  //     continue;
-  //   }
-  //   std::vector<LogEntry> after_filter;
-  //   for (const auto& i : k_stripe.second) {
-  //     after_filter.push_back(fragments_[i]);
-  //   }
-  //   fragments_ = after_filter;
-  //
-  //   // Set meta data
-  //   SetFragRecoverCnt(k_stripe.first.first);
-  //   SetFragmentCnt(k_stripe.first.second);
-  //
-  //   assert(after_filter.size() > 0);
-  //   SetFragLength(after_filter[0].FragmentLength());
-  //   return;
-  // }
-  //
-  // // Here means can not decode a full entry from these collected fragments
-  // // Set -1 indicates decode process will directly return false
-  // SetFragRecoverCnt(-1);
-  // return;
+  std::map<std::pair<int, int>, std::vector<int>> m;
+
+  for (int i = 0; i < fragments_.size(); ++i) {
+    const auto& fragment = fragments_[i];
+    // First checks index and term pair
+    if (fragment.Index() != this->index_ || fragment.Term() != this->term_) {
+      continue;
+    }
+
+    if (fragment.Type() == kFragments) {
+      m[{fragment.GetK(), fragment.GetN()}].push_back(static_cast<int>(i));
+    }
+
+    if (fragment.Type() == kNormal) {
+      m[{1, 0}].push_back(static_cast<int>(i));
+    }
+  }
+
+  // Check if we can decode a full entry:
+  for (const auto& k_stripe : m) {
+    auto k = k_stripe.first.first;
+    if (k_stripe.second.size() < k) {
+      continue;
+    }
+    std::vector<LogEntry> after_filter;
+    for (const auto& i : k_stripe.second) {
+      after_filter.push_back(fragments_[i]);
+    }
+    fragments_ = after_filter;
+
+    // Set meta data
+    SetK(k_stripe.first.first);
+    SetN(k_stripe.first.second);
+
+    assert(after_filter.size() > 0);
+    SetFragLength(after_filter[0].FragmentSlice().size());
+    return;
+  }
+
+  // Here means can not decode a full entry from these collected fragments
+  // Set -1 indicates decode process will directly return false
+  SetK(-1);
+  return;
 }
 }  // namespace raft

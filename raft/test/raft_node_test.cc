@@ -29,7 +29,7 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestOneFollowerCrash) {
+TEST_F(RaftNodeBasicTest, TestFollowersCrash) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);

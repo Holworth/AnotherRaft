@@ -18,7 +18,8 @@ class Storage;
 enum RaftRole {
   kFollower = 1,
   kCandidate = 2,
-  kLeader = 3,
+  kPreLeader = 3,
+  kLeader = 4,
 };
 
 namespace config {
@@ -116,6 +117,53 @@ struct SequenceGenerator {
   uint64_t seq;
 };
 
+struct PreLeaderStripeStore {
+  PreLeaderStripeStore() = default;
+
+  // [start_index, end_index] is the range of index that preLeader collects
+  raft_index_t start_index, end_index;
+  std::vector<Stripe> stripes;
+  bool response_[15];
+  int node_num;
+  raft_node_id_t me;
+
+  void InitRequestFragmentsTask(raft_index_t start, raft_index_t end, int node_num,
+                                raft_node_id_t me) {
+    this->start_index = start;
+    this->end_index = end;
+    this->node_num = node_num;
+    this->me = me;
+    stripes.clear();
+    stripes.reserve(end - start + 1);
+    memset(response_, false, sizeof(response_));
+    response_[me] = true;
+  }
+
+  void UpdateResponseState(raft_node_id_t id) { response_[id] = true; }
+
+  bool IsCollected(raft_node_id_t id) const { return response_[id]; }
+
+  int CollectedFragmentsCnt() const {
+    int ret = 0;
+    for (int i = 0; i < node_num; ++i) {
+      ret += response_[i];
+    }
+    return ret;
+  }
+
+  void AddFragments(raft_index_t idx, const LogEntry &entry) {
+    if (idx < start_index || idx > end_index) {
+      // NOTE: idx > end_index indicates that current leader receives an entry
+      // with index higher than leader's last index, in that way, it simply cut off
+      // these entries because the majority of the servers doesn't have this
+      // entry(otherwise the leader won't win this election)
+      return;
+    }
+    auto array_index = idx - start_index;
+    stripes[array_index].AddFragments(entry);
+  }
+};
+
 // A raft peer maintains the necessary information in terms of "Logic" state
 // of raft algorithm
 class RaftPeer {
@@ -159,6 +207,9 @@ class RaftState {
 
   void Process(AppendEntriesArgs *args, AppendEntriesReply *reply);
   void Process(AppendEntriesReply *reply);
+
+  void Process(RequestFragmentsArgs *args, RequestFragmentsReply *reply);
+  void Process(RequestFragmentsReply *reply);
 
   // This is a command from upper level application, the raft instance is supposed to
   // copy this entry to its own log and replicate it to other followers
@@ -216,6 +267,7 @@ class RaftState {
   void tickOnFollower();
   void tickOnCandidate();
   void tickOnLeader();
+  void tickOnPreLeader();
 
   void resetElectionTimer();
   void resetHeartbeatTimer();
@@ -223,6 +275,7 @@ class RaftState {
   void convertToFollower(raft_term_t term);
   void convertToCandidate();
   void convertToLeader();
+  void convertToPreLeader();
 
   void persistVoteFor();
   void persistCurrentTerm();
@@ -232,6 +285,9 @@ class RaftState {
 
   // Replicate entries to all other raft peers
   void broadcastHeartbeat();
+
+  // Collect all needed fragments
+  void collectFragments();
 
   void incrementVoteMeCnt() { vote_me_cnt_++; }
 
@@ -260,6 +316,12 @@ class RaftState {
   // In flexibleK, the leader needs to send AppendEntries arguments in every
   // heartbeat round
   void replicateEntries();
+
+  // The preleader will try becoming leader if all requested fragments are
+  // decoded into complete log entries
+  void PreLeaderBecomeLeader();
+
+  void EncodeCollectedStripe();
 
  private:
   // For concurrency control. A raft state instance might be accessed via
@@ -298,12 +360,16 @@ class RaftState {
   // For each index, last_replicate contains the recent replicate version
   std::unordered_map<raft_index_t, Version> last_replicate_;
 
+  // A place for storing fragments come from RequestFragments
+  PreLeaderStripeStore preleader_stripe_store_;
+
  private:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient *> rpc_clients_;
 
   util::Timer election_timer_;   // Record elapse time during election
   util::Timer heartbeat_timer_;  // Record elapse time since last heartbeat
+  util::Timer preleader_timer_;  // Record fragments collection time
 
   // Election time should be between [min, max), set by configuration
   int64_t electionTimeLimitMin_, electionTimeLimitMax_;

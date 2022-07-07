@@ -75,6 +75,36 @@ struct AppendEntriesReply {
   std::vector<Version> versions;
 };
 
+struct RequestFragmentsArgs {
+  // The term when leader(Or pre-leader) sends out this RequestFragments RPC to
+  // collect fragments in order to recover the original entry contents
+  raft_term_t term;
+
+  raft_node_id_t leader_id;
+
+  // [start, last] specifies the range of fragments the pre-leader process
+  // requires.
+  raft_index_t start_index, last_index;
+};
+
+struct RequestFragmentsReply {
+  raft_node_id_t reply_id;
+
+  raft_term_t term;
+
+  // If there is some replied fragment entries, the start index of it, it should
+  // be exactly the same index as that is contained in corresponding RequestFragmentsArgs
+  raft_index_t start_index;
+
+  // Request Fragments may fail, e.g. If requested server has higher term, which
+  // invalidates the leadership of current leader
+  int success;
+
+  int entry_cnt;
+
+  std::vector<LogEntry> fragments;
+};
+
 // A struct that indicates the command specified by user of the raft cluster
 struct CommandData {
   int start_fragment_offset;
@@ -88,7 +118,10 @@ enum {
   // sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
   kAppendEntriesArgsHdrSize = 40,
   kAppendEntriesReplyHdrSize = sizeof(raft_term_t) + sizeof(int) + sizeof(raft_index_t) +
-                               sizeof(raft_node_id_t) + sizeof(raft_index_t) + sizeof(int)
+                               sizeof(raft_node_id_t) + sizeof(raft_index_t) +
+                               sizeof(int),
+  kRequestFragmentsReplyHdrSize = sizeof(raft_node_id_t) + sizeof(raft_term_t) +
+                                  sizeof(raft_index_t) + sizeof(int) * 2,
 };
 
 }  // namespace raft

@@ -1,5 +1,6 @@
 #include "rcf_rpc.h"
 
+#include "RCF/ByteBuffer.hpp"
 #include "RCF/ClientStub.hpp"
 #include "RCF/Endpoint.hpp"
 #include "RCF/Future.hpp"
@@ -30,6 +31,20 @@ RCF::ByteBuffer RaftRPCService::RequestVote(const RCF::ByteBuffer &arg_buf) {
 RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
   AppendEntriesArgs args;
   AppendEntriesReply reply;
+
+  auto serializer = Serializer::NewSerializer();
+  serializer.Deserialize(&arg_buf, &args);
+  raft_->Process(&args, &reply);
+
+  RCF::ByteBuffer reply_buf(serializer.getSerializeSize(reply));
+  serializer.Serialize(&reply, &reply_buf);
+
+  return reply_buf;
+}
+
+RCF::ByteBuffer RaftRPCService::RequestFragments(const RCF::ByteBuffer &arg_buf) {
+  RequestFragmentsArgs args;
+  RequestFragmentsReply reply;
 
   auto serializer = Serializer::NewSerializer();
   serializer.Deserialize(&arg_buf, &args);
@@ -86,6 +101,25 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
+void RCFRpcClient::sendMessage(const RequestFragmentsArgs &args) {
+  if (stopped_) {
+    return;
+  }
+
+  ClientPtr client_ptr(new RcfClient<I_RaftRPCService>(
+      RCF::TcpEndpoint(target_address_.ip, target_address_.port)));
+
+  auto serializer = Serializer::NewSerializer();
+  RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
+  serializer.Serialize(&args, &arg_buf);
+
+  RCF::Future<RCF::ByteBuffer> ret;
+  auto cmp_callback = [=]() {
+    onRequestFragmentsComplete(ret, client_ptr, this->raft_, this->id_);
+  };
+  ret = client_ptr->RequestFragments(RCF::AsyncTwoway(cmp_callback), arg_buf);
+}
+
 void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
                                          ClientPtr client_ptr, RaftState *raft,
                                          raft_node_id_t peer) {
@@ -114,6 +148,23 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
   } else {
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
+    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
+    raft->Process(&reply);
+  }
+}
+
+void RCFRpcClient::onRequestFragmentsComplete(RCF::Future<RCF::ByteBuffer> ret,
+                                              ClientPtr client_ptr, RaftState *raft,
+                                              raft_node_id_t peer) {
+  (void)client_ptr;
+
+  auto ePtr = ret.getAsyncException();
+  if (ePtr.get()) {
+    LOG(util::kRPC, "S%d RequestFragments RPC Call Error: %s", peer,
+        ePtr->getErrorString().c_str());
+  } else {
+    RCF::ByteBuffer ret_buf = *ret;
+    RequestFragmentsReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
     raft->Process(&reply);
   }

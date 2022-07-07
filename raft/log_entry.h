@@ -95,6 +95,13 @@ class LogEntry {
 
   // Serialization function required by RCF
   // void serialize(SF::Archive &ar);
+  std::string ToString() const {  // Dump the important information
+    std::stringstream ss;
+    ss << "K: " << GetK() << " K+M: " << GetN() << " FragId: " << FragId()
+       << " FragOff: " << StartOffset() << " FragLen: " << FragmentSlice().size()
+       << " Len: " << NotEncodedSlice().size() << "\n";
+    return ss.str();
+  }
 
  private:
   // These three attributes are allocated when creating a command
