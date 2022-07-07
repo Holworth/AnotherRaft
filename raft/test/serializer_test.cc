@@ -135,6 +135,8 @@ class SerializerTest : public ::testing::Test {
   void TestSerializeRequestVoteReply(bool async);
   void TestSerializeAppendEntriesArgs(bool async);
   void TestSerializeAppendEntriesReply(bool async);
+  void TestSerializeRequestFragmentsArgs(bool async);
+  void TestSerializeRequestFragmentsReply(bool async);
 
  private:
   const std::string kLocalTestIp = "127.0.0.1";
@@ -242,11 +244,11 @@ void SerializerTest::TestSerializeAppendEntriesReply(bool async) {
                          {Version{1, 1, 1, 2}, Version{2, 1, 1, 1}, Version{3, 1, 1, 1}}};
 
   auto cmp = [](const AppendEntriesReply &lhs, const AppendEntriesReply &rhs) -> bool {
-    bool hdr_eq = 
-      lhs.reply_id == rhs.reply_id && lhs.expect_index == rhs.expect_index && 
-      lhs.prev_entry_index == rhs.prev_entry_index && lhs.success == rhs.success && 
-      lhs.term == rhs.term && lhs.version_cnt == rhs.version_cnt;
-    
+    bool hdr_eq = lhs.reply_id == rhs.reply_id && lhs.expect_index == rhs.expect_index &&
+                  lhs.prev_entry_index == rhs.prev_entry_index &&
+                  lhs.success == rhs.success && lhs.term == rhs.term &&
+                  lhs.version_cnt == rhs.version_cnt;
+
     if (lhs.versions.size() != rhs.versions.size()) {
       return false;
     }
@@ -265,6 +267,52 @@ void SerializerTest::TestSerializeAppendEntriesReply(bool async) {
   }
 }
 
+void SerializerTest::TestSerializeRequestFragmentsArgs(bool async) {
+  RequestFragmentsArgs args = RequestFragmentsArgs{
+      static_cast<raft_term_t>(rand()), static_cast<raft_node_id_t>(rand()),
+      static_cast<raft_index_t>(rand()), static_cast<raft_index_t>(rand())};
+
+  auto cmp = [](const RequestFragmentsArgs &a, const RequestFragmentsArgs &b) -> bool {
+    return std::memcmp(&a, &b, sizeof(RequestFragmentsArgs)) == 0;
+  };
+  if (async) {
+    SendClientRequestAsyncTest<RequestFragmentsArgs>(args, cmp);
+  } else {
+    SendClientRequestTest<RequestFragmentsArgs>(args, cmp);
+  }
+}
+
+void SerializerTest::TestSerializeRequestFragmentsReply(bool async) {
+  RequestFragmentsReply reply =
+      RequestFragmentsReply{static_cast<raft_node_id_t>(rand()),
+                            static_cast<raft_term_t>(rand()),
+                            static_cast<raft_index_t>(rand()),
+                            true,
+                            2,
+                            {GenerateRandomLogEntry(true, kFragments),
+                             GenerateRandomLogEntry(true, kFragments)}};
+  auto cmp = [](const RequestFragmentsReply& lhs, const RequestFragmentsReply& rhs) -> bool {
+    bool hdr_eq = lhs.reply_id == rhs.reply_id && lhs.start_index == rhs.start_index &&
+                  lhs.success == rhs.success && lhs.term == rhs.term &&
+                  lhs.entry_cnt == rhs.entry_cnt;
+
+    if (lhs.fragments.size() != rhs.fragments.size()) {
+      return false;
+    }
+    for (int i = 0; i < lhs.fragments.size(); ++i) {
+      if (!(lhs.fragments[i] == rhs.fragments[i])) {
+        return false;
+      }
+    }
+    return true;
+  };
+  if (async) {
+    SendClientRequestAsyncTest<RequestFragmentsReply>(reply, cmp);
+  } else {
+    SendClientRequestTest<RequestFragmentsReply>(reply, cmp);
+  }
+}
+
 TEST_F(SerializerTest, DISABLED_TestSerializeSync) {
   LaunchServerThread();
   TestNoDataLogEntryTransfer(false);
@@ -274,17 +322,21 @@ TEST_F(SerializerTest, DISABLED_TestSerializeSync) {
   TestSerializeRequestVoteReply(false);
   TestSerializeAppendEntriesArgs(false);
   TestSerializeAppendEntriesReply(false);
+  TestSerializeRequestFragmentsArgs(false);
+  TestSerializeRequestFragmentsReply(false);
 }
 
 TEST_F(SerializerTest, TestSerializeAsync) {
   LaunchServerThread();
-  // TestNoDataLogEntryTransfer(true);
-  // TestCompleteCommandDataLogEntryTransfer(true);
-  // TestFragmentDataLogEntryTransfer(true);
-  // TestSerializeRequestVoteArgs(true);
-  // TestSerializeRequestVoteReply(true);
-  // TestSerializeAppendEntriesArgs(true);
+  TestNoDataLogEntryTransfer(true);
+  TestCompleteCommandDataLogEntryTransfer(true);
+  TestFragmentDataLogEntryTransfer(true);
+  TestSerializeRequestVoteArgs(true);
+  TestSerializeRequestVoteReply(true);
+  TestSerializeAppendEntriesArgs(true);
   TestSerializeAppendEntriesReply(true);
+  TestSerializeRequestFragmentsArgs(true);
+  TestSerializeRequestFragmentsReply(true);
 }
 
 }  // namespace raft
