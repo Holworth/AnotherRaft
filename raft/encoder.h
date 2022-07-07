@@ -5,6 +5,7 @@
 
 #include "log_entry.h"
 #include "raft_type.h"
+#include "util.h"
 
 namespace raft {
 // Version is used in FlexibleK to mark the status of a stripe
@@ -21,7 +22,10 @@ class Stripe {
 
   Slice NotEncodedSlice() { return fragments_[0].NotEncodedSlice(); }
 
-  void AddFragments(const LogEntry& frag) { fragments_.push_back(frag); }
+  void AddFragments(const LogEntry& frag) { 
+    LOG(util::kRaft, "Stripe ent size=%d", fragments_.size());
+    fragments_.push_back(frag); 
+  }
 
   auto FragmentCount() -> int { return fragments_.size(); }
 
