@@ -129,6 +129,8 @@ class RaftElectionTest : public ::testing::Test {
     void sendMessage(const AppendEntriesArgs &args) override {
       appendentries_channel_->push_back(args);
     }
+
+    void sendMessage(const RequestFragmentsArgs &args) override {}
     void setState(void *) override {}
     void stop() override {}
     void recover() override {}
