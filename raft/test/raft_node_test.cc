@@ -16,7 +16,7 @@ class RaftNodeBasicTest : public RaftNodeTest {
   }
 };
 
-TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestSimplyProposeEntry) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -29,7 +29,7 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestFollowersCrash) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestFollowersCrash) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -56,7 +56,7 @@ TEST_F(RaftNodeBasicTest, TestFollowersCrash) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestLeaderCrash) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestLeaderCrash) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);

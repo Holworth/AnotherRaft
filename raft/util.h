@@ -32,7 +32,7 @@ class Logger {
   // Enable debug messages or not. False means all types
   // of messages will be ignored
   // static const bool debugFlag = ENABLE_RAFT_LOG;
-  static const bool debugFlag = false;
+  static const bool debugFlag = true;
 
   // On debugFlag = true, enable RPC related messages
   static const bool debugRPCFlag = false;
