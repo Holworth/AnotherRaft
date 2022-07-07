@@ -66,7 +66,10 @@ class Stripe {
 
   const Version& GetVersion() const { return version_; }
 
-  void Init() { fragments_.clear(); }
+  void Init() { 
+    fragments_.clear(); 
+    LOG(util::kRaft, "Stripe ent size=%d", fragments_.size());
+  }
 
   void Remove(int i) {
     // Delete an entry with specific frag id
