@@ -99,6 +99,8 @@ TEST_F(RaftNodeBasicTest, TestNewLeaderGetFullLogEntry) {
   sleepMs(1000);
 
   EXPECT_TRUE(checkCommitted(pr, 4));
+
+  ClearTestContext(config);
 }
 
 }  // namespace raft
