@@ -22,21 +22,43 @@ class EncoderTest : public ::testing::Test {
 TEST_F(EncoderTest, TestSimpleEncodingDecoding) {
   const int kTestK = 2;
   const int kTestM = 1;
-  const raft_index_t kTestRaftIndex = 1;
-  const raft_term_t kTestRaftTerm = 1;
 
-  auto encoder = new Encoder();
+  Encoder encoder;
   Encoder::EncodingResults results;
   Slice ent = GenerateRandomSlice(512, 1024);
 
   // Encoding
-  encoder->EncodeSlice(ent, kTestK, kTestM, &results);
+  encoder.EncodeSlice(ent, kTestK, kTestM, &results);
 
   // Decoding
   Slice recover_ent;
-  encoder->DecodeSlice(results, kTestK, kTestM, &recover_ent);
-  Slice origin_ent(recover_ent.data(), ent.size());
+  encoder.DecodeSlice(results, kTestK, kTestM, &recover_ent);
 
+  Slice origin_ent(recover_ent.data(), ent.size());
+  ASSERT_EQ(origin_ent.compare(ent), 0);
+}
+
+TEST_F(EncoderTest, TestDecodingAfterRemoveSomeFragments) {
+  const int TestK = 5;
+  const int TestM = 3;
+
+  Encoder encoder;
+  Encoder::EncodingResults results;
+  Slice ent = GenerateRandomSlice(512, 1024);
+
+  // Encoding
+  encoder.EncodeSlice(ent, TestK, TestM, &results);
+
+  // remove some fragments 
+  while (results.size() > TestK) {
+    results.erase(results.begin());
+  }
+
+  // Decoding
+  Slice recover_ent;
+  encoder.DecodeSlice(results, TestK, TestM, &recover_ent);
+
+  Slice origin_ent(recover_ent.data(), ent.size());
   ASSERT_EQ(origin_ent.compare(ent), 0);
 }
 
