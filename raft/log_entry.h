@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdio>
 #include <string>
 
 #include "SF/Archive.hpp"
@@ -29,7 +30,7 @@ class Slice {
   auto toString() const -> std::string { return std::string(data_, size_); }
 
   // Require both slice are valid
-  auto compare(const Slice &slice) -> bool {
+  auto compare(const Slice &slice) -> int {
     assert(valid() && slice.valid());
     auto cmp_len = std::min(size(), slice.size());
     auto cmp_res = std::memcmp(data(), slice.data(), cmp_len);
@@ -61,17 +62,8 @@ class LogEntry {
   auto Type() const -> raft_entry_type { return type; }
   void SetType(raft_entry_type type) { this->type = type; }
 
-  auto Sequence() const -> raft_sequence_t { return seq; }
-  void SetSequence(raft_sequence_t seq) { this->seq = seq; }
-
-  auto GetN() const -> uint16_t { return n; }
-  auto SetN(uint16_t n) { this->n = n; }
-
-  auto GetK() const -> uint16_t { return k; }
-  void SetK(uint16_t k) { this->k = k; }
-
-  auto FragId() const -> uint16_t { return fragment_id; }
-  void SetFragId(uint16_t id) { this->fragment_id = id; }
+  auto GetVersion() const -> Version { return version; }
+  void SetVersion(const Version &v) { version = v; }
 
   auto StartOffset() const -> int { return start_fragment_offset; }
   void SetStartOffset(int off) { start_fragment_offset = off; }
@@ -95,12 +87,15 @@ class LogEntry {
 
   // Serialization function required by RCF
   // void serialize(SF::Archive &ar);
-  std::string ToString() const {  // Dump the important information
-    std::stringstream ss;
-    ss << "K: " << GetK() << " K+M: " << GetN() << " FragId: " << FragId()
-       << " FragOff: " << StartOffset() << " FragLen: " << FragmentSlice().size()
-       << " Len: " << NotEncodedSlice().size() << "\n";
-    return ss.str();
+  //
+  // Dump some important information
+  std::string ToString() const {
+    char buf[256];
+    sprintf(buf, "LogEntry{term=%d, index=%d, type=%s, version=%s, start_off=%d}", Term(),
+            Index(), EntryTypeToString(Type()), version.ToString().c_str(),
+            StartOffset());
+
+    return std::string(buf);
   }
 
  private:
@@ -108,16 +103,19 @@ class LogEntry {
   raft_term_t term;
   raft_index_t index;
   raft_entry_type type;  // Full entry or fragments
-  raft_sequence_t seq;
+  // raft_sequence_t seq;
+  //
+  // // k+m in ec mode
+  // uint16_t n;
+  //
+  // // k: the minimum number of fragments to recover a full entry
+  // uint16_t k;
+  //
+  // // Uniquely identify a fragment among a stripe, valid value: [0, n)
+  // uint16_t fragment_id;
 
-  // k+m in ec mode
-  uint16_t n;
-
-  // k: the minimum number of fragments to recover a full entry
-  uint16_t k;
-
-  // Uniquely identify a fragment among a stripe, valid value: [0, n)
-  uint16_t fragment_id;
+  // Version is only valid when type is kFragments
+  Version version;
 
   // [REQUIRE] specified by user, indicating the start offset of command
   // data for encoding

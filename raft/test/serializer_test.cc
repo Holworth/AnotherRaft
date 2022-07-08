@@ -1,4 +1,3 @@
-#include "RCF/ThreadLibrary.hpp"
 #include "serializer.h"
 
 #include <cstdlib>
@@ -10,6 +9,7 @@
 #include "RCF/Future.hpp"
 #include "RCF/InitDeinit.hpp"
 #include "RCF/RCF.hpp"
+#include "RCF/ThreadLibrary.hpp"
 #include "RCF/UdpEndpoint.hpp"
 #include "gtest/gtest.h"
 #include "log_entry.h"
@@ -113,11 +113,17 @@ class SerializerTest : public ::testing::Test {
     return Slice(rand_data, rand_size);
   }
 
+  auto GenerateRandomVersion() -> Version {
+    return Version{
+        VersionNumber{static_cast<raft_term_t>(rand()), static_cast<uint32_t>(rand())},
+        rand(), rand(), static_cast<raft_frag_id_t>(rand())};
+  }
+
   auto GenerateRandomLogEntry(bool generate_data, raft_entry_type type) -> LogEntry {
     LogEntry ent;
     ent.SetTerm(rand());
     ent.SetIndex(rand());
-    ent.SetSequence(rand());
+    ent.SetVersion(GenerateRandomVersion());
     ent.SetType(type);
     if (generate_data) {
       switch (ent.Type()) {
@@ -267,7 +273,7 @@ void SerializerTest::TestSerializeAppendEntriesReply(bool async) {
     }
     bool versions_eq = lhs.versions.size() == rhs.versions.size();
     for (int i = 0; i < lhs.versions.size(); ++i) {
-      if (lhs.versions[i] != rhs.versions[i]) {
+      if (!(lhs.versions[i] == rhs.versions[i])) {
         return false;
       }
     }
@@ -304,7 +310,8 @@ void SerializerTest::TestSerializeRequestFragmentsReply(bool async) {
                             2,
                             {GenerateRandomLogEntry(true, kFragments),
                              GenerateRandomLogEntry(true, kFragments)}};
-  auto cmp = [](const RequestFragmentsReply& lhs, const RequestFragmentsReply& rhs) -> bool {
+  auto cmp = [](const RequestFragmentsReply &lhs,
+                const RequestFragmentsReply &rhs) -> bool {
     bool hdr_eq = lhs.reply_id == rhs.reply_id && lhs.start_index == rhs.start_index &&
                   lhs.success == rhs.success && lhs.term == rhs.term &&
                   lhs.entry_cnt == rhs.entry_cnt;

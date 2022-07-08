@@ -11,6 +11,7 @@ namespace raft {
 Serializer Serializer::NewSerializer() { return Serializer(); }
 
 char *Serializer::serialize_logentry_helper(const LogEntry *entry, char *dst) {
+  // NOTE: It is ok to simply copy sizeof(LogEntry) here
   std::memcpy(dst, entry, sizeof(LogEntry));
   dst += sizeof(LogEntry);
   dst = PutPrefixLengthSlice(entry->NotEncodedSlice(), dst);
