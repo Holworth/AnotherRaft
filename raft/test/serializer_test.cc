@@ -253,14 +253,14 @@ void SerializerTest::TestSerializeAppendEntriesArgs(bool async) {
 }
 
 void SerializerTest::TestSerializeAppendEntriesReply(bool async) {
-  AppendEntriesReply reply =
-      AppendEntriesReply{static_cast<raft_term_t>(rand()),
-                         rand(),
-                         static_cast<raft_index_t>(rand()),
-                         static_cast<raft_node_id_t>(rand()),
-                         static_cast<raft_index_t>(rand()),
-                         3,
-                         {Version{1, 1, 1, 2}, Version{2, 1, 1, 1}, Version{3, 1, 1, 1}}};
+  AppendEntriesReply reply = AppendEntriesReply{
+      static_cast<raft_term_t>(rand()),
+      rand(),
+      static_cast<raft_index_t>(rand()),
+      static_cast<raft_node_id_t>(rand()),
+      static_cast<raft_index_t>(rand()),
+      3,
+      {GenerateRandomVersion(), GenerateRandomVersion(), GenerateRandomVersion()}};
 
   auto cmp = [](const AppendEntriesReply &lhs, const AppendEntriesReply &rhs) -> bool {
     bool hdr_eq = lhs.reply_id == rhs.reply_id && lhs.expect_index == rhs.expect_index &&
@@ -348,13 +348,13 @@ TEST_F(SerializerTest, DISABLED_TestSerializeSync) {
 
 TEST_F(SerializerTest, TestSerializeAsync) {
   LaunchServerThread();
-  // TestNoDataLogEntryTransfer(true);
-  // TestCompleteCommandDataLogEntryTransfer(true);
-  // TestFragmentDataLogEntryTransfer(true);
-  // TestSerializeRequestVoteArgs(true);
-  // TestSerializeRequestVoteReply(true);
-  // TestSerializeAppendEntriesArgs(true);
-  // TestSerializeAppendEntriesReply(true);
+  TestNoDataLogEntryTransfer(true);
+  TestCompleteCommandDataLogEntryTransfer(true);
+  TestFragmentDataLogEntryTransfer(true);
+  TestSerializeRequestVoteArgs(true);
+  TestSerializeRequestVoteReply(true);
+  TestSerializeAppendEntriesArgs(true);
+  TestSerializeAppendEntriesReply(true);
   TestSerializeRequestFragmentsArgs(true);
   TestSerializeRequestFragmentsReply(true);
 }
