@@ -116,7 +116,7 @@ class Encoder {
   static constexpr int kAlignment = 8;
 
  public:
-  using EncodingResults = std::unordered_map<raft_frag_id_t, Slice>;
+  using EncodingResults = std::map<raft_frag_id_t, Slice>;
 
   Encoder() {
     encode_matrix_ = new unsigned char[kMaxK * (kMaxM + kMaxK)];
