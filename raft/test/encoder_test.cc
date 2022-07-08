@@ -1,5 +1,6 @@
 #include "encoder.h"
 #include <cstdlib>
+#include <iterator>
 
 #include "gtest/gtest.h"
 #include "log_entry.h"
@@ -51,7 +52,8 @@ TEST_F(EncoderTest, TestDecodingAfterRemoveSomeFragments) {
 
   // remove some fragments 
   while (results.size() > TestK) {
-    results.erase(results.begin());
+    auto remove_iter = std::next(std::begin(results), rand() % results.size());
+    results.erase(remove_iter);
   }
 
   // Decoding
