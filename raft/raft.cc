@@ -1,6 +1,7 @@
 #include "raft.h"
 
 #include <cassert>
+#include <cstdio>
 #include <cstdlib>
 #include <ctime>
 #include <map>
@@ -583,10 +584,9 @@ void RaftState::tryUpdateCommitIndex() {
               request_version.GetVersionNumber()) >= 0) {
         // Two different servers may replicate the same fragment, we must decide the
         // number of different fragments that have been replicated
-        auto frag_id = replicate_frag[node->matchVersion[N].GetFragmentId()];
+        auto frag_id = node->matchVersion[N].GetFragmentId();
         if (replicate_frag[frag_id] == false) {
           agree_cnt++;
-          LOG(util::kRaft, "S%d Add AgreeCnt: %d", agree_cnt);
           replicate_frag[frag_id] = true;
         }
       }

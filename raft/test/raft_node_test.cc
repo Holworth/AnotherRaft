@@ -78,7 +78,7 @@ TEST_F(RaftNodeBasicTest, DISABLED_TestLeaderCrash) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestNewLeaderGetFullLogEntry) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestNewLeaderGetFullLogEntry) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);

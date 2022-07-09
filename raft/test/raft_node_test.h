@@ -255,10 +255,9 @@ class RaftNodeTest : public ::testing::Test {
     if (!decode_stat) {
       return false;
     }
-    auto val = *reinterpret_cast<int*>(res.data());
-    auto val_tail = *reinterpret_cast<int*>(res.data() + kCommandDataLength - 4);
-    EXPECT_EQ(val, val_tail);
-    return val == propose_val;
+    auto val_tail = *reinterpret_cast<int*>(res.data() + kCommandDataLength - 8);
+    EXPECT_EQ(propose_val, val_tail);
+    return true;
   }
 
   int LivenessLevel() const { return node_num_ / 2; }
