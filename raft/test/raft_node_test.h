@@ -222,6 +222,7 @@ class RaftNodeTest : public ::testing::Test {
   bool checkCommitted(const ProposeResult& propose_result, int propose_val) {
     Stripe stripe;
     int alive_number = 0;
+    Encoder::EncodingResults collected_res;
     for (int i = 0; i < node_num_; ++i) {
       if (Alive(i)) {
         alive_number += 1;
@@ -234,33 +235,27 @@ class RaftNodeTest : public ::testing::Test {
             continue;
           }
           if (ent.Type() == kFragments) {
-            stripe.AddFragments(ent);
+            collected_res.insert_or_assign(ent.GetVersion().fragment_id, ent);
           }
         }
       }
     }
 
-    stripe.SetK(alive_number - LivenessLevel());
-    stripe.SetN(alive_number);
-    if (stripe.FragmentNum() == 0) {
+    int k = alive_number - LivenessLevel();
+    int m = LivenessLevel();
+    if (collected_res.size() == 0) {
       return false;
     }
-    stripe.SetFragLength(stripe.GetFragment(0).FragmentSlice().size());
 
     Encoder encoder;
-    LogEntry ent;
+    Slice res;
     // Failed decoding: may due to insufficient fragments
-    auto decode_stat = encoder.DecodeEntry(&stripe, &ent);
+    auto decode_stat = encoder.DecodeSlice(collected_res, k, m, &res);
     if (!decode_stat) {
       return false;
     }
-    EXPECT_EQ(ent.Type(), kNormal);
-    EXPECT_EQ(ent.CommandData().size(), kCommandDataLength);
-
-    auto data_ptr = ent.CommandData().data();
-    auto data_size = ent.CommandData().size();
-    auto val = *reinterpret_cast<int*>(data_ptr);
-    auto val_tail = *reinterpret_cast<int*>(data_ptr + data_size - 4);
+    auto val = *reinterpret_cast<int*>(res.data());
+    auto val_tail = *reinterpret_cast<int*>(res.data() + kCommandDataLength - 4);
     EXPECT_EQ(val, val_tail);
     return val == propose_val;
   }

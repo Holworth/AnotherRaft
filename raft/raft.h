@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "encoder.h"
+#include "log_entry.h"
 #include "log_manager.h"
 #include "raft_struct.h"
 #include "raft_type.h"
@@ -23,9 +24,9 @@ enum RaftRole {
 };
 
 namespace config {
-const int64_t kHeartbeatInterval = 100;  // 100ms
+const int64_t kHeartbeatInterval = 100;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
-};
+};                                              // namespace config
 
 struct RaftConfig {
   // The node id of curernt peer. A node id is the unique identifier to
@@ -143,8 +144,8 @@ struct PreLeaderStripeStore {
     }
 
     // Initiate stripe
-    for (auto stripe: stripes) {
-      stripe.Init();
+    for (auto stripe : stripes) {
+      // stripe.Init();
     }
 
     memset(response_, false, sizeof(response_));
@@ -172,7 +173,7 @@ struct PreLeaderStripeStore {
       return;
     }
     auto array_index = idx - start_index;
-    stripes[array_index].AddFragments(entry);
+    // stripes[array_index].AddFragments(entry);
   }
 };
 
@@ -268,6 +269,13 @@ class RaftState {
 
   void tryApplyLogEntries();
 
+  // Encoding specified log entry with encoding parameter k, m, the results is written
+  // into specified stripe
+  void EncodingRaftEntry(raft_index_t raft_index, int k, int m, VersionNumber version_num,
+                         Stripe *stripe);
+
+  bool NeedOverwriteLogEntry(const Version& old_version, const Version& new_version);
+
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
   // Add any new entries that are not in raft's log
@@ -275,6 +283,8 @@ class RaftState {
 
   // Reset the next index and match index fields when current server becomes leader
   void resetNextIndexAndMatchIndex();
+
+  uint32_t NextSequence() { return seq_gen_.Next(); }
 
   void tickOnFollower();
   void tickOnCandidate();
@@ -370,6 +380,7 @@ class RaftState {
   SequenceGenerator seq_gen_;
   // For each index, there is an associated stripe that contains the encoded data
   std::map<raft_index_t, Stripe *> encoded_stripe_;
+
   // For each index, last_replicate contains the recent replicate version
   std::unordered_map<raft_index_t, Version> last_replicate_;
 

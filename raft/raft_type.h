@@ -58,27 +58,13 @@ struct VersionNumber {
   }
 
   bool operator==(const VersionNumber& rhs) { return this->compare(rhs) == 0; }
-};
 
-// struct Version {
-//   raft_index_t idx;
-//   uint64_t sequence;
-//   int k, m;
-//
-//   // Dump the important information
-//   std::string toString() const {
-//     std::stringstream ss;
-//     ss << "Version {index:" << idx << ", sequence:" << sequence << ", k:" << k
-//        << ", m:" << m << "}";
-//     return ss.str();
-//   }
-//
-//   bool operator==(const Version& rhs) const {
-//     return std::memcmp(this, &rhs, sizeof(Version)) == 0;
-//   }
-//
-//   bool operator!=(const Version& rhs) const { return !(*this == rhs); }
-// };
+  std::string ToString() const {
+    char buf[256];
+    sprintf(buf, "VersionNumber{term=%d, seq=%d}", Term(), Seq());
+    return std::string(buf);
+  }
+};
 
 // A version is a struct that records encoding-related version of an entry
 struct Version {
