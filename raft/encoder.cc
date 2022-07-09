@@ -5,54 +5,6 @@
 
 namespace raft {
 
-void Stripe::Filter() {
-  // key: The pair of (k, n), it uniquely determines an encoded stripe
-  // value: A vector that records the stripe fragments' index
-  // std::map<std::pair<int, int>, std::vector<int>> m;
-  //
-  // for (int i = 0; i < fragments_.size(); ++i) {
-  //   const auto& fragment = fragments_[i];
-  //   // First checks index and term pair
-  //   if (fragment.Index() != this->index_ || fragment.Term() != this->term_) {
-  //     continue;
-  //   }
-  //
-  //   if (fragment.Type() == kFragments) {
-  //     m[{fragment.GetK(), fragment.GetN()}].push_back(static_cast<int>(i));
-  //   }
-  //
-  //   if (fragment.Type() == kNormal) {
-  //     m[{1, 0}].push_back(static_cast<int>(i));
-  //   }
-  // }
-  //
-  // // Check if we can decode a full entry:
-  // for (const auto& k_stripe : m) {
-  //   auto k = k_stripe.first.first;
-  //   if (k_stripe.second.size() < k) {
-  //     continue;
-  //   }
-  //   std::vector<LogEntry> after_filter;
-  //   for (const auto& i : k_stripe.second) {
-  //     after_filter.push_back(fragments_[i]);
-  //   }
-  //   fragments_ = after_filter;
-  //
-  //   // Set meta data
-  //   SetK(k_stripe.first.first);
-  //   SetN(k_stripe.first.second);
-  //
-  //   assert(after_filter.size() > 0);
-  //   SetFragLength(after_filter[0].FragmentSlice().size());
-  //   return;
-  // }
-  //
-  // // Here means can not decode a full entry from these collected fragments
-  // // Set -1 indicates decode process will directly return false
-  // SetK(-1);
-  // return;
-}
-
 // EncodeSlice should not modify underlying data contained by input slice
 bool Encoder::EncodeSlice(const Slice& slice, int k, int m, EncodingResults* results) {
   auto encoding_size = slice.size();
