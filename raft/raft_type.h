@@ -86,7 +86,7 @@ struct Version {
   // Dump the data
   std::string ToString() const {
     char buf[256];
-    sprintf(buf, "Version{VersionNumber{term=%d, seq=%d}, k=%d, m=%d, fragment_id=%d}",
+    sprintf(buf, "Version{VersionNumber{Term=%d, Seq=%d}, K=%d, M=%d, FragID=%d}",
             GetVersionNumber().Term(), GetVersionNumber().Seq(), GetK(), GetM(),
             GetFragmentId());
     return std::string(buf);
