@@ -478,9 +478,12 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     auto ent = lm_->GetSingleLogEntry(raft_index);
     if (NeedOverwriteLogEntry(ent->GetVersion(),
                               args->entries[array_index].GetVersion())) {
+      LOG(util::kRaft, "S%d OVERWRITE I%d", id_, raft_index);
       lm_->OverWriteLogEntry(args->entries[array_index], raft_index);
     } else {
       // Just simply overwrite version number
+      LOG(util::kRaft, "S%d UPDATE VERSION I%d VN(%s)", id_, raft_index,
+          args->entries[array_index].GetVersion().GetVersionNumber().ToString().c_str());
       ent->SetVersion(args->entries[array_index].GetVersion());
     }
     ent = lm_->GetSingleLogEntry(raft_index);
