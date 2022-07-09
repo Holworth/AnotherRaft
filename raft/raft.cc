@@ -586,6 +586,7 @@ void RaftState::tryUpdateCommitIndex() {
         auto frag_id = replicate_frag[node->matchVersion[N].GetFragmentId()];
         if (replicate_frag[frag_id] == false) {
           agree_cnt++;
+          LOG(util::kRaft, "S%d Add AgreeCnt: %d", agree_cnt);
           replicate_frag[frag_id] = true;
         }
       }
