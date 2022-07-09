@@ -235,7 +235,8 @@ class RaftNodeTest : public ::testing::Test {
             continue;
           }
           if (ent.Type() == kFragments) {
-            collected_res.insert_or_assign(ent.GetVersion().fragment_id, ent);
+            collected_res.insert_or_assign(ent.GetVersion().fragment_id,
+                                           ent.FragmentSlice());
           }
         }
       }
