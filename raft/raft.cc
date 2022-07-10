@@ -431,12 +431,6 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   int val = *reinterpret_cast<int *>(entry.CommandData().data());
 
-  // Replicate this entry out
-  // for (auto &[id, _] : peers_) {
-  //   if (id != id_) {
-  //     sendAppendEntries(id);
-  //   }
-  // }
   replicateEntries();
   return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
@@ -914,6 +908,8 @@ void RaftState::EncodingRaftEntry(raft_index_t raft_index, int k, int m,
     encoded_ent.SetIndex(raft_index);
     encoded_ent.SetTerm(stripe->raft_term);
     encoded_ent.SetType(kFragments);
+    encoded_ent.SetStartOffset(ent->StartOffset());
+    encoded_ent.SetCommandLength(ent->CommandLength());
     encoded_ent.SetNotEncodedSlice(Slice(ent->CommandData().data(), ent->StartOffset()));
     encoded_ent.SetFragmentSlice(frag);
     encoded_ent.SetVersion(Version{version_num, k, m, frag_id});
@@ -1139,9 +1135,13 @@ void RaftState::EncodeCollectedStripe() {
     auto r_idx = i + preleader_stripe_store_.start_index;
     if (succ) {
       lm_->OverWriteLogEntry(entry, r_idx);
+      LOG(util::kRaft, "S%d OverWrite Decoded Entry Info:%s", id_,
+          entry.ToString().c_str());
     } else {
       // Failed to decode a full entry, delete all preceding log entries
+      auto last_index = lm_->LastLogEntryIndex();
       lm_->DeleteLogEntriesFrom(r_idx);
+      LOG(util::kRaft, "S%d DelEntry(I%d)", id_, r_idx, last_index);
       return;
     }
   }
@@ -1154,9 +1154,9 @@ bool RaftState::NeedOverwriteLogEntry(const Version &old_version,
          old_version.GetFragmentId() != new_version.GetFragmentId();
 }
 
-void RaftState::FilterDuplicatedCollectedFragments(Stripe& stripes) {
-  // The stripe may contain multiple fragments with different encoding parameters, 
-  // this function is responsible for only remaining those entries that can be 
+void RaftState::FilterDuplicatedCollectedFragments(Stripe &stripes) {
+  // The stripe may contain multiple fragments with different encoding parameters,
+  // this function is responsible for only remaining those entries that can be
   // successfully decoded
 }
 

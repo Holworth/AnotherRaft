@@ -71,7 +71,8 @@ class LogEntry {
   auto CommandData() const -> Slice {
     return Type() == kNormal ? command_data_ : Slice();
   }
-  auto CommandLength() const -> size_t { return command_size_; }
+  auto CommandLength() const -> int { return command_size_; }
+  void SetCommandLength(int size) { command_size_ = size; }
 
   void SetCommandData(const Slice &slice) { 
     command_data_ = slice; 
@@ -94,9 +95,9 @@ class LogEntry {
   // Dump some important information
   std::string ToString() const {
     char buf[256];
-    sprintf(buf, "LogEntry{term=%d, index=%d, type=%s, version=%s, start_off=%d}", Term(),
+    sprintf(buf, "LogEntry{term=%d, index=%d, type=%s, version=%s, commandlen=%d, start_off=%d}", Term(),
             Index(), EntryTypeToString(Type()), version.ToString().c_str(),
-            StartOffset());
+            CommandLength(), StartOffset());
 
     return std::string(buf);
   }

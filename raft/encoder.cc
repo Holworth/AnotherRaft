@@ -148,6 +148,7 @@ bool Encoder::DecodeSlice(const EncodingResults& fragments, int k, int m,
     return false;
   }
   *results = Slice(data, decode_size);
+  return true;
 }
 
 // bool Encoder::DecodeSlice(const EncodingResults& fragments, int k, int m,
