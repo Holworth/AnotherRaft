@@ -253,6 +253,7 @@ class RaftNodeTest : public ::testing::Test {
     // Failed decoding: may due to insufficient fragments
     auto decode_stat = encoder.DecodeSlice(collected_res, k, m, &res);
     if (!decode_stat) {
+      LOG(util::kRaft, "[FAILED] Decode Slice Fail");
       return false;
     }
     auto val_tail = *reinterpret_cast<int*>(res.data() + kCommandDataLength - 8);
