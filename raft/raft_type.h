@@ -64,6 +64,8 @@ struct VersionNumber {
     sprintf(buf, "VersionNumber{term=%d, seq=%d}", Term(), Seq());
     return std::string(buf);
   }
+
+  static VersionNumber Default() { return VersionNumber{0, 0}; }
 };
 
 // A version is a struct that records encoding-related version of an entry
@@ -72,6 +74,8 @@ struct Version {
   // Encoding related data
   int k, m;
   raft_frag_id_t fragment_id;
+
+  static Version Default() { return {VersionNumber::Default(), 0, 0, 0}; }
 
   VersionNumber GetVersionNumber() const { return version_number; }
   int GetK() const { return k; }

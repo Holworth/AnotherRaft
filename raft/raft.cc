@@ -413,6 +413,7 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   entry.SetIndex(next_entry_index);
   entry.SetTerm(CurrentTerm());
   entry.SetStartOffset(command.start_fragment_offset);
+  entry.SetVersion(Version::Default());
 
   lm_->AppendLogEntry(entry);
 
@@ -953,6 +954,7 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
   ent->SetType(kNormal);
   ent->SetCommandData(Slice(data, origin_size));
   ent->SetStartOffset(not_encoded_size);
+  ent->SetVersion(Version::Default());
   LOG(util::kRaft, "S%d Decode Results: Ent(%s)", id_, ent->ToString().c_str());
 
   return true;
