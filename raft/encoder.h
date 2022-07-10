@@ -15,6 +15,7 @@ struct Stripe {
   raft_index_t raft_index;
   raft_term_t raft_term;
   std::map<raft_frag_id_t, LogEntry> fragments;
+  std::vector<LogEntry> collected_fragments;
   Version version;
 };
 
@@ -151,6 +152,11 @@ class Encoder {
   // Decode a set of fragments to generate the full content, the corresponding k and m
   // parameters should be set before calling this method
   bool DecodeSlice(const EncodingResults& input, int k, int m, Slice* results);
+
+  // A helper function: Decode entry to a data place specified by data, set the size to 
+  // be data length after decoding
+  bool DecodeSliceHelper(const EncodingResults& input, int k, int m, char* data,
+                         int* size);
 
  private:
   // A built-in encoding matrix space. Since encoding matrix will not be changed

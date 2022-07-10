@@ -3,11 +3,13 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <map>
 #include <mutex>
 #include <vector>
 
+#include "encoder.h"
 #include "log_entry.h"
 #include "log_manager.h"
 #include "raft_struct.h"
@@ -311,7 +313,7 @@ void RaftState::Process(RequestFragmentsArgs *args, RequestFragmentsReply *reply
 
   std::scoped_lock<std::mutex> lck(mtx_);
 
-  LOG(util::kRaft, "S%d Receive RequestFragments From S%d(EC) (T%d SI=%d EI=%d)", id_,
+  LOG(util::kRaft, "S%d RECV ReqFrag From S%d(EC) (T%d SI=%d EI=%d)", id_,
       args->leader_id, args->term, args->start_index, args->last_index);
 
   reply->reply_id = id_;
@@ -323,8 +325,8 @@ void RaftState::Process(RequestFragmentsArgs *args, RequestFragmentsReply *reply
     reply->fragments.clear();
     reply->success = false;
 
-    LOG(util::kRaft, "S%d refuse RequestFragments: Higher Term(%d>%d)", id_,
-        CurrentTerm(), args->term);
+    LOG(util::kRaft, "S%d REFUSE ReqFrag: Higher Term(%d>%d)", id_, CurrentTerm(),
+        args->term);
     return;
   }
 
@@ -357,7 +359,7 @@ void RaftState::Process(RequestFragmentsReply *reply) {
 
   std::scoped_lock<std::mutex> lck(mtx_);
 
-  LOG(util::kRaft, "S%d receive RequestFragmentsReply From S%d", id_, reply->reply_id);
+  LOG(util::kRaft, "S%d RECV ReqFragReply From S%d", id_, reply->reply_id);
 
   if (Role() != kPreLeader || reply->term < CurrentTerm()) {
     return;
@@ -371,7 +373,7 @@ void RaftState::Process(RequestFragmentsReply *reply) {
   LOG(util::kRaft, "S%d ReqFrag Resp (Cnt=%d)", id_, reply->entry_cnt);
 
   if (preleader_stripe_store_.IsCollected(reply->reply_id)) {
-    LOG(util::kRaft, "S%d ommit RequestFragmentsReply from S%d", id_, reply->reply_id);
+    LOG(util::kRaft, "S%d ommit ReqFragReply from S%d", id_, reply->reply_id);
     return;
   }
 
@@ -761,53 +763,63 @@ void RaftState::broadcastHeartbeat() {
 }
 
 void RaftState::collectFragments() {
-  // // Initiate a fragments collection task
-  // LOG(util::kRaft, "S%d Collect Fragments(I%d->I%d)", id_, CommitIndex() + 1,
-  //     lm_->LastLogEntryIndex());
-  //
+  // Initiate a fragments collection task
+  LOG(util::kRaft, "S%d Collect Fragments(I%d->I%d)", id_, CommitIndex() + 1,
+      lm_->LastLogEntryIndex());
+
   // // Initiate a request fragments task
-  // preleader_stripe_store_.InitRequestFragmentsTask(
-  //     CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size() + 1, id_);
-  // preleader_timer_.Reset();
+  preleader_stripe_store_.InitRequestFragmentsTask(
+      CommitIndex() + 1, lm_->LastLogEntryIndex(), peers_.size() + 1, id_);
+  preleader_timer_.Reset();
+
+  for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
+    raft_index_t r_idx = i + preleader_stripe_store_.start_index;
+    auto ent = lm_->GetSingleLogEntry(r_idx);
+    assert(ent != nullptr);
+
+    // NOTE: The stripe meta data is set by current leader, however, that might
+    // be invalid since a collected stripe may contain multiple kind of entries
+    // i.e. with different k and m parameters
+    Stripe &stripe = preleader_stripe_store_.stripes[i];
+
+    // The stripe must filtered fragments that does not match specified index and term
+    stripe.raft_index = ent->Index();
+    stripe.raft_term = ent->Term();
+
+    /*
+    // K + M
+    // TODO: Set k after filtering fragments, use the smaller k
+    stripe.SetFragmentCnt(ent->FragmentsCnt());
+    // K
+    stripe.SetFragRecoverCnt(ent->FragmentRequireCnt());
+    stripe.SetFragLength(ent->FragmentLength());
+    */
+
+    // Add current server's saved fragments(It might be a complete log entry as well)
+    if (ent->Type() == kFragments) {
+      auto frag_id = ent->GetVersion().GetFragmentId();
+      stripe.fragments[frag_id] = *ent;
+      LOG(util::kRaft, "S%d Add FragId%d into Stripe I%d", id_, frag_id, ent->Index());
+    } else if (ent->Type() == kNormal) {
+      // No need to collect this entry since leader has full entry
+      LOG(util::kRaft, "S%d Skip Collect I%d", id_, ent->Index());
+    } else {
+      // This ent might be a null entry which carries no data
+    }
+  }
   //
-  // for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
-  //   raft_index_t r_idx = i + preleader_stripe_store_.start_index;
-  //   auto ent = lm_->GetSingleLogEntry(r_idx);
-  //   assert(ent != nullptr);
+  RequestFragmentsArgs args;
+  args.term = CurrentTerm();
+  args.leader_id = id_;
+  args.start_index = CommitIndex() + 1;
+  args.last_index = lm_->LastLogEntryIndex();
   //
-  //   // NOTE: The stripe meta data is set by current leader, however, that might
-  //   // be invalid since a collected stripe may contain multiple kind of entries
-  //   // i.e. with different k and m parameters
-  //   Stripe &stripe = preleader_stripe_store_.stripes[i];
-  //   stripe.SetIndex(ent->Index());
-  //   stripe.SetTerm(ent->Term());
-  //   /*
-  //   // K + M
-  //   // TODO: Set k after filtering fragments, use the smaller k
-  //   stripe.SetFragmentCnt(ent->FragmentsCnt());
-  //   // K
-  //   stripe.SetFragRecoverCnt(ent->FragmentRequireCnt());
-  //   stripe.SetFragLength(ent->FragmentLength());
-  //   */
-  //
-  //   // Add current server's saved fragments(It might be a complete log entry as well)
-  //   stripe.AddFragments(
-  //       *(lm_->GetSingleLogEntry(preleader_stripe_store_.start_index + i)));
-  //   LOG(util::kRaft, "S%d Add Its Fragments into Stripe I%d", id_, ent->Index());
-  // }
-  //
-  // RequestFragmentsArgs args;
-  // args.term = CurrentTerm();
-  // args.leader_id = id_;
-  // args.start_index = CommitIndex() + 1;
-  // args.last_index = lm_->LastLogEntryIndex();
-  //
-  // for (auto &[id, rpc] : rpc_clients_) {
-  //   if (id == id_) {
-  //     continue;
-  //   }
-  //   rpc->sendMessage(args);
-  // }
+  for (auto &[id, rpc] : rpc_clients_) {
+    if (id == id_) {
+      continue;
+    }
+    rpc->sendMessage(args);
+  }
 }
 
 void RaftState::resetElectionTimer() {
@@ -907,6 +919,46 @@ void RaftState::EncodingRaftEntry(raft_index_t raft_index, int k, int m,
     encoded_ent.SetVersion(Version{version_num, k, m, frag_id});
     stripe->fragments[frag_id] = encoded_ent;
   }
+}
+
+bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
+  // Debug:
+  // ------------------------------------------------------------------
+  LOG(util::kRaft, "S%d Decode Stripe I%d", id_, stripe->raft_index);
+  // ------------------------------------------------------------------
+  auto version = stripe->collected_fragments[0].GetVersion();
+  auto k = version.GetK();
+  auto m = version.GetM();
+
+  int not_encoded_size = stripe->collected_fragments[0].StartOffset();
+  int complete_ent_size =
+      not_encoded_size + (stripe->collected_fragments[0].FragmentSlice().size() * k);
+
+  auto data = new char[complete_ent_size + 16];
+  std::memcpy(data, stripe->collected_fragments[0].NotEncodedSlice().data(),
+              stripe->collected_fragments[0].NotEncodedSlice().size());
+
+  Encoder::EncodingResults input;
+  for (const auto &ent : stripe->collected_fragments) {
+    input.insert({ent.GetVersion().GetFragmentId(), ent.FragmentSlice()});
+    LOG(util::kRaft, "S%d Decode: Add Input(FragId%d)", ent.GetVersion().GetFragmentId());
+  }
+  int decode_size = 0;
+  if (!encoder_.DecodeSliceHelper(input, k, m, data, &decode_size)) {
+    delete[] data;
+    return false;
+  }
+
+  int origin_size = stripe->collected_fragments[0].CommandLength();
+
+  ent->SetIndex(stripe->raft_index);
+  ent->SetTerm(stripe->raft_term);
+  ent->SetType(kNormal);
+  ent->SetCommandData(Slice(data, origin_size));
+  LOG(util::kRaft, "S%d Decode Results: Ent(I%d T%d CmdSize%d)", ent->Index(),
+      ent->Term(), ent->CommandLength());
+
+  return true;
 }
 
 // TODO: Update logic
@@ -1074,29 +1126,25 @@ void RaftState::PreLeaderBecomeLeader() {
 void RaftState::EncodeCollectedStripe() {
   // Debug:
   // ------------------------------------------------------------------
-  LOG(util::kRaft, "S%d decode collected stripes", id_);
+  LOG(util::kRaft, "S%d Decode Collected Stripes", id_);
   // ------------------------------------------------------------------
-  // for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
-  //   auto &stripe = preleader_stripe_store_.stripes[i];
-  //
-  //   stripe.Filter();
-  //
-  //   // Debug:
-  //   // ------------------------------------------------------------------
-  //   LOG(util::kRaft, "S%d decode stripe I%d", id_, stripe.GetIndex());
-  //   // ------------------------------------------------------------------
-  //
-  //   LogEntry entry;
-  //   auto succ = encoder_.DecodeEntry(&stripe, &entry);
-  //   auto r_idx = i + preleader_stripe_store_.start_index;
-  //   if (succ) {
-  //     lm_->OverWriteLogEntry(entry, r_idx);
-  //   } else {
-  //     // Failed to decode a full entry, delete all preceding log entries
-  //     lm_->DeleteLogEntriesFrom(r_idx);
-  //     return;
-  //   }
-  // }
+  for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
+    auto &stripe = preleader_stripe_store_.stripes[i];
+
+    // For a stripe, filter the entry
+    FilterDuplicatedCollectedFragments(stripe);
+
+    LogEntry entry;
+    auto succ = DecodingRaftEntry(&stripe, &entry);
+    auto r_idx = i + preleader_stripe_store_.start_index;
+    if (succ) {
+      lm_->OverWriteLogEntry(entry, r_idx);
+    } else {
+      // Failed to decode a full entry, delete all preceding log entries
+      lm_->DeleteLogEntriesFrom(r_idx);
+      return;
+    }
+  }
 }
 
 bool RaftState::NeedOverwriteLogEntry(const Version &old_version,
@@ -1104,6 +1152,12 @@ bool RaftState::NeedOverwriteLogEntry(const Version &old_version,
   return old_version.GetK() != new_version.GetK() ||
          old_version.GetM() != new_version.GetM() ||
          old_version.GetFragmentId() != new_version.GetFragmentId();
+}
+
+void RaftState::FilterDuplicatedCollectedFragments(Stripe& stripes) {
+  // The stripe may contain multiple fragments with different encoding parameters, 
+  // this function is responsible for only remaining those entries that can be 
+  // successfully decoded
 }
 
 }  // namespace raft

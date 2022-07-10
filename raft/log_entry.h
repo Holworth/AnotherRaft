@@ -71,9 +71,12 @@ class LogEntry {
   auto CommandData() const -> Slice {
     return Type() == kNormal ? command_data_ : Slice();
   }
-  auto CommandLength() const -> size_t { return command_data_.size(); }
+  auto CommandLength() const -> size_t { return command_size_; }
 
-  void SetCommandData(const Slice &slice) { command_data_ = slice; }
+  void SetCommandData(const Slice &slice) { 
+    command_data_ = slice; 
+    command_size_ = slice.size();
+  }
 
   auto NotEncodedSlice() const -> Slice {
     return Type() == kNormal ? CommandData() : not_encoded_slice_;
@@ -120,6 +123,7 @@ class LogEntry {
   // [REQUIRE] specified by user, indicating the start offset of command
   // data for encoding
   int start_fragment_offset;
+  int command_size_;
 
   Slice command_data_;       // Spcified by user, valid iff type = normal
   Slice not_encoded_slice_;  // Command data not being encoded

@@ -173,7 +173,7 @@ struct PreLeaderStripeStore {
       return;
     }
     auto array_index = idx - start_index;
-    // stripes[array_index].AddFragments(entry);
+    stripes[array_index].collected_fragments.push_back(entry);
   }
 };
 
@@ -274,7 +274,12 @@ class RaftState {
   void EncodingRaftEntry(raft_index_t raft_index, int k, int m, VersionNumber version_num,
                          Stripe *stripe);
 
+  // Decoding all fragments contained in a stripe into a complete log entry
+  bool DecodingRaftEntry(Stripe* stripe, LogEntry* ent);
+
   bool NeedOverwriteLogEntry(const Version& old_version, const Version& new_version);
+
+  void FilterDuplicatedCollectedFragments(Stripe& stripes);
 
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
