@@ -951,7 +951,7 @@ void RaftState::replicateEntries() {
     // Update each fragments version number
     for (auto &[id, frag] : stripe->fragments) {
       auto frag_version = new_version;
-      frag_version.SetVersionNumber(version_num);
+      frag_version.SetFragmentId(id);
       frag.SetVersion(frag_version);
     }
 
