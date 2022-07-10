@@ -942,7 +942,9 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
     LOG(util::kRaft, "S%d Decode: Add Input(FragId%d)", ent.GetVersion().GetFragmentId());
   }
   int decode_size = 0;
-  if (!encoder_.DecodeSliceHelper(input, k, m, data, &decode_size)) {
+  // Specify that decoding data should be written to the data pointer that at
+  // not_encoded_size place
+  if (!encoder_.DecodeSliceHelper(input, k, m, data + not_encoded_size, &decode_size)) {
     delete[] data;
     return false;
   }
