@@ -948,6 +948,13 @@ void RaftState::replicateEntries() {
     auto stripe = encoded_stripe_[raft_index];
     stripe->version = new_version;
 
+    // Update each fragments version number
+    for (auto &[id, frag] : stripe->fragments) {
+      auto frag_version = new_version;
+      frag_version.SetVersionNumber(version_num);
+      frag.SetVersion(frag_version);
+    }
+
     // Update Commit Requirements
     last_replicate_.insert_or_assign(raft_index, new_version);
   }
