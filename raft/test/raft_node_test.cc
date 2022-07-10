@@ -29,7 +29,7 @@ TEST_F(RaftNodeBasicTest, DISBALED_TestSimplyProposeEntry) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestFollowersCrash) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestFollowersCrash) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -78,7 +78,7 @@ TEST_F(RaftNodeBasicTest, DISABLED_TestLeaderCrash) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, DISABLED_TestNewLeaderGetFullLogEntry) {
+TEST_F(RaftNodeBasicTest, TestNewLeaderGetFullLogEntry) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);

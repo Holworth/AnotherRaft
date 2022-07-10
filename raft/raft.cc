@@ -792,7 +792,8 @@ void RaftState::collectFragments() {
     // Add current server's saved fragments(It might be a complete log entry as well)
     if (ent->Type() == kFragments) {
       auto frag_id = ent->GetVersion().GetFragmentId();
-      stripe.fragments[frag_id] = *ent;
+      // stripe.fragments[frag_id] = *ent;
+      stripe.collected_fragments.push_back(*ent);
       LOG(util::kRaft, "S%d Add FragId%d into Stripe I%d", id_, frag_id, ent->Index());
     } else if (ent->Type() == kNormal) {
       // No need to collect this entry since leader has full entry
@@ -951,8 +952,8 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
   ent->SetTerm(stripe->raft_term);
   ent->SetType(kNormal);
   ent->SetCommandData(Slice(data, origin_size));
-  LOG(util::kRaft, "S%d Decode Results: Ent(I%d T%d CmdSize%d)", ent->Index(),
-      ent->Term(), ent->CommandLength());
+  ent->SetStartOffset(not_encoded_size);
+  LOG(util::kRaft, "S%d Decode Results: Ent(%s)", id_, ent->ToString().c_str());
 
   return true;
 }
