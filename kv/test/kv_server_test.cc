@@ -32,6 +32,12 @@ class KvServerTest : public ::testing::Test {
     int k, m;
     raft::raft_frag_id_t frag_id;
     raft::Slice frag;
+
+    std::string ToString() const {
+      char buf[256];
+      sprintf(buf, "DecodedString{k=%d, m=%d, frag_id=%d}", k, m, frag_id);
+      return std::string(buf);
+    }
   };
 
   DecodedString DecodeString(std::string* str) {
@@ -76,6 +82,8 @@ class KvServerTest : public ::testing::Test {
 
     // check if need to search other servers to collect fragments
     auto format = DecodeString(&resp.value);
+    LOG(raft::util::kRaft, "DecodeString Result: %s", format.ToString().c_str());
+
     if (format.k == 1) {
       GetKeyFromPrefixLengthFormat(format.frag.data(), value);
       return kOk;

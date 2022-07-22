@@ -5,6 +5,7 @@
 
 #include "raft_type.h"
 #include "type.h"
+#include "util.h"
 
 namespace kv {
 size_t GetRawBytesSizeForRequest(const Request& request) {
@@ -42,6 +43,8 @@ void RaftEntryToRequest(const raft::LogEntry& ent, Request* request) {
       request->value.push_back(tmp_data[i]);
     }
 
+    LOG(raft::util::kRaft, "RaftEnt To Request: k=%d,m=%d,frag_id=%d", 1, 0, 0);
+
     // value would be the prefix length key format
     auto remaining_size = ent.CommandData().size() - (bytes - ent.CommandData().data());
     request->value.append(bytes, remaining_size);
@@ -59,6 +62,10 @@ void RaftEntryToRequest(const raft::LogEntry& ent, Request* request) {
     *reinterpret_cast<int*>(tmp_data) = ent.GetVersion().GetK();
     *reinterpret_cast<int*>(tmp_data + 4) = ent.GetVersion().GetM();
     *reinterpret_cast<int*>(tmp_data + 8) = ent.GetVersion().GetFragmentId();
+
+    LOG(raft::util::kRaft, "RaftEnt To Request: k=%d,m=%d,frag_id=%d",
+        ent.GetVersion().GetK(), ent.GetVersion().GetM(),
+        ent.GetVersion().GetFragmentId());
 
     for (int i = 0; i < 12; ++i) {
       request->value.push_back(tmp_data[i]);

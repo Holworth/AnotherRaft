@@ -33,6 +33,10 @@ void KvServer::Start() {
 // A server receives a request from outside world(e.g. A client or a mock client) and
 // it should deal with this request properly
 void KvServer::DealWithRequest(const Request* request, Response* resp) {
+  if (IsDisconnected()) {
+    resp->err = kRequestExecTimeout;
+    return;
+  }
   LOG(raft::util::kRaft, "S%d deal with req %s", id_, ToString(*request).c_str());
 
   resp->type = request->type;
@@ -159,6 +163,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
 
 void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
   auto read_index = this->raft_->LastIndex();
+  LOG(raft::util::kRaft, "S%d Execute Get Operation, ReadIndex=%d", id_, read_index);
+
   // spin until the entry has been applied
   raft::util::Timer timer;
   timer.Reset();
