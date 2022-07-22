@@ -1,12 +1,14 @@
 #include "raft.h"
 
 #include <cassert>
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <map>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 #include "encoder.h"

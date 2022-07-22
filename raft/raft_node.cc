@@ -86,6 +86,7 @@ void RaftNode::startTickerThread() {
       // Tick the raft state for every 10ms so that the raft can make progress
       // std::this_thread::sleep_for(std::chrono::milliseconds(10));
       this->raft_state_->Tick();
+      std::this_thread::sleep_for(std::chrono::milliseconds(kRaftTickBaseInterval));
     }
   };
   std::thread ticker_thread(ticker);
