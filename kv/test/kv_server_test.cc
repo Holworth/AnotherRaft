@@ -10,6 +10,7 @@
 #include <string>
 #include <thread>
 
+#include "RCF/ThreadLibrary.hpp"
 #include "gtest/gtest.h"
 #include "kv_format.h"
 #include "log_entry.h"
@@ -258,26 +259,26 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
 
   LaunchAllServers(servers_config);
 
+  const std::string key_prefix = "key";
+  const std::string value_prefix = "value-abcdefg-";
+
   std::string value;
-  // const int test_cnt = 1000;
-  // for (int i = 0; i < test_cnt; ++i) {
-  //   auto key = "key" + std::to_string(i);
-  //   auto value = "value" + std::to_string(i);
-  //   EXPECT_EQ(Put(key, value), kOk);
-  // }
-  //
-  // for (int i = 0; i < test_cnt; ++i) {
-  //   EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
-  //   EXPECT_EQ(value, "value" + std::to_string(i));
-  // }
-  EXPECT_EQ(Put("key1", "value-abcdefg1"), kOk);
-  sleepMs(100); // Wait leader broadcast commit index to other follower
+  const int test_cnt = 1000;
+
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = key_prefix + std::to_string(i);
+    auto value = value_prefix + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
 
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
+  sleepMs(100);
 
-  EXPECT_EQ(Get("key1", &value), kOk);
-  EXPECT_EQ(value, "value-abcdefg1");
+  for (int i = 0; i < test_cnt; ++i) {
+    EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, value_prefix + std::to_string(i));
+  }
 
   ClearTestContext(servers_config);
 }

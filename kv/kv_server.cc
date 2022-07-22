@@ -2,6 +2,7 @@
 
 #include <mutex>
 
+#include "RCF/ThreadLibrary.hpp"
 #include "kv_format.h"
 #include "log_entry.h"
 #include "raft_node.h"
@@ -175,6 +176,9 @@ void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
       resp->err = kRequestExecTimeout;
       return;
     }
+    LOG(raft::util::kRaft, "S%d Execute Get Operation(ApplyIndex:%d) ReadIndex%d", id_,
+        LastApplyIndex(), read_index);
+    RCF::sleepMs(10);
   }
   auto succ = db_->Get(request->key, &(resp->value));
   if (!succ) {
