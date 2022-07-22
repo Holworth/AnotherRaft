@@ -81,6 +81,9 @@ class KvServerTest : public ::testing::Test {
       return kOk;
     }
 
+    LOG(raft::util::kRaft, "[Get Partial Value: k=%d m=%d], start collecting", format.k,
+        format.m);
+
     int k = format.k, m = format.m;
     raft::Encoder::EncodingResults input;
 
@@ -259,6 +262,10 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   //   EXPECT_EQ(value, "value" + std::to_string(i));
   // }
   EXPECT_EQ(Put("key1", "value-abcdefg1"), kOk);
+
+  auto leader1 = GetCurrentLeaderId();
+  Disconnect(leader1);
+
   EXPECT_EQ(Get("key1", &value), kOk);
   EXPECT_EQ(value, "value-abcdefg1");
 
