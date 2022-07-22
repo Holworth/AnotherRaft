@@ -42,9 +42,9 @@ void RaftEntryToRequest(const raft::LogEntry& ent, Request* request) {
       request->value.push_back(tmp_data[i]);
     }
 
-    // Bytes now points to the length byte of value string
+    // value would be the prefix length key format
     auto remaining_size = ent.CommandData().size() - (bytes - ent.CommandData().data());
-    request->value.append(bytes + sizeof(int), remaining_size - sizeof(int));
+    request->value.append(bytes, remaining_size);
   } else {
     // construct the header and key
     std::memcpy(request, ent.NotEncodedSlice().data(), RequestHdrSize());
