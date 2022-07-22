@@ -62,7 +62,7 @@ class RaftNode {
   ProposeResult Propose(const CommandData& cmd) { return raft_state_->Propose(cmd); }
 
   // Return the last raft index of this raft node
-  raft::raft_index_t LastIndex() const { }
+  raft::raft_index_t LastIndex() const { return raft_state_->LastIndex(); }
 
   bool IsLeader() { return raft_state_->Role() == kLeader; }
 
