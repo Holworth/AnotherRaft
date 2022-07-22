@@ -270,6 +270,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   //   EXPECT_EQ(value, "value" + std::to_string(i));
   // }
   EXPECT_EQ(Put("key1", "value-abcdefg1"), kOk);
+  sleepMs(100); // Wait leader broadcast commit index to other follower
 
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
