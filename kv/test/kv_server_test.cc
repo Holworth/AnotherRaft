@@ -267,7 +267,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   const std::string value_prefix = "value-abcdefg-";
 
   std::string value;
-  const int test_cnt = 10;
+  const int test_cnt = 1000;
 
   for (int i = 0; i < test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);
@@ -296,38 +296,40 @@ TEST_F(KvServerTest, DISABLED_TestDeleteAndOverwrite) {
 
   LaunchAllServers(servers_config);
 
+  const std::string key_prefix = "key";
+  const std::string value_prefix = "value-abcdefg-";
+  const std::string value_prefix2 = "value2-abcdefg-";
+
   std::string value;
   const int test_cnt = 10;
 
   for (int i = 0; i < test_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    auto value = "value" + std::to_string(i);
+    auto key = key_prefix + std::to_string(i);
+    auto value = value_prefix + std::to_string(i);
     EXPECT_EQ(Put(key, value), kOk);
   }
 
-  for (int i = 0; i < test_cnt; ++i) {
-    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
-    EXPECT_EQ(value, "value" + std::to_string(i));
-  }
+  sleepMs(100);
+  auto leader1 = GetCurrentLeaderId();
+  Disconnect(leader1);
 
   for (int i = 0; i < test_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    if (i % 2 == 0) {
-      EXPECT_EQ(Delete(key), kOk);
-    } else {
-      auto value = "value2-" + std::to_string(i);
-      EXPECT_EQ(Put(key, value), kOk);
-    }
+    EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, value_prefix + std::to_string(i));
   }
 
+  // Test overwrite with new value
   for (int i = 0; i < test_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    if (i % 2 == 0) {
-      EXPECT_EQ(Get(key, &value), kKeyNotExist);
-    } else {
-      EXPECT_EQ(Get(key, &value), kOk);
-      EXPECT_EQ(value, "value2-" + std::to_string(i));
-    }
+    auto key = key_prefix + std::to_string(i);
+    auto value = value_prefix2 + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  auto leader2 = GetCurrentLeaderId();
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = key_prefix + std::to_string(i);
+    EXPECT_EQ(Get(key, &value), kOk);
+    EXPECT_EQ(value, value_prefix2 + std::to_string(i));
   }
 
   ClearTestContext(servers_config);
