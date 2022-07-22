@@ -275,9 +275,9 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
     EXPECT_EQ(Put(key, value), kOk);
   }
 
+  sleepMs(1000); // Wait leader broadcast the commit index
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
-  sleepMs(100);
 
   for (int i = 0; i < test_cnt; ++i) {
     EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);

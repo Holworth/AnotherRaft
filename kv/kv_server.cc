@@ -1,6 +1,8 @@
 #include "kv_server.h"
 
+#include <chrono>
 #include <mutex>
+#include <thread>
 
 #include "RCF/ThreadLibrary.hpp"
 #include "kv_format.h"
@@ -178,7 +180,8 @@ void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
     }
     LOG(raft::util::kRaft, "S%d Execute Get Operation(ApplyIndex:%d) ReadIndex%d", id_,
         LastApplyIndex(), read_index);
-    RCF::sleepMs(10);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   auto succ = db_->Get(request->key, &(resp->value));
   if (!succ) {

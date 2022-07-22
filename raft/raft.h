@@ -1,6 +1,7 @@
 #pragma once
 #include <cstring>
 #include <map>
+#include <mutex>
 #include <unordered_map>
 
 #include "encoder.h"
@@ -229,9 +230,8 @@ class RaftState {
   ProposeResult Propose(const CommandData &command);
 
   raft::raft_index_t LastIndex() { 
-    mtx_.lock();
+    std::scoped_lock<std::mutex> mtx(this->mtx_);
     return lm_->LastLogEntryIndex(); 
-    mtx_.unlock();
   }
 
  public:
