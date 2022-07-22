@@ -17,7 +17,7 @@ namespace raft {
 // creating timer thread and so on.
 class RaftNode {
  public:
-  static const int kRaftTickBaseInterval = 50;
+  static const int kRaftTickBaseInterval = 20;
   struct NodeConfig {
     raft_node_id_t node_id_me;
     std::unordered_map<raft_node_id_t, rpc::NetAddress> servers;
