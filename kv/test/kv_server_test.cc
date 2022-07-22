@@ -206,18 +206,22 @@ class KvServerTest : public ::testing::Test {
     for (const auto& [id, config] : nodes_config) {
       raft::RaftNode::NodeConfig raft_config = {id, net_config, config.storage_name,
                                                 nullptr};
-      LaunchRaftNodeInstance({raft_config, config.dbname});
+      InitRaftNodeInstance({raft_config, config.dbname});
+    }
+
+    // Start each server
+    for (int i = 0; i < node_num_; ++i) {
+      servers_[i]->Start();
     }
   }
 
-  void LaunchRaftNodeInstance(const KvServerConfig& config) {
+  void InitRaftNodeInstance(const KvServerConfig& config) {
     auto kv_server = KvServer::NewKvServer(config);
     // std::printf("create server with server=%p db=%p\n", kv_server, kv_server->DB());
     this->servers_[kv_server->Id()] = kv_server;
     kv_server->Init();
-    auto kv_thread = std::thread([=]() { kv_server->Start(); });
-    kv_thread.detach();
-  };
+  }
+
 
   void ClearTestContext(const NodesConfig& nodes_config) {
     auto cmp = [](KvServer* node) {
