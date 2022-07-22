@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cstring>
 #include <sstream>
+#include <cassert>
 
 #include "RCF/RCF.hpp"
 

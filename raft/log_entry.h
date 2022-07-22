@@ -15,6 +15,13 @@ class Serializer;
 
 class Slice {
  public:
+  static Slice Copy(const Slice &slice) {
+    auto data = new char[slice.size() + 12];
+    std::memcpy(data, slice.data(), slice.size());
+    return Slice(data, slice.size());
+  }
+
+ public:
   Slice(char *data, size_t size) : data_(data), size_(size) {}
   Slice(const std::string &s) : data_(new char[s.size()]), size_(s.size()) {
     std::memcpy(data_, s.c_str(), size_);
@@ -74,8 +81,8 @@ class LogEntry {
   auto CommandLength() const -> int { return command_size_; }
   void SetCommandLength(int size) { command_size_ = size; }
 
-  void SetCommandData(const Slice &slice) { 
-    command_data_ = slice; 
+  void SetCommandData(const Slice &slice) {
+    command_data_ = slice;
     command_size_ = slice.size();
   }
 
@@ -95,9 +102,11 @@ class LogEntry {
   // Dump some important information
   std::string ToString() const {
     char buf[256];
-    sprintf(buf, "LogEntry{term=%d, index=%d, type=%s, version=%s, commandlen=%d, start_off=%d}", Term(),
-            Index(), EntryTypeToString(Type()), version.ToString().c_str(),
-            CommandLength(), StartOffset());
+    sprintf(
+        buf,
+        "LogEntry{term=%d, index=%d, type=%s, version=%s, commandlen=%d, start_off=%d}",
+        Term(), Index(), EntryTypeToString(Type()), version.ToString().c_str(),
+        CommandLength(), StartOffset());
 
     return std::string(buf);
   }

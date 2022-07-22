@@ -21,7 +21,7 @@ SET(
 
 
 add_library(kv ${KV_SRC})
-target_link_libraries(kv raft rcf ${libleveldb})
+target_link_libraries(kv raft ${libleveldb})
 target_include_directories(kv PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 add_subdirectory(test)

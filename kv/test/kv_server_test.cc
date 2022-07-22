@@ -92,7 +92,7 @@ class KvServerTest : public ::testing::Test {
         auto found = servers_[i]->DB()->Get(key, &frag_value);
         if (found) {
           auto format = DecodeString(&frag_value);
-          input.insert_or_assign(format.frag_id, format.frag);
+          input.insert_or_assign(format.frag_id, raft::Slice::Copy(format.frag));
         }
       }
     }
