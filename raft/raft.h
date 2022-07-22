@@ -228,6 +228,12 @@ class RaftState {
   // copy this entry to its own log and replicate it to other followers
   ProposeResult Propose(const CommandData &command);
 
+  raft::raft_index_t LastIndex() { 
+    mtx_.lock();
+    return lm_->LastLogEntryIndex(); 
+    mtx_.unlock();
+  }
+
  public:
   // Init all necessary status of raft state, including reset election timer
   void Init();

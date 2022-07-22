@@ -1,4 +1,5 @@
 #pragma once
+#include "log_entry.h"
 #include "type.h"
 namespace kv {
 // Get the size of bytes needed to serialize an request into raw bytes
@@ -9,6 +10,9 @@ void RequestToRawBytes(const Request& request, char* bytes);
 
 // Deserialize a request from raw bytes
 void RawBytesToRequest(char* bytes, Request* request);
+
+// Deserialize a fragment requests from raw bytes
+void RaftEntryToRequest(const raft::LogEntry& ent, Request* request);
 
 // Serialize a string to raw bytes specified by buf, returns the next position of
 // last written bytes

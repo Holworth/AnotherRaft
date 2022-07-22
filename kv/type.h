@@ -23,6 +23,7 @@ enum ErrorType {
   // specified seconds, probably due to no enough servers
   kKVRequestTimesout = 6,
   kRPCCallFailed = 7,
+  kKVDecodeFail = 8,
 };
 
 struct Request {
@@ -41,10 +42,19 @@ struct Response {
   ErrorType err;
   raft::raft_term_t raft_term;
   std::string value;  // Valid if type is Get
-  //
+  int k, m;           // The parameter needed to construct an original value
   void serialize(SF::Archive& ar) {
-    ar& type& client_id& sequence& err& raft_term& value;
+    ar& type& client_id& sequence& err& raft_term& value& k& m;
   }
+};
+
+struct RequestWithFragment {
+  RequestType type;
+  uint32_t client_id;
+  uint32_t sequence;
+  std::string key;
+  std::string fragmentvalue;
+  int k, m;  // The parameter needed to construct an original value
 };
 
 inline constexpr size_t RequestHdrSize() {

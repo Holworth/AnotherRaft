@@ -30,6 +30,8 @@ void KvServer::Start() {
   startApplyKvRequestCommandsThread();
 }
 
+// A server receives a request from outside world(e.g. A client or a mock client) and
+// it should deal with this request properly
 void KvServer::DealWithRequest(const Request* request, Response* resp) {
   LOG(raft::util::kRaft, "S%d deal with req %s", id_, ToString(*request).c_str());
 
@@ -44,14 +46,20 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       return;
     case kPut:
     case kDelete:
+
     // kGet may not need to go along this road?
     case kGet:
       auto size = GetRawBytesSizeForRequest(*request);
-      auto data = new char[size];
+      auto data = new char[size + 12];
       RequestToRawBytes(*request, data);
 
+      // find the start offset, it must contain the request Header and the key content
+      int start_offset = RequestHdrSize() + sizeof(int) + request->key.size();
+
+      LOG(raft::util::kRaft, "S%d propose request startoffset(%d)", id_, start_offset);
+
       // Construct a raft command
-      auto cmd = raft::CommandData{static_cast<int>(size), raft::Slice(data, size)};
+      auto cmd = raft::CommandData{start_offset, raft::Slice(data, size)};
       auto pr = raft_->Propose(cmd);
 
       // Loop until the propose entry to be applied
@@ -73,6 +81,8 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   }
 }
 
+// Check if a particular propose has been committed and set the ApplyResult struct if
+// it has been committed
 bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
                                    KvRequestApplyResult* apply) {
   // Not committed entry
@@ -95,8 +105,6 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
 
 void KvServer::ApplyRequestCommandThread(KvServer* server) {
   while (!server->exit_.load()) {
-    // Read committed entry from raft
-    // raft::LogEntry ent = server->channel_->Pop();
     raft::LogEntry ent;
     if (!server->channel_->TryPop(ent)) {
       continue;
@@ -106,7 +114,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
 
     // Apply this entry to state machine(i.e. Storage Engine)
     Request req;
-    RawBytesToRequest(ent.CommandData().data(), &req);
+    // RawBytesToRequest(ent.CommandData().data(), &req);
+    RaftEntryToRequest(ent, &req);
 
     LOG(raft::util::kRaft, "S%d Apply request(%s) to db", server->Id(),
         ToString(req).c_str());
@@ -134,8 +143,11 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
       default:
         assert(0);
     }
-    LOG(raft::util::kRaft, "S%d Apply request(%s) to db Done", server->Id(),
-        ToString(req).c_str());
+
+    server->applied_index_ = ent.Index();
+
+    LOG(raft::util::kRaft, "S%d Apply request(%s) to db Done, APPLY I%d", server->Id(),
+        ToString(req).c_str(), server->LastApplyIndex());
     // Add the apply result into map
     std::scoped_lock<std::mutex> lck(server->map_mutex_);
     server->applied_cmds_.insert({ent.Index(), ar});

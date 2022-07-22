@@ -52,6 +52,8 @@ class KvServer {
 
   bool IsLeader() const { return raft_->IsLeader(); }
 
+  raft::raft_index_t LastApplyIndex() { return applied_index_; }
+
  private:
   // Check if a log entry has been committed yet
   bool CheckEntryCommitted(const raft::ProposeResult& pr, KvRequestApplyResult* apply);
@@ -98,5 +100,8 @@ class KvServer {
   std::atomic<bool> exit_;
 
   raft::raft_node_id_t id_;
+
+  // The raft index of last applied entry
+  raft::raft_index_t applied_index_;
 };
 }  // namespace kv

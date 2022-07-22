@@ -32,6 +32,8 @@ const std::string ToString(ErrorType type) {
       return "KVRequestTimesout";
     case kRPCCallFailed:
       return "RPCCallFailed";
+    case kKVDecodeFail:
+      return "KVDecodeFail";
   }
   return "UndeterminedErrorType";
 }

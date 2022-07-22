@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include "raft.h"
+#include "raft_type.h"
 #include "rcf_rpc.h"
 #include "rpc.h"
 #include "rsm.h"
@@ -59,6 +60,9 @@ class RaftNode {
   Rsm* getRsm() { return rsm_; }
 
   ProposeResult Propose(const CommandData& cmd) { return raft_state_->Propose(cmd); }
+
+  // Return the last raft index of this raft node
+  raft::raft_index_t LastIndex() const { }
 
   bool IsLeader() { return raft_state_->Role() == kLeader; }
 
