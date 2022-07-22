@@ -855,6 +855,7 @@ void RaftState::Tick() {
 }
 
 void RaftState::tickOnFollower() {
+  LOG(util::kRaft, "S%d TickOnFollower", id_);
   if (election_timer_.ElapseMilliseconds() < election_time_out_) {
     return;
   }
@@ -862,6 +863,7 @@ void RaftState::tickOnFollower() {
 }
 
 void RaftState::tickOnCandidate() {
+  LOG(util::kRaft, "S%d TickOnCandidate", id_);
   if (election_timer_.ElapseMilliseconds() < election_time_out_) {
     return;
   }
@@ -871,6 +873,7 @@ void RaftState::tickOnCandidate() {
 }
 
 void RaftState::tickOnLeader() {
+  LOG(util::kRaft, "S%d TickOnLeader", id_);
   if (heartbeat_timer_.ElapseMilliseconds() < heartbeatTimeInterval) {
     return;
   }
@@ -879,6 +882,7 @@ void RaftState::tickOnLeader() {
 }
 
 void RaftState::tickOnPreLeader() {
+  LOG(util::kRaft, "S%d TickOnPreLeader", id_);
   if (preleader_timer_.ElapseMilliseconds() < config::kCollectFragmentsInterval) {
     return;
   }

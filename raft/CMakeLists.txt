@@ -25,7 +25,7 @@ if (NOT libisal)
 endif()
 
 
-SET(LIBS ${libpthread} ${libdl} ${libuuid} ${libisal})
+SET(LIBS ${libpthread} ${libdl} ${libuuid}) ${libisal})
 
 set(
   RAFT_SRC 
