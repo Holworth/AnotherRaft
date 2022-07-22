@@ -267,7 +267,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   const std::string value_prefix = "value-abcdefg-";
 
   std::string value;
-  const int test_cnt = 1000;
+  const int test_cnt = 10;
 
   for (int i = 0; i < test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);

@@ -15,9 +15,12 @@ namespace raft {
 // A raft node is the collection of raft state runtime, i.e. the raft node is responsible
 // for maintaining the RaftState instance, creating RPC calls, persisting log entries,
 // creating timer thread and so on.
+
+namespace config {
+  static const int kRaftTickBaseInterval = 20;
+}
 class RaftNode {
  public:
-  static const int kRaftTickBaseInterval = 20;
   struct NodeConfig {
     raft_node_id_t node_id_me;
     std::unordered_map<raft_node_id_t, rpc::NetAddress> servers;
