@@ -85,6 +85,8 @@ class KvServer {
 
   StorageEngine* DB() { return db_; }
 
+  void ExecuteGetOperation(const Request* request, Response* resp);
+
  private:
   raft::RaftNode* raft_;
   Channel* channel_;  // channel is used to interact with lower level raft library

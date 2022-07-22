@@ -45,10 +45,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       resp->err = raft_->IsLeader() ? kOk : kNotALeader;
       return;
     case kPut:
-    case kDelete:
-
-    // kGet may not need to go along this road?
-    case kGet:
+    case kDelete: {
       auto size = GetRawBytesSizeForRequest(*request);
       auto data = new char[size + 12];
       RequestToRawBytes(*request, data);
@@ -78,6 +75,12 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       // Otherwise timesout
       resp->err = kRequestExecTimeout;
       return;
+    }
+
+    case kGet: {
+      ExecuteGetOperation(request, resp);
+      return;
+    }
   }
 }
 
@@ -130,16 +133,16 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
         server->db_->Delete(req.key);
         break;
       case kGet:
-        if (!server->db_->Get(req.key, &get_value)) {
-          ar.err = kKeyNotExist;
-          ar.value = "";
-        } else {
-          ar.err = kOk;
-          ar.value = std::move(get_value);
-          LOG(raft::util::kRaft, "S%d apply Get command (get value=%s)", server->Id(),
-              ar.value.c_str());
-        }
-        break;
+        // if (!server->db_->Get(req.key, &get_value)) {
+        //   ar.err = kKeyNotExist;
+        //   ar.value = "";
+        // } else {
+        //   ar.err = kOk;
+        //   ar.value = std::move(get_value);
+        //   LOG(raft::util::kRaft, "S%d apply Get command (get value=%s)", server->Id(),
+        //       ar.value.c_str());
+        // }
+        // break;
       default:
         assert(0);
     }
@@ -151,6 +154,27 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     // Add the apply result into map
     std::scoped_lock<std::mutex> lck(server->map_mutex_);
     server->applied_cmds_.insert({ent.Index(), ar});
+  }
+}
+
+void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
+  auto read_index = this->raft_->LastIndex();
+  // spin until the entry has been applied
+  raft::util::Timer timer;
+  timer.Reset();
+  while (LastApplyIndex() < read_index) {
+    if (timer.ElapseMilliseconds() >= 300) {
+      resp->err = kRequestExecTimeout;
+      return;
+    }
+  }
+  auto succ = db_->Get(request->key, &(resp->value));
+  if (!succ) {
+    resp->err = kKeyNotExist;
+    return;
+  } else {
+    resp->err = kOk;
+    return;
   }
 }
 }  // namespace kv
