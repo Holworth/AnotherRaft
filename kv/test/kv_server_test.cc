@@ -115,7 +115,8 @@ class KvServerTest : public ::testing::Test {
       return kRPCCallFailed;
     }
 
-    *value = std::string(decode_res.data(), decode_res.size());
+    // decode_res is a string
+    GetKeyFromPrefixLengthFormat(decode_res.data(), value);
     return kOk;
   }
 
