@@ -1052,10 +1052,11 @@ void RaftState::replicateEntries() {
       for (auto idx = next_index; idx <= CommitIndex(); ++idx) {
         args.entries.push_back(*lm_->GetSingleLogEntry(idx));
       }
-      // For those followers whoes required entries fall behind the CommitIndex(), the 
+      // For those followers whoes required entries fall behind the CommitIndex(), the
       // leader simply sends its local data. Most notably, send an empty entry to such
       // follower does not affect the safety
-      LOG(util::kRaft, "S%d Replenish ent I(%d->%d)", id_, next_index, CommitIndex());
+      LOG(util::kRaft, "S%d Replenish ent I(%d->%d) To S%d", id_, next_index,
+          CommitIndex(), id);
       args.prev_log_index = next_index - 1;
       args.prev_log_term = lm_->TermAt(args.prev_log_index);
     } else {
