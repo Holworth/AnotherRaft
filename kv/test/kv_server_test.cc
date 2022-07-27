@@ -372,7 +372,7 @@ TEST_F(KvServerTest, TestFollowerCommitAfterRejoiningTheCluster) {
   const std::string value_prefix = "value-abcdefg-";
 
   std::string value;
-  const int test_cnt = 10;
+  const int test_cnt = 5;
 
   PutBatch(key_prefix, value_prefix, 1, test_cnt);
 
@@ -385,6 +385,8 @@ TEST_F(KvServerTest, TestFollowerCommitAfterRejoiningTheCluster) {
 
   // Bring the follower back
   Reconnect((leader1 + 1) % node_num_);
+  LOG(raft::util::kRaft, "S%d reconnect", (leader1 + 1) % node_num_);
+
   // The leader should replenish entries this follower lacks
   PutBatch(key_prefix, value_prefix, 2 * test_cnt + 1, 3 * test_cnt);
 
