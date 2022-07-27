@@ -1048,7 +1048,7 @@ void RaftState::replicateEntries() {
     auto next_index = peers_[id]->NextIndex();
 
     if (next_index < CommitIndex() + 1) {
-      // Fill in with leader's entries
+      // Fill in with leader's entries to replenish entries that this follower lacks
       for (auto idx = next_index; idx <= CommitIndex(); ++idx) {
         args.entries.push_back(*lm_->GetSingleLogEntry(idx));
       }
@@ -1063,9 +1063,8 @@ void RaftState::replicateEntries() {
       args.prev_log_term = lm_->TermAt(args.prev_log_index);
     }
 
-    // TODO: Should we send all entries [CommitIndex, LastIndex] to follower? what
-    // about eliminating some entries by using NextIndex?
-    auto send_index = args.prev_log_index + 1;
+    // Start send entries within the range [CommitIndex()+1, LastIndex()]
+    auto send_index = CommitIndex() + 1;
     for (; send_index <= lm_->LastLogEntryIndex(); ++send_index) {
       assert(encoded_stripe_.count(send_index) != 0);
       auto fragment_id = frag_map[id];
