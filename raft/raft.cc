@@ -14,6 +14,7 @@
 #include "encoder.h"
 #include "log_entry.h"
 #include "log_manager.h"
+#include "raft_node.h"
 #include "raft_struct.h"
 #include "raft_type.h"
 #include "storage.h"
@@ -228,19 +229,18 @@ void RaftState::Process(AppendEntriesReply *reply) {
   auto node = peers_[peer_id];
   if (reply->success) {  // Requested entries are successfully replicated
     // Update nextIndex and matchIndex for this server
-    // auto update_nextIndex = reply->expect_index;
-    // auto update_matchIndex = update_nextIndex - 1;
-    //
-    // if (node->NextIndex() < update_nextIndex) {
-    //   node->SetNextIndex(update_nextIndex);
-    //   LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
-    // }
-    //
-    // if (node->MatchIndex() < update_matchIndex) {
-    //   node->SetMatchIndex(update_matchIndex);
-    //   LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->MatchIndex());
-    // }
-    //
+    auto update_nextIndex = reply->expect_index;
+    auto update_matchIndex = update_nextIndex - 1;
+
+    if (node->NextIndex() < update_nextIndex) {
+      node->SetNextIndex(update_nextIndex);
+      LOG(util::kRaft, "S%d update peer S%d NI%d", id_, peer_id, node->NextIndex());
+    }
+
+    if (node->MatchIndex() < update_matchIndex) {
+      node->SetMatchIndex(update_matchIndex);
+      LOG(util::kRaft, "S%d update peer S%d MI%d", id_, peer_id, node->MatchIndex());
+    }
 
     // TODO: Modify logic here
     for (int i = 0; i < reply->version_cnt; ++i) {
@@ -1034,18 +1034,34 @@ void RaftState::replicateEntries() {
     }
     if (!live_monitor_.IsAlive(id)) {
       LOG(util::kRaft, "S%d detect S%d is not alive, send heartbeat", id_, id);
-      // TODO: Should we send heartbeat messages here? so that we can detect a restart
-      // server?
+      sendHeartBeat(id);
       continue;
     }
 
+    // Otherwise send true messages
     // Construct an AE args
     AppendEntriesArgs args;
     args.term = CurrentTerm();
     args.leader_id = id_;
     args.leader_commit = CommitIndex();
-    args.prev_log_index = CommitIndex();
-    args.prev_log_term = lm_->TermAt(args.prev_log_index);
+
+    auto next_index = peers_[id]->NextIndex();
+
+    if (next_index < CommitIndex() + 1) {
+      // Fill in with leader's entries
+      for (auto idx = next_index; idx <= CommitIndex(); ++idx) {
+        args.entries.push_back(*lm_->GetSingleLogEntry(idx));
+      }
+      // For those followers whoes required entries fall behind the CommitIndex(), the 
+      // leader simply sends its local data. Most notably, send an empty entry to such
+      // follower does not affect the safety
+      LOG(util::kRaft, "S%d Replenish ent I(%d->%d)", id_, next_index, CommitIndex());
+      args.prev_log_index = next_index - 1;
+      args.prev_log_term = lm_->TermAt(args.prev_log_index);
+    } else {
+      args.prev_log_index = CommitIndex();
+      args.prev_log_term = lm_->TermAt(args.prev_log_index);
+    }
 
     // TODO: Should we send all entries [CommitIndex, LastIndex] to follower? what
     // about eliminating some entries by using NextIndex?
