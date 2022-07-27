@@ -379,6 +379,7 @@ TEST_F(KvServerTest, TestFollowerCommitAfterRejoiningTheCluster) {
   sleepMs(1000);
   auto leader1 = GetCurrentLeaderId();
   Disconnect((leader1 + 1) % node_num_);  // randomly disable a follower
+  LOG(raft::util::kRaft, "S%d disconnect", (leader1 + 1) % node_num_);
   //
   PutBatch(key_prefix, value_prefix, test_cnt + 1, test_cnt * 2);
   CheckGetBatch(key_prefix, value_prefix, 1, 2 * test_cnt);
@@ -394,6 +395,8 @@ TEST_F(KvServerTest, TestFollowerCommitAfterRejoiningTheCluster) {
   sleepMs(1000);
   leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
+  LOG(raft::util::kRaft, "S%d disconnect", (leader1 + 1) % node_num_);
+
   CheckGetBatch(key_prefix, value_prefix, 2 * test_cnt + 1, 3 * test_cnt);
 
   ClearTestContext(servers_config);
