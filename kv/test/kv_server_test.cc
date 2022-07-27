@@ -222,7 +222,6 @@ class KvServerTest : public ::testing::Test {
     kv_server->Init();
   }
 
-
   void ClearTestContext(const NodesConfig& nodes_config) {
     auto cmp = [](KvServer* node) {
       if (!node->Exited()) {
@@ -254,7 +253,7 @@ class KvServerTest : public ::testing::Test {
   static const raft::raft_node_id_t kNoLeader = -1;
 };
 
-TEST_F(KvServerTest, TestSimplePutAndGet) {
+TEST_F(KvServerTest, DISABLED_TestSimplePutAndGet) {
   auto servers_config = NodesConfig{
       {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
       {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
@@ -275,7 +274,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
     EXPECT_EQ(Put(key, value), kOk);
   }
 
-  sleepMs(1000); // Wait leader broadcast the commit index
+  sleepMs(1000);  // Wait leader broadcast the commit index
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
 
@@ -285,6 +284,57 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   }
 
   ClearTestContext(servers_config);
+}
+
+TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
+  auto servers_config = NodesConfig{
+      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
+      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
+      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
+      {3, {{"127.0.0.1", 50004}, "", "./testdb3"}},
+      {4, {{"127.0.0.1", 50005}, "", "./testdb4"}},
+  };
+
+  LaunchAllServers(servers_config);
+
+  const std::string key_prefix = "key";
+  const std::string value_prefix = "value-abcdefg-";
+
+  std::string value;
+  const int test_cnt = 10;
+
+  for (int i = 0; i < test_cnt; ++i) {
+    auto key = key_prefix + std::to_string(i);
+    auto value = value_prefix + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  sleepMs(1000);  // Wait leader broadcast the commit index
+  auto leader1 = GetCurrentLeaderId();
+  Disconnect(leader1);
+
+  // Check if Get operation works well after leader is down, i.e. If the leader can 
+  // successfully gather fragments and get full entry
+  for (int i = 0; i < test_cnt; ++i) {
+    EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
+    EXPECT_EQ(value, value_prefix + std::to_string(i));
+  }
+
+  for (int i = test_cnt; i < 2 * test_cnt; ++i) {
+    auto key = key_prefix + std::to_string(i);
+    auto value = value_prefix + std::to_string(i);
+    EXPECT_EQ(Put(key, value), kOk);
+  }
+
+  sleepMs(1000);
+  auto leader2 = GetCurrentLeaderId();
+  Disconnect(leader2);
+
+  for (int i = test_cnt; i < 2 * test_cnt; ++i) {
+    auto key = key_prefix + std::to_string(i);
+    EXPECT_EQ(Get(key, &value), kOk);
+    EXPECT_EQ(value, value_prefix + std::to_string(i));
+  }
 }
 
 TEST_F(KvServerTest, DISABLED_TestDeleteAndOverwrite) {
