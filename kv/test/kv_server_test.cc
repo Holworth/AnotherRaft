@@ -306,7 +306,7 @@ TEST_F(KvServerTest, DISABLED_TestSimplePutAndGet) {
   ClearTestContext(servers_config);
 }
 
-TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
+TEST_F(KvServerTest, DISABLED_TestPutAndGetAfterLeaderDown) {
   auto servers_config = NodesConfig{
       {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
       {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
