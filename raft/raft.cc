@@ -800,7 +800,9 @@ void RaftState::collectFragments() {
       LOG(util::kRaft, "S%d Add FragId%d into Stripe I%d", id_, frag_id, ent->Index());
     } else if (ent->Type() == kNormal) {
       // No need to collect this entry since leader has full entry
-      LOG(util::kRaft, "S%d Skip Collect I%d", id_, ent->Index());
+      stripe.collected_fragments.push_back(*ent);
+      LOG(util::kRaft, "S%d Skip Collecting I%d because of full entry", id_,
+          ent->Index());
     } else {
       // This ent might be a null entry which carries no data
     }
@@ -930,6 +932,13 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
   // ------------------------------------------------------------------
   LOG(util::kRaft, "S%d Decode Stripe I%d", id_, stripe->raft_index);
   // ------------------------------------------------------------------
+  //
+  // A corner case: Check if there already exists an full entry, maybe newly elected
+  // leader is the old leader.
+  if (FindFullEntryInStripe(stripe, ent)) {
+    return true;
+  }
+  
   auto version = stripe->collected_fragments[0].GetVersion();
   auto k = version.GetK();
   auto m = version.GetM();
@@ -1140,19 +1149,22 @@ void RaftState::PreLeaderBecomeLeader() {
       preleader_stripe_store_.CollectedFragmentsCnt());
   if (preleader_stripe_store_.CollectedFragmentsCnt() >= livenessLevel() + 1) {
     LOG(util::kRaft, "S%d Rebuild fragments", id_);
-    EncodeCollectedStripe();
+    DecodeCollectedStripe();
     convertToLeader();
   }
 }
 
 // TODO: Update logic
-void RaftState::EncodeCollectedStripe() {
+void RaftState::DecodeCollectedStripe() {
   // Debug:
   // ------------------------------------------------------------------
   LOG(util::kRaft, "S%d Decode Collected Stripes", id_);
   // ------------------------------------------------------------------
   for (int i = 0; i < preleader_stripe_store_.stripes.size(); ++i) {
     auto &stripe = preleader_stripe_store_.stripes[i];
+    if (stripe.CollectFragmentsCount() == 0) {
+      continue;
+    }
 
     // For a stripe, filter the entry
     FilterDuplicatedCollectedFragments(stripe);
@@ -1185,6 +1197,16 @@ void RaftState::FilterDuplicatedCollectedFragments(Stripe &stripes) {
   // The stripe may contain multiple fragments with different encoding parameters,
   // this function is responsible for only remaining those entries that can be
   // successfully decoded
+}
+
+bool RaftState::FindFullEntryInStripe(const Stripe* stripe, LogEntry* ent) {
+  for (const auto& frag: stripe->collected_fragments) {
+    if (frag.Type() == kNormal) {
+      *ent = frag;
+      return true;
+    }
+  }
+  return false;
 }
 
 }  // namespace raft

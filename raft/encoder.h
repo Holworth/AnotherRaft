@@ -17,6 +17,8 @@ struct Stripe {
   std::map<raft_frag_id_t, LogEntry> fragments;
   std::vector<LogEntry> collected_fragments;
   Version version;
+
+  size_t CollectFragmentsCount() const { return collected_fragments.size(); }
 };
 
 // Version is used in FlexibleK to mark the status of a stripe

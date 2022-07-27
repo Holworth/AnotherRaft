@@ -287,6 +287,8 @@ class RaftState {
 
   void FilterDuplicatedCollectedFragments(Stripe& stripes);
 
+  bool FindFullEntryInStripe(const Stripe* stripe, LogEntry* ent);
+
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
   // Add any new entries that are not in raft's log
@@ -355,7 +357,7 @@ class RaftState {
   // decoded into complete log entries
   void PreLeaderBecomeLeader();
 
-  void EncodeCollectedStripe();
+  void DecodeCollectedStripe();
 
  private:
   // For concurrency control. A raft state instance might be accessed via
