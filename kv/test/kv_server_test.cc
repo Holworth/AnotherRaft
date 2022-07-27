@@ -268,7 +268,7 @@ TEST_F(KvServerTest, DISABLED_TestSimplePutAndGet) {
   std::string value;
   const int test_cnt = 1000;
 
-  for (int i = 0; i < test_cnt; ++i) {
+  for (int i = 1; i <= test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);
     auto value = value_prefix + std::to_string(i);
     EXPECT_EQ(Put(key, value), kOk);
@@ -278,7 +278,7 @@ TEST_F(KvServerTest, DISABLED_TestSimplePutAndGet) {
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
 
-  for (int i = 0; i < test_cnt; ++i) {
+  for (int i = 1; i <= test_cnt; ++i) {
     EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
     EXPECT_EQ(value, value_prefix + std::to_string(i));
   }
@@ -301,9 +301,9 @@ TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
   const std::string value_prefix = "value-abcdefg-";
 
   std::string value;
-  const int test_cnt = 10;
+  const int test_cnt = 1000;
 
-  for (int i = 0; i < test_cnt; ++i) {
+  for (int i = 1; i <= test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);
     auto value = value_prefix + std::to_string(i);
     EXPECT_EQ(Put(key, value), kOk);
@@ -315,12 +315,12 @@ TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
 
   // Check if Get operation works well after leader is down, i.e. If the leader can 
   // successfully gather fragments and get full entry
-  for (int i = 0; i < test_cnt; ++i) {
+  for (int i = 1; i <= test_cnt; ++i) {
     EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
     EXPECT_EQ(value, value_prefix + std::to_string(i));
   }
 
-  for (int i = test_cnt; i < 2 * test_cnt; ++i) {
+  for (int i = test_cnt + 1; i <= 2 * test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);
     auto value = value_prefix + std::to_string(i);
     EXPECT_EQ(Put(key, value), kOk);
@@ -330,123 +330,10 @@ TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
   auto leader2 = GetCurrentLeaderId();
   Disconnect(leader2);
 
-  for (int i = test_cnt; i < 2 * test_cnt; ++i) {
+  for (int i = test_cnt + 1; i <= 2 * test_cnt; ++i) {
     auto key = key_prefix + std::to_string(i);
     EXPECT_EQ(Get(key, &value), kOk);
     EXPECT_EQ(value, value_prefix + std::to_string(i));
   }
 }
-
-TEST_F(KvServerTest, DISABLED_TestDeleteAndOverwrite) {
-  auto servers_config = NodesConfig{
-      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
-      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
-      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
-  };
-
-  LaunchAllServers(servers_config);
-
-  const std::string key_prefix = "key";
-  const std::string value_prefix = "value-abcdefg-";
-  const std::string value_prefix2 = "value2-abcdefg-";
-
-  std::string value;
-  const int test_cnt = 10;
-
-  for (int i = 0; i < test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    auto value = value_prefix + std::to_string(i);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
-
-  sleepMs(100);
-  auto leader1 = GetCurrentLeaderId();
-  Disconnect(leader1);
-
-  for (int i = 0; i < test_cnt; ++i) {
-    EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
-    EXPECT_EQ(value, value_prefix + std::to_string(i));
-  }
-
-  // Test overwrite with new value
-  for (int i = 0; i < test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    auto value = value_prefix2 + std::to_string(i);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
-
-  auto leader2 = GetCurrentLeaderId();
-  for (int i = 0; i < test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    EXPECT_EQ(Get(key, &value), kOk);
-    EXPECT_EQ(value, value_prefix2 + std::to_string(i));
-  }
-
-  ClearTestContext(servers_config);
-}
-
-TEST_F(KvServerTest, DISABLED_TestGetPreviousValueAfterLeaderCrashes) {
-  auto servers_config = NodesConfig{
-      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
-      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
-      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
-  };
-
-  LaunchAllServers(servers_config);
-
-  std::string value;
-
-  const int phase1_put_cnt = 100;
-  for (int i = 0; i < phase1_put_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    auto value = "value" + std::to_string(i);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
-
-  for (int i = 0; i < phase1_put_cnt; ++i) {
-    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
-    EXPECT_EQ(value, "value" + std::to_string(i));
-  }
-
-  auto leader1 = GetCurrentLeaderId();
-  Disconnect(leader1);
-
-  // Previous value should be read from remaining cluster
-  for (int i = 0; i < phase1_put_cnt; ++i) {
-    EXPECT_EQ(Get("key" + std::to_string(i), &value), kOk);
-    EXPECT_EQ(value, "value" + std::to_string(i));
-  }
-  auto leader2 = GetCurrentLeaderId();
-  ASSERT_NE(leader1, leader2);
-
-  // Delete all keys from phase1 and put some new keys in phase2
-  const int phase2_put_cnt = 100;
-
-  for (int i = 0; i < phase1_put_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    EXPECT_EQ(Delete(key), kOk);
-  }
-
-  for (int i = 0; i < phase2_put_cnt; ++i) {
-    auto key = "key" + std::to_string(i + phase1_put_cnt);
-    auto value = "value" + std::to_string(i + phase1_put_cnt);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
-
-  // Check results
-  for (int i = 0; i < phase1_put_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    EXPECT_EQ(Get(key, &value), kKeyNotExist);
-  }
-
-  for (int i = 0; i < phase2_put_cnt; ++i) {
-    auto key = "key" + std::to_string(i + phase1_put_cnt);
-    auto expect_value = "value" + std::to_string(i + phase1_put_cnt);
-    EXPECT_EQ(Get(key, &value), kOk);
-    EXPECT_EQ(value, expect_value);
-  }
-
-  ClearTestContext(servers_config);
-}
-
 }  // namespace kv
