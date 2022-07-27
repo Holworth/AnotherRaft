@@ -63,6 +63,25 @@ class KvServerTest : public ::testing::Test {
 
   void sleepMs(int cnt) { std::this_thread::sleep_for(std::chrono::milliseconds(cnt)); }
 
+  void PutBatch(const std::string& key_prefix, const std::string& value_prefix, int lo,
+                int hi) {
+    for (int i = lo; i <= hi; ++i) {
+      auto key = key_prefix + std::to_string(i);
+      auto value = value_prefix + std::to_string(i);
+      EXPECT_EQ(Put(key, value), kOk);
+    }
+  }
+
+  void CheckGetBatch(const std::string& key_prefix, const std::string& value_prefix,
+                     int lo, int hi) {
+    std::string value;
+    for (int i = lo; i <= hi; ++i) {
+      auto key = key_prefix + std::to_string(i);
+      EXPECT_EQ(Get(key, &value), kOk);
+      EXPECT_EQ(value, value_prefix + std::to_string(i));
+    }
+  }
+
  public:
   ErrorType Put(const std::string& key, const std::string& value) {
     Request request = Request{kPut, 0, 0, key, value};
@@ -244,6 +263,7 @@ class KvServerTest : public ::testing::Test {
 
  public:
   void Disconnect(raft::raft_node_id_t id) { servers_[id]->Disconnect(); }
+  void Reconnect(raft::raft_node_id_t id) { servers_[id]->Reconnect(); }
 
  public:
   KvServer* servers_[kMaxNodeNum];
@@ -313,7 +333,7 @@ TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
 
-  // Check if Get operation works well after leader is down, i.e. If the leader can 
+  // Check if Get operation works well after leader is down, i.e. If the leader can
   // successfully gather fragments and get full entry
   for (int i = 1; i <= test_cnt; ++i) {
     EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
@@ -335,5 +355,45 @@ TEST_F(KvServerTest, TestPutAndGetAfterLeaderDown) {
     EXPECT_EQ(Get(key, &value), kOk);
     EXPECT_EQ(value, value_prefix + std::to_string(i));
   }
+
+  ClearTestContext(servers_config);
+}
+
+TEST_F(KvServerTest, TestFollowerCommitAfterRejoiningTheCluster) {
+  auto servers_config = NodesConfig{
+      {0, {{"127.0.0.1", 50001}, "", "./testdb0"}},
+      {1, {{"127.0.0.1", 50002}, "", "./testdb1"}},
+      {2, {{"127.0.0.1", 50003}, "", "./testdb2"}},
+  };
+
+  LaunchAllServers(servers_config);
+
+  const std::string key_prefix = "key";
+  const std::string value_prefix = "value-abcdefg-";
+
+  std::string value;
+  const int test_cnt = 10;
+
+  PutBatch(key_prefix, value_prefix, 1, test_cnt);
+
+  sleepMs(1000);
+  auto leader1 = GetCurrentLeaderId();
+  Disconnect((leader1 + 1) % node_num_);  // randomly disable a follower
+  //
+  PutBatch(key_prefix, value_prefix, test_cnt + 1, test_cnt * 2);
+  CheckGetBatch(key_prefix, value_prefix, 1, 2 * test_cnt);
+
+  // Bring the follower back
+  Reconnect((leader1 + 1) % node_num_);
+  // The leader should replenish entries this follower lacks
+  PutBatch(key_prefix, value_prefix, 2 * test_cnt + 1, 3 * test_cnt);
+
+  // Let the leader down and check put value
+  sleepMs(1000);
+  leader1 = GetCurrentLeaderId();
+  Disconnect(leader1);
+  CheckGetBatch(key_prefix, value_prefix, 2 * test_cnt + 1, 3 * test_cnt);
+
+  ClearTestContext(servers_config);
 }
 }  // namespace kv
