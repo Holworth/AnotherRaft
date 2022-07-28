@@ -107,7 +107,7 @@ TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   LaunchKvServiceNodes(cluster_config);
   sleepMs(1000);
 
-  auto client = std::make_shared<KvServiceClient>(new KvServiceClient(cluster_config, 0));
+  auto client = std::make_shared<KvServiceClient>(cluster_config, 0);
   int put_cnt = 10;
   CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
   CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
@@ -125,7 +125,7 @@ TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
   LaunchKvServiceNodes(cluster_config);
   sleepMs(1000);
 
-  auto client = std::make_shared<KvServiceClient>(new KvServiceClient(cluster_config, 0));
+  auto client = std::make_shared<KvServiceClient>(cluster_config, 0);
   int put_cnt = 10;
 
   CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
@@ -153,7 +153,7 @@ TEST_F(KvClusterTest, TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
   const std::string value_prefix = "value-abcdefg-";
 
   int put_cnt = 10;
-  auto client = std::make_shared<KvServiceClient>(new KvServiceClient(cluster_config, 0));
+  auto client = std::make_shared<KvServiceClient>(cluster_config, 0);
   CheckBatchPut(client, key_prefix, value_prefix, 1, put_cnt);
 
   auto leader1 = GetLeaderId();
@@ -195,10 +195,9 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
   const int put_cnt = 10;
 
   auto spawn_clients = [=](const int client_id) {
-    auto client =
-        std::make_shared<KvServiceClient>(new KvServiceClient(cluster_config, client_id));
-    auto key_prefix = common_keyprefix + std::to_string(client_id);
-    auto value_prefix = common_valueprefix;
+    auto client = std::make_shared<KvServiceClient>(cluster_config, client_id);
+    auto key_prefix = common_keyprefix + std::to_string(client_id) + "-";
+    auto value_prefix = common_valueprefix + std::to_string(client_id) + "-";
     CheckBatchPut(client, key_prefix, value_prefix, 1, put_cnt);
     CheckBatchGet(client, key_prefix, value_prefix, 1, put_cnt);
   };
