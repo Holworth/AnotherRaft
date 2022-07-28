@@ -27,11 +27,13 @@ Response KvServerRPCClient::DealWithRequest(const Request& request) {
 }
 
 void KvServerRPCClient::GetValue(const GetValueRequest& request,
-                                 void (*cb)(const GetValueResponse&)) {
+                                 std::function<void(const GetValueResponse&)> cb) {
   ClientPtr client_ptr(
       new RcfClient<I_KvServerRPCService>(RCF::TcpEndpoint(address_.ip, address_.port)));
   client_ptr->getClientStub().getTransport().setMaxOutgoingMessageLength(512 * 1024 *
                                                                          1024);
+  client_ptr->getClientStub().setRemoteCallTimeoutMs(900);
+
   RCF::Future<GetValueResponse> ret;
   auto cmp_callback = [=]() {
     auto p = ret;

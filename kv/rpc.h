@@ -1,4 +1,6 @@
 #pragma once
+#include <functional>
+
 #include "RCF/ClientStub.hpp"
 #include "RCF/Future.hpp"
 #include "RCF/InitDeinit.hpp"
@@ -76,7 +78,8 @@ class KvServerRPCClient {
 
   Response DealWithRequest(const Request& request);
 
-  void GetValue(const GetValueRequest& request, void (*cb)(const GetValueResponse&));
+  void GetValue(const GetValueRequest& request,
+                std::function<void(const GetValueResponse&)> cb);
 
   // Set timeout for this RPC call, a typical value might be 300ms?
   void SetRPCTimeOutMs(int cnt) {

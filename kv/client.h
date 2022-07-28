@@ -2,6 +2,7 @@
 #include <thread>
 #include <unordered_map>
 
+#include "RCF/Future.hpp"
 #include "config.h"
 #include "kv_node.h"
 #include "raft_type.h"
@@ -16,10 +17,28 @@ class KvServiceClient {
   KvServiceClient(const KvClusterConfig& config);
   ~KvServiceClient();
 
+  struct GatherValueTask {
+    std::string key;
+    raft::raft_index_t read_index;
+    raft::raft_node_id_t replied_id;
+    raft::Encoder::EncodingResults* decode_input;
+    int k, m;
+  };
+
+  struct GatherValueTaskResults {
+    std::string *value;
+    ErrorType err;
+  };
+
  public:
   ErrorType Put(const std::string& key, const std::string& value);
   ErrorType Get(const std::string&, std::string* value);
   ErrorType Delete(const std::string& key);
+
+  void DoGatherValueTask(const GatherValueTask* task, GatherValueTaskResults* res);
+
+  static void OnGetValueRpcComplete(RCF::Future<GetValueResponse> ret,
+                                    KvServiceClient* client);
 
   raft::raft_node_id_t LeaderId() const { return curr_leader_; }
 
@@ -66,5 +85,6 @@ class KvServiceClient {
   static const raft::raft_node_id_t kNoDetectLeader = -1;
   raft::raft_term_t curr_leader_term_;
   raft::Encoder::EncodingResults gather_value_input_;
+  std::atomic<bool> gather_value_task_done_;
 };
 }  // namespace kv
