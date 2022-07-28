@@ -131,6 +131,7 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
     }
   }
 
+  LOG(raft::util::kRaft, "Client Loop until gather value process done");
   raft::util::Timer timer;
   timer.Reset();
   while (timer.ElapseMilliseconds() < 1000) {
