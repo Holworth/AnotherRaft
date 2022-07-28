@@ -192,7 +192,8 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
 
   const std::string common_keyprefix = "key-";
   const std::string common_valueprefix = "value-abcdefg-";
-  const int put_cnt = 10;
+  const int put_cnt = 1000;
+  const int thread_cnt = 4;
 
   auto spawn_clients = [=](const int client_id) {
     auto client = std::make_shared<KvServiceClient>(cluster_config, client_id);
@@ -202,11 +203,15 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
     CheckBatchGet(client, key_prefix, value_prefix, 1, put_cnt);
   };
 
-  auto t1 = std::thread(spawn_clients, 1);
-  auto t2 = std::thread(spawn_clients, 2);
+  // Spawn a few client threads to send requests
+  std::thread threads[16];
+  for (int i = 1; i <= thread_cnt; ++i) {
+    threads[i] = std::thread(spawn_clients, static_cast<uint32_t>(i));
+  }
 
-  t1.join();
-  t2.join();
+  for (int i = 1; i <= thread_cnt; ++i) {
+    threads[i].join();
+  }
 
   ClearTestContext(cluster_config);
 }
