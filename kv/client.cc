@@ -22,7 +22,7 @@ KvServiceClient::~KvServiceClient() {
 Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
   raft::util::Timer timer;
   timer.Reset();
-  LOG(raft::util::kRaft, "Client start deal with request (%s)",
+  LOG(raft::util::kRaft, "[C%d] Dealing With Req (%s)", ClientId(),
       ToString(request).c_str());
   while (timer.ElapseMilliseconds() < kKVRequestTimesoutCnt * 1000) {
     if (curr_leader_ == kNoDetectLeader && DetectCurrentLeader() == kNoDetectLeader) {
@@ -30,8 +30,8 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
       sleepMs(300);
       continue;
     }
-    LOG(raft::util::kRaft, "Client send request (%s) to %d", ToString(request).c_str(),
-        curr_leader_);
+    LOG(raft::util::kRaft, "[C%d] Send Req (%s) to S%d", ClientId(),
+        ToString(request).c_str(), curr_leader_);
     auto resp = GetRPCStub(curr_leader_)->DealWithRequest(request);
     switch (resp.err) {
       case kOk:
@@ -43,8 +43,8 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
       case kRequestExecTimeout:
       case kNotALeader:
       case kRPCCallFailed:
-        LOG(raft::util::kRaft, "Client Receive Response(err=%s), fallback to nonleader",
-            ToString(resp.err).c_str());
+        LOG(raft::util::kRaft, "[C%d] Recv Resp(err=%s), Fallback to Nonleader",
+            ClientId(), ToString(resp.err).c_str());
         curr_leader_ = kNoDetectLeader;
         curr_leader_term_ = 0;
         break;
@@ -69,7 +69,7 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   Request request = {kGet, ClientId(), 0, key, std::string("")};
   auto resp = WaitUntilRequestDone(request);
 
-  LOG(raft::util::kRaft, "Client Recv Response from S%d", resp.reply_server_id);
+  LOG(raft::util::kRaft, "[C%d] Recv Resp from S%d", ClientId(), resp.reply_server_id);
 
   if (resp.err != kOk) {
     return resp.err;
@@ -91,8 +91,8 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   int k = format.k, m = format.m;
   raft::Encoder::EncodingResults input;
   input.insert({format.frag_id, raft::Slice::Copy(format.frag)});
-  LOG(raft::util::kRaft, "[Client] Add Fragment of Frag%d from S%d", format.frag_id,
-      resp.reply_server_id);
+  LOG(raft::util::kRaft, "[C%d] Add Fragment of Frag%d from S%d", ClientId(),
+      format.frag_id, resp.reply_server_id);
 
   GatherValueTask task{key, resp.read_index, resp.reply_server_id, &input, k, m};
   GatherValueTaskResults res{value, kOk};
@@ -126,15 +126,15 @@ raft::raft_node_id_t KvServiceClient::DetectCurrentLeader() {
 
 void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
                                         GatherValueTaskResults* res) {
-  LOG(raft::util::kRaft, "[Client] Start running Gather Value Task, k=%d, m=%d", task->k,
-      task->m);
+  LOG(raft::util::kRaft, "[C%d] Start running Gather Value Task, k=%d, m=%d", ClientId(),
+      task->k, task->m);
   std::atomic<bool> gather_value_done = false;
 
   // Use lock to prevent concurrent callback function running
   std::mutex mtx;
 
   auto call_back = [=, &gather_value_done, &mtx](const GetValueResponse& resp) {
-    LOG(raft::util::kRaft, "[Client] Recv GetValue Response from S%d",
+    LOG(raft::util::kRaft, "[C%d] Recv GetValue Response from S%d", ClientId(),
         resp.reply_server_id);
     if (resp.err != kOk) {
       return;
@@ -142,9 +142,11 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
     std::scoped_lock<std::mutex> lck(mtx);
 
     auto fmt = DecodeString(const_cast<std::string*>(&resp.value));
+    LOG(raft::util::kRaft, "[C%d] Decode Value: k=%d, m=%d, fragid=%d", ClientId(), fmt.k,
+        fmt.m, fmt.frag_id)
     if (fmt.k == task->k && fmt.m == task->m) {
       task->decode_input->insert({fmt.frag_id, raft::Slice::Copy(fmt.frag)});
-      LOG(raft::util::kRaft, "[Client] Add Fragment of %d", fmt.frag_id);
+      LOG(raft::util::kRaft, "[C%d] Add Fragment of %d", ClientId(), fmt.frag_id);
     }
 
     // The gather value task is not done, and there is enough fragments to
@@ -157,10 +159,10 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
         GetKeyFromPrefixLengthFormat(results.data(), res->value);
         res->err = kOk;
         gather_value_done.store(true);
-        LOG(raft::util::kRaft, "[Client] Decode Value Succ");
+        LOG(raft::util::kRaft, "[C%d] Decode Value Succ", ClientId());
       } else {
         res->err = kKVDecodeFail;
-        LOG(raft::util::kRaft, "[Client] Decode Value Fail");
+        LOG(raft::util::kRaft, "[C%d] Decode Value Fail", ClientId());
       }
     }
   };
@@ -185,7 +187,6 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
     }
   }
 
-  LOG(raft::util::kRaft, "Client Loop until gather value process done");
   raft::util::Timer timer;
   timer.Reset();
   while (timer.ElapseMilliseconds() <= 1000) {

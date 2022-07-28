@@ -254,10 +254,10 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequestWithFailure) {
         fail_server_id = (leader + 1) % node_num_;
       }
       Disconnect(fail_server_id);
-      LOG(raft::util::kRaft, ">>>[S%d disconnect]<<<", fail_server_id);
+      LOG(raft::util::kRaft, ">>>[S%d Disconnect]<<<", fail_server_id);
       sleepMs(chaos_occur_interval);
       Reconnect(fail_server_id);
-      LOG(raft::util::kRaft, ">>>[S%d reconnect]<<<", fail_server_id);
+      LOG(raft::util::kRaft, ">>>[S%d Reconnect]<<<", fail_server_id);
     }
   };
 
