@@ -1,7 +1,7 @@
 #pragma once
-#include <_types/_uint32_t.h>
 #include <thread>
 #include <unordered_map>
+#include <cstdint>
 
 #include "RCF/Future.hpp"
 #include "config.h"
