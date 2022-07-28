@@ -40,7 +40,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
     resp->err = kRequestExecTimeout;
     return;
   }
-  LOG(raft::util::kRaft, "S%d deal with req %s", id_, ToString(*request).c_str());
+  LOG(raft::util::kRaft, "S%d deals with req %s", id_, ToString(*request).c_str());
 
   resp->type = request->type;
   resp->client_id = request->client_id;
@@ -51,6 +51,8 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   switch (request->type) {
     case kDetectLeader:
       resp->err = raft_->IsLeader() ? kOk : kNotALeader;
+      LOG(raft::util::kRaft, "S%d reply DetectLeader err:%s", Id(),
+          ToString(resp->err).c_str());
       return;
     case kPut:
     case kDelete: {
