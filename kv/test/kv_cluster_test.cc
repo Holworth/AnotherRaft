@@ -105,8 +105,8 @@ TEST_F(KvClusterTest, TestSimplePutGetOperation) {
 
   auto client = new KvServiceClient(cluster_config);
   int put_cnt = 10;
-  CheckBatchPut(client, "key", "value", 1, put_cnt);
-  CheckBatchGet(client, "key", "value", 1, put_cnt);
+  CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
+  CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
   ClearTestContext(cluster_config);
 }
 
@@ -122,8 +122,8 @@ TEST_F(KvClusterTest, DISABLED_TestDeleteAndOverWriteValue) {
   auto client = new KvServiceClient(cluster_config);
   int put_cnt = 1000;
 
-  CheckBatchPut(client, "key", "value", 1, put_cnt);
-  CheckBatchGet(client, "key", "value", 1, put_cnt);
+  CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
+  CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
 
   // For odd key, delete it, for even key, overwrite them with new value
   for (int i = 1; i <= put_cnt; ++i) {
@@ -151,7 +151,7 @@ TEST_F(KvClusterTest, DISABLED_TestDeleteAndOverWriteValue) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestLeaderTransfer) {
+TEST_F(KvClusterTest, DISABLED_TestLeaderTransfer) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
