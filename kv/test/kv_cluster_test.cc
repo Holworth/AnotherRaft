@@ -88,7 +88,7 @@ class KvClusterTest : public ::testing::Test {
     }
   }
 
- private:
+ public:
   KvServiceNode* nodes_[kMaxNodeNum];
   static const raft::raft_node_id_t kNoDetectLeader = -1;
   int node_num_;
@@ -130,6 +130,47 @@ TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
   Disconnect(leader);
 
   CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
+
+  ClearTestContext(cluster_config);
+}
+
+TEST_F(KvClusterTest, TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
+  auto cluster_config = KvClusterConfig{
+      {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
+      {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
+      {2, {2, {"127.0.0.1", 50002}, {"127.0.0.1", 50007}, "", "./testdb2"}},
+      {3, {3, {"127.0.0.1", 50003}, {"127.0.0.1", 50008}, "", "./testdb3"}},
+      {4, {4, {"127.0.0.1", 50004}, {"127.0.0.1", 50009}, "", "./testdb4"}},
+  };
+  LaunchKvServiceNodes(cluster_config);
+  sleepMs(1000);
+
+  const std::string key_prefix = "key";
+  const std::string value_prefix = "value-abcdefg-";
+
+  int put_cnt = 10;
+  auto client = new KvServiceClient(cluster_config);
+  CheckBatchPut(client, key_prefix, value_prefix, 1, put_cnt);
+
+  auto leader1 = GetLeaderId();
+  Disconnect((leader1 + 1) % node_num_);  // randomly disable a follower
+  LOG(raft::util::kRaft, "S%d disconnect", (leader1 + 1) % node_num_);
+
+  CheckBatchPut(client, key_prefix, value_prefix, put_cnt + 1, put_cnt * 2);
+  CheckBatchGet(client, key_prefix, value_prefix, 1, 2 * put_cnt);
+
+  Reconnect((leader1 + 1) % node_num_);
+  LOG(raft::util::kRaft, "S%d reconnect", (leader1 + 1) % node_num_);
+
+  CheckBatchPut(client, key_prefix, value_prefix, 2 * put_cnt + 1, 3 * put_cnt);
+
+  // Let the leader down and check put value
+  sleepMs(1000);
+  leader1 = GetLeaderId();
+  Disconnect(leader1);
+  LOG(raft::util::kRaft, "S%d disconnect", (leader1 + 1) % node_num_);
+
+  CheckBatchGet(client, key_prefix, value_prefix, 1, 3 * put_cnt);
 
   ClearTestContext(cluster_config);
 }
