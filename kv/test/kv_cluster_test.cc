@@ -94,7 +94,7 @@ class KvClusterTest : public ::testing::Test {
   int node_num_;
 };
 
-TEST_F(KvClusterTest, TestSimplePutGetOperation) {
+TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
@@ -110,44 +110,27 @@ TEST_F(KvClusterTest, TestSimplePutGetOperation) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestDeleteAndOverWriteValue) {
+TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
   auto cluster_config = KvClusterConfig{
-      {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
-      {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
-      {2, {2, {"127.0.0.1", 50002}, {"127.0.0.1", 50005}, "", "./testdb2"}},
+      {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 60000}, "", "./testdb0"}},
+      {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 60001}, "", "./testdb1"}},
+      {2, {2, {"127.0.0.1", 50002}, {"127.0.0.1", 60002}, "", "./testdb2"}},
+      {3, {3, {"127.0.0.1", 50003}, {"127.0.0.1", 60003}, "", "./testdb3"}},
+      {4, {4, {"127.0.0.1", 50004}, {"127.0.0.1", 60004}, "", "./testdb4"}},
   };
   LaunchKvServiceNodes(cluster_config);
   sleepMs(1000);
 
   auto client = new KvServiceClient(cluster_config);
-  int put_cnt = 1000;
+  int put_cnt = 10;
 
   CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
+  sleepMs(1000);
+  auto leader = GetLeaderId();
+  Disconnect(leader);
+
   CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
 
-  // For odd key, delete it, for even key, overwrite them with new value
-  for (int i = 1; i <= put_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    if (i % 2) {
-      EXPECT_EQ(client->Delete(key), kOk);
-    } else {
-      auto value = "value2-" + std::to_string(i);
-      EXPECT_EQ(client->Put(key, value), kOk);
-    }
-  }
-
-  // Check Get
-  std::string value;
-  for (int i = 1; i <= put_cnt; ++i) {
-    auto key = "key" + std::to_string(i);
-    if (i % 2) {
-      EXPECT_EQ(client->Get(key, &value), kKeyNotExist);
-    } else {
-      auto expect_val = "value2-" + std::to_string(i);
-      EXPECT_EQ(client->Get(key, &value), kOk);
-      EXPECT_EQ(value, expect_val);
-    }
-  }
   ClearTestContext(cluster_config);
 }
 

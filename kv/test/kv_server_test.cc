@@ -323,38 +323,21 @@ TEST_F(KvServerTest, DISABLED_TestPutAndGetAfterLeaderDown) {
   std::string value;
   const int test_cnt = 1000;
 
-  for (int i = 1; i <= test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    auto value = value_prefix + std::to_string(i);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
+  PutBatch(key_prefix, value_prefix, 1, test_cnt);
 
   sleepMs(1000);  // Wait leader broadcast the commit index
   auto leader1 = GetCurrentLeaderId();
   Disconnect(leader1);
 
-  // Check if Get operation works well after leader is down, i.e. If the leader can
-  // successfully gather fragments and get full entry
-  for (int i = 1; i <= test_cnt; ++i) {
-    EXPECT_EQ(Get(key_prefix + std::to_string(i), &value), kOk);
-    EXPECT_EQ(value, value_prefix + std::to_string(i));
-  }
+  CheckGetBatch(key_prefix, value_prefix, 1, test_cnt);
 
-  for (int i = test_cnt + 1; i <= 2 * test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    auto value = value_prefix + std::to_string(i);
-    EXPECT_EQ(Put(key, value), kOk);
-  }
+  PutBatch(key_prefix, value_prefix, test_cnt + 1, 2 * test_cnt);
 
   sleepMs(1000);
   auto leader2 = GetCurrentLeaderId();
   Disconnect(leader2);
 
-  for (int i = test_cnt + 1; i <= 2 * test_cnt; ++i) {
-    auto key = key_prefix + std::to_string(i);
-    EXPECT_EQ(Get(key, &value), kOk);
-    EXPECT_EQ(value, value_prefix + std::to_string(i));
-  }
+  CheckGetBatch(key_prefix, value_prefix, test_cnt + 1, 2 * test_cnt);
 
   ClearTestContext(servers_config);
 }
