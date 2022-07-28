@@ -1,4 +1,5 @@
 #pragma once
+#include <_types/_uint32_t.h>
 #include <thread>
 #include <unordered_map>
 
@@ -14,7 +15,7 @@ class KvServiceClient {
   static const int kKVRequestTimesoutCnt = 10;
 
  public:
-  KvServiceClient(const KvClusterConfig& config);
+  KvServiceClient(const KvClusterConfig& config, uint32_t client_id);
   ~KvServiceClient();
 
   struct GatherValueTask {
@@ -71,6 +72,8 @@ class KvServiceClient {
                          raft::Slice(const_cast<char*>(bytes), remaining_size)};
   }
 
+  uint32_t ClientId() const { return client_id_; }
+
  private:
   raft::raft_node_id_t DetectCurrentLeader();
   Response WaitUntilRequestDone(const Request& request);
@@ -83,8 +86,9 @@ class KvServiceClient {
   std::unordered_map<raft::raft_node_id_t, rpc::KvServerRPCClient*> servers_;
   raft::raft_node_id_t curr_leader_;
   static const raft::raft_node_id_t kNoDetectLeader = -1;
+
   raft::raft_term_t curr_leader_term_;
-  raft::Encoder::EncodingResults gather_value_input_;
-  std::atomic<bool> gather_value_task_done_;
+
+  uint32_t client_id_;
 };
 }  // namespace kv

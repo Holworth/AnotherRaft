@@ -40,7 +40,8 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
     resp->err = kRequestExecTimeout;
     return;
   }
-  LOG(raft::util::kRaft, "S%d deals with req %s", id_, ToString(*request).c_str());
+  LOG(raft::util::kRaft, "S%d Deals with Req(From C%d) %s", id_, request->client_id,
+      ToString(*request).c_str());
 
   resp->type = request->type;
   resp->client_id = request->client_id;

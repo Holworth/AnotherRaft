@@ -5,7 +5,8 @@
 #include "type.h"
 #include "util.h"
 namespace kv {
-KvServiceClient::KvServiceClient(const KvClusterConfig& config) {
+KvServiceClient::KvServiceClient(const KvClusterConfig& config, uint32_t client_id)
+    : client_id_(client_id) {
   for (const auto& [id, conf] : config) {
     servers_.insert({id, new rpc::KvServerRPCClient(conf.kv_rpc_addr, id)});
   }
@@ -59,13 +60,13 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
 }
 
 ErrorType KvServiceClient::Put(const std::string& key, const std::string& value) {
-  Request request = {kPut, 0, 0, key, value};
+  Request request = {kPut, ClientId(), 0, key, value};
   auto resp = WaitUntilRequestDone(request);
   return resp.err;
 }
 
 ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
-  Request request = {kGet, 0, 0, key, std::string("")};
+  Request request = {kGet, ClientId(), 0, key, std::string("")};
   auto resp = WaitUntilRequestDone(request);
 
   LOG(raft::util::kRaft, "Client Recv Response from S%d", resp.reply_server_id);
@@ -101,7 +102,7 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
 }
 
 ErrorType KvServiceClient::Delete(const std::string& key) {
-  Request request = {kDelete, 0, 0, key, ""};
+  Request request = {kDelete, ClientId(), 0, key, ""};
   auto resp = WaitUntilRequestDone(request);
   return resp.err;
 }
@@ -111,7 +112,7 @@ raft::raft_node_id_t KvServiceClient::DetectCurrentLeader() {
     if (stub == nullptr) {
       continue;
     }
-    Request detect_request = {kDetectLeader, 0, 0, "", ""};
+    Request detect_request = {kDetectLeader, ClientId(), 0, "", ""};
     auto resp = GetRPCStub(id)->DealWithRequest(detect_request);
     if (resp.err == kOk) {
       if (resp.raft_term > curr_leader_term_) {
