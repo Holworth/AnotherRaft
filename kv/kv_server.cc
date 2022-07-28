@@ -51,8 +51,8 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   switch (request->type) {
     case kDetectLeader:
       resp->err = raft_->IsLeader() ? kOk : kNotALeader;
-      LOG(raft::util::kRaft, "S%d reply DetectLeader err:%s", Id(),
-          ToString(resp->err).c_str());
+      LOG(raft::util::kRaft, "S%d reply DetectLeader term:%d err:%s", Id(),
+          resp->raft_term, ToString(resp->err).c_str());
       return;
     case kPut:
     case kDelete: {
