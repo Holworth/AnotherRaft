@@ -153,7 +153,7 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
       raft::Slice results;
       auto stat = encoder.DecodeSlice(*(task->decode_input), task->k, task->m, &results);
       if (stat) {
-        *res->value = std::string(results.data(), results.size());
+        GetKeyFromPrefixLengthFormat(results.data(), res->value);
         res->err = kOk;
         gather_value_done.store(true);
         LOG(raft::util::kRaft, "[Client] Decode Value Succ");
