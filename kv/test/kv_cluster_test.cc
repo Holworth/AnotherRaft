@@ -114,7 +114,7 @@ TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
+TEST_F(KvClusterTest, DISABLED_TestGetAfterOldLeaderFail) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
@@ -138,7 +138,7 @@ TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
+TEST_F(KvClusterTest, DISABLED_TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
