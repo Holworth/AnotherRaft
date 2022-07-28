@@ -61,7 +61,7 @@ struct GetValueResponse {
   std::string value;
   ErrorType err;
   raft::raft_node_id_t reply_server_id;
-  void serialize(SF::Archive& ar) { ar& value& err; }
+  void serialize(SF::Archive& ar) { ar& value& err& reply_server_id; }
 };
 
 struct RequestWithFragment {

@@ -90,7 +90,8 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   int k = format.k, m = format.m;
   raft::Encoder::EncodingResults input;
   input.insert({format.frag_id, raft::Slice::Copy(format.frag)});
-  LOG(raft::util::kRaft, "[Client] Add Fragment of Frag%d", format.frag_id);
+  LOG(raft::util::kRaft, "[Client] Add Fragment of Frag%d from S%d", format.frag_id,
+      resp.reply_server_id);
 
   GatherValueTask task{key, resp.read_index, resp.reply_server_id, &input, k, m};
   GatherValueTaskResults res{value, kOk};

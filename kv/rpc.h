@@ -42,6 +42,8 @@ class KvServerRPCService {
   }
 
   GetValueResponse GetValue(const GetValueRequest& request) {
+    LOG(raft::util::kRaft, "S%d recv GetValue Request: readIndex=%d", server_->Id(),
+        request.read_index);
     raft::util::Timer timer;
     timer.Reset();
     // Spin until the entries before read index have been applied into the DB
@@ -50,6 +52,7 @@ class KvServerRPCService {
     }
     std::string value;
     auto found = server_->DB()->Get(request.key, &value);
+    LOG(raft::util::kRaft, "S%d make GetValue Response", server_->Id());
     if (found) {
       return GetValueResponse{std::move(value), kOk, server_->Id()};
     } else {
