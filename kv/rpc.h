@@ -84,6 +84,8 @@ class KvServerRPCClient {
   void GetValue(const GetValueRequest& request,
                 std::function<void(const GetValueResponse&)> cb);
 
+  GetValueResponse GetValue(const GetValueRequest& request);
+
   // Set timeout for this RPC call, a typical value might be 300ms?
   void SetRPCTimeOutMs(int cnt) {
     client_stub_.getClientStub().setRemoteCallTimeoutMs(cnt);

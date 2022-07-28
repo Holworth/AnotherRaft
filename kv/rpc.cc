@@ -26,6 +26,22 @@ Response KvServerRPCClient::DealWithRequest(const Request& request) {
   }
 }
 
+// Synchronize call GetValue
+GetValueResponse KvServerRPCClient::GetValue(const GetValueRequest& request) {
+  try {
+    auto resp = client_stub_.GetValue(request);
+    return resp;
+  } catch (RCF::Exception& e) {
+    LOG(raft::util::kRaft, "KvServerRPC Client %d RCP failed(%s)", id_,
+        e.getErrorMessage().c_str());
+    GetValueResponse resp;
+    resp.err = kRPCCallFailed;
+    return resp;
+  }
+}
+
+
+// Asynchronous call GetValue
 void KvServerRPCClient::GetValue(const GetValueRequest& request,
                                  std::function<void(const GetValueResponse&)> cb) {
   ClientPtr client_ptr(
@@ -39,7 +55,7 @@ void KvServerRPCClient::GetValue(const GetValueRequest& request,
     auto p = ret;
     auto ePtr = p.getAsyncException();
     if (ePtr.get()) {
-      LOG(raft::util::kRPC, "GetValue RPC Call Error: %s",
+      LOG(raft::util::kRaft, "GetValue RPC Call Error: %s",
           ePtr->getErrorString().c_str());
     } else {
       cb(*p);

@@ -175,7 +175,12 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
   auto get_req = GetValueRequest{task->key, task->read_index};
   for (auto& [id, server] : servers_) {
     if (id != task->replied_id) {
-      GetRPCStub(id)->GetValue(get_req, call_back);
+      // GetRPCStub(id)->GetValue(get_req, call_back);
+      GetRPCStub(id)->SetRPCTimeOutMs(1000);
+      auto resp = GetRPCStub(id)->GetValue(get_req);
+      if (resp.err == kOk) {
+        call_back(resp);
+      }
     }
   }
 
