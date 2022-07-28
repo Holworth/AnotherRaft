@@ -41,11 +41,27 @@ struct Response {
   uint32_t sequence;
   ErrorType err;
   raft::raft_term_t raft_term;
-  std::string value;  // Valid if type is Get
-  int k, m;           // The parameter needed to construct an original value
+  std::string value;               // Valid if type is Get
+  int k, m;                        // The parameter needed to construct an original value
+  raft::raft_index_t read_index;   // This is valid only when type is Get
+  raft::raft_node_id_t reply_server_id;  // The id of server that makes this response
   void serialize(SF::Archive& ar) {
-    ar& type& client_id& sequence& err& raft_term& value& k& m;
+    ar& type& client_id& sequence& err& raft_term& value& k& m& read_index& reply_server_id;
   }
+};
+
+// The request & response struct uniquely marks an RPC process named GetValue
+struct GetValueRequest {
+  std::string key;
+  raft::raft_index_t read_index;
+  void serialize(SF::Archive& ar) { ar& key& read_index; }
+};
+
+struct GetValueResponse {
+  std::string value;
+  ErrorType err;
+  raft::raft_node_id_t reply_server_id;
+  void serialize(SF::Archive& ar) { ar& value& err; }
 };
 
 struct RequestWithFragment {

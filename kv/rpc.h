@@ -26,6 +26,7 @@ struct NetAddress {
 // Define the RPC return value and parameter
 RCF_BEGIN(I_KvServerRPCService, "I_KvServerRPCService")
 RCF_METHOD_R1(Response, DealWithRequest, const Request&)
+RCF_METHOD_R1(GetValueResponse, GetValue, const GetValueRequest&)
 RCF_END(I_KvServerRPCService)
 
 class KvServerRPCService {
@@ -37,6 +38,23 @@ class KvServerRPCService {
     server_->DealWithRequest(&req, &resp);
     return resp;
   }
+
+  GetValueResponse GetValue(const GetValueRequest& request) {
+    raft::util::Timer timer;
+    timer.Reset();
+    // Spin until the entries before read index have been applied into the DB
+    while (server_->LastApplyIndex() < request.read_index) {
+      ;
+    }
+    std::string value;
+    auto found = server_->DB()->Get(request.key, &value);
+    if (found) {
+      return GetValueResponse{std::move(value), kOk, server_->Id()};
+    } else {
+      return GetValueResponse{std::string(""), kKeyNotExist, server_->Id()};
+    }
+  }
+
   void SetKvServer(KvServer* server) { server_ = server; }
 
  private:
@@ -50,12 +68,15 @@ class KvServerRPCService {
 // Each KvServerRPCClient object responds to a KvNode
 class KvServerRPCClient {
  public:
+  using ClientPtr = std::shared_ptr<RcfClient<I_KvServerRPCService>>;
   KvServerRPCClient(const NetAddress& net_addr, raft::raft_node_id_t id)
       : address_(net_addr),
         id_(id),
         client_stub_(RCF::TcpEndpoint(net_addr.ip, net_addr.port)) {}
 
   Response DealWithRequest(const Request& request);
+
+  void GetValue(const GetValueRequest& request, void (*cb)(const GetValueResponse&));
 
   // Set timeout for this RPC call, a typical value might be 300ms?
   void SetRPCTimeOutMs(int cnt) {

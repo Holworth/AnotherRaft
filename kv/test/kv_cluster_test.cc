@@ -94,7 +94,7 @@ class KvClusterTest : public ::testing::Test {
   int node_num_;
 };
 
-TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
+TEST_F(KvClusterTest, TestSimplePutGetOperation) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
@@ -104,7 +104,7 @@ TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   sleepMs(1000);
 
   auto client = new KvServiceClient(cluster_config);
-  int put_cnt = 1000;
+  int put_cnt = 10;
   CheckBatchPut(client, "key", "value", 1, put_cnt);
   CheckBatchGet(client, "key", "value", 1, put_cnt);
   ClearTestContext(cluster_config);

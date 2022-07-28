@@ -25,5 +25,26 @@ Response KvServerRPCClient::DealWithRequest(const Request& request) {
     return resp;
   }
 }
+
+void KvServerRPCClient::GetValue(const GetValueRequest& request,
+                                 void (*cb)(const GetValueResponse&)) {
+  ClientPtr client_ptr(
+      new RcfClient<I_KvServerRPCService>(RCF::TcpEndpoint(address_.ip, address_.port)));
+  client_ptr->getClientStub().getTransport().setMaxOutgoingMessageLength(512 * 1024 *
+                                                                         1024);
+  RCF::Future<GetValueResponse> ret;
+  auto cmp_callback = [=]() {
+    auto p = ret;
+    auto ePtr = p.getAsyncException();
+    if (ePtr.get()) {
+      LOG(raft::util::kRPC, "GetValue RPC Call Error: %s",
+          ePtr->getErrorString().c_str());
+    } else {
+      cb(*p);
+    }
+  };
+  ret = client_ptr->GetValue(RCF::AsyncTwoway(cmp_callback), request);
+}
+
 }  // namespace rpc
 }  // namespace kv

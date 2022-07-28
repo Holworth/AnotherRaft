@@ -16,7 +16,7 @@ class RaftNodeBasicTest : public RaftNodeTest {
   }
 };
 
-TEST_F(RaftNodeBasicTest, DISBALED_TestSimplyProposeEntry) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestSimplyProposeEntry) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);

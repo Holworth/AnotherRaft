@@ -23,6 +23,35 @@ class KvServiceClient {
 
   raft::raft_node_id_t LeaderId() const { return curr_leader_; }
 
+  struct DecodedString {
+    int k, m;
+    raft::raft_frag_id_t frag_id;
+    raft::Slice frag;
+
+    std::string ToString() const {
+      char buf[256];
+      sprintf(buf, "DecodedString{k=%d, m=%d, frag_id=%d}", k, m, frag_id);
+      return std::string(buf);
+    }
+  };
+
+  DecodedString DecodeString(std::string* str) {
+    auto bytes = str->c_str();
+
+    int k = *reinterpret_cast<const int*>(bytes);
+    bytes += sizeof(int);
+
+    int m = *reinterpret_cast<const int*>(bytes);
+    bytes += sizeof(int);
+
+    auto frag_id = *reinterpret_cast<const raft::raft_frag_id_t*>(bytes);
+    bytes += sizeof(raft::raft_frag_id_t);
+
+    auto remaining_size = str->size() - sizeof(int) * 2 - sizeof(raft::raft_frag_id_t);
+    return DecodedString{k, m, frag_id,
+                         raft::Slice(const_cast<char*>(bytes), remaining_size)};
+  }
+
  private:
   raft::raft_node_id_t DetectCurrentLeader();
   Response WaitUntilRequestDone(const Request& request);
@@ -36,5 +65,6 @@ class KvServiceClient {
   raft::raft_node_id_t curr_leader_;
   static const raft::raft_node_id_t kNoDetectLeader = -1;
   raft::raft_term_t curr_leader_term_;
+  raft::Encoder::EncodingResults gather_value_input_;
 };
 }  // namespace kv

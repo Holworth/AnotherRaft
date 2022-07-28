@@ -46,6 +46,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   resp->client_id = request->client_id;
   resp->sequence = request->sequence;
   resp->raft_term = raft_->getRaftState()->CurrentTerm();
+  resp->reply_server_id = id_;
 
   switch (request->type) {
     case kDetectLeader:
@@ -167,6 +168,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
 void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
   auto read_index = this->raft_->LastIndex();
   LOG(raft::util::kRaft, "S%d Execute Get Operation, ReadIndex=%d", id_, read_index);
+
+  resp->read_index = read_index;
 
   // spin until the entry has been applied
   raft::util::Timer timer;

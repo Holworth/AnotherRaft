@@ -1,6 +1,7 @@
 #include "client.h"
 
 #include "config.h"
+#include "encoder.h"
 #include "type.h"
 #include "util.h"
 namespace kv {
@@ -66,10 +67,80 @@ ErrorType KvServiceClient::Put(const std::string& key, const std::string& value)
 ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   Request request = {kGet, 0, 0, key, std::string("")};
   auto resp = WaitUntilRequestDone(request);
-  if (resp.err == kOk) {
-    *value = resp.value;
+
+  LOG(raft::util::kRaft, "Client Recv Response from S%d", resp.reply_server_id);
+
+  if (resp.err != kOk) {
+    return resp.err;
   }
-  return resp.err;
+
+  // Decoding the response byte array for further information: we may need to collect
+  // other fragments
+  auto format = DecodeString(&resp.value);
+
+  if (format.k == 1) {
+    GetKeyFromPrefixLengthFormat(format.frag.data(), value);
+    return kOk;
+  }
+
+  LOG(raft::util::kRaft, "[Get Partial Value: k=%d m=%d readindex=%d], start collecting",
+      format.k, format.m, resp.read_index);
+
+  // Start gather get value,
+  // TODO: This might be encapsulated into a task process?
+  int k = format.k, m = format.m;
+  raft::Encoder::EncodingResults input;
+  input.insert({format.frag_id,
+                raft::Slice(const_cast<char*>(format.frag.data()), format.frag.size())});
+
+  std::string final_value;
+  std::atomic<bool> gather_value_done = false;
+  ErrorType gather_value_err;
+  auto call_back = [=, &input, &gather_value_done,
+                    &gather_value_err](const GetValueResponse& resp) {
+    LOG(raft::util::kRaft, "Client Recv GetValue Response from S%d",
+        resp.reply_server_id);
+    if (resp.err != kOk) {
+      return;
+    }
+    auto fmt = DecodeString(const_cast<std::string*>(&resp.value));
+    if (fmt.k == k && fmt.m == m) {
+      input.insert({fmt.frag_id, raft::Slice::Copy(raft::Slice(format.frag.data(),
+                                                               format.frag.size()))});
+    }
+
+    if (input.size() >= k) {
+      raft::Encoder encoder;
+      raft::Slice results;
+      auto stat = encoder.DecodeSlice(input, k, m, &results);
+      if (stat) {
+        *value = std::string(results.data(), results.size());
+        gather_value_done.store(true);
+      } else {
+        gather_value_err = kKVDecodeFail;
+      }
+    }
+  };
+
+  // issues parallel GetValue RPC to all nodes and decode the value when receiving
+  // at least F response
+  auto get_req = GetValueRequest{key, resp.read_index};
+  for (auto& [id, server] : servers_) {
+    if (id != resp.reply_server_id) {
+      GetRPCStub(id)->GetValue(get_req, nullptr);
+    }
+  }
+
+  raft::util::Timer timer;
+  timer.Reset();
+  while (timer.ElapseMilliseconds() < 1000) {
+    while (gather_value_done.load() == false) {
+      ;
+    }
+    *value = final_value;
+    return kOk;
+  }
+  return kRequestExecTimeout;
 }
 
 ErrorType KvServiceClient::Delete(const std::string& key) {
