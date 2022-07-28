@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -213,6 +214,69 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
     threads[i].join();
   }
 
+  ClearTestContext(cluster_config);
+}
+
+TEST_F(KvClusterTest, TestConcurrentClientsRequestWithFailure) {
+  auto cluster_config = KvClusterConfig{
+      {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
+      {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
+      {2, {2, {"127.0.0.1", 50002}, {"127.0.0.1", 50007}, "", "./testdb2"}},
+      {3, {3, {"127.0.0.1", 50003}, {"127.0.0.1", 50008}, "", "./testdb3"}},
+      {4, {4, {"127.0.0.1", 50004}, {"127.0.0.1", 50009}, "", "./testdb4"}},
+  };
+  LaunchKvServiceNodes(cluster_config);
+  sleepMs(1000);
+
+  const std::string common_keyprefix = "key-";
+  const std::string common_valueprefix = "value-abcdefg-";
+  const int put_cnt = 100;
+  const int thread_cnt = 4;
+  const int chaos_occur_interval = 1000;
+
+  auto spawn_clients = [=](const int client_id) {
+    auto client = std::make_shared<KvServiceClient>(cluster_config, client_id);
+    auto key_prefix = common_keyprefix + std::to_string(client_id) + "-";
+    auto value_prefix = common_valueprefix + std::to_string(client_id) + "-";
+    CheckBatchPut(client, key_prefix, value_prefix, 1, put_cnt);
+    CheckBatchGet(client, key_prefix, value_prefix, 1, put_cnt);
+  };
+
+  std::atomic<bool> make_chaos = true;
+
+  // Spawn a threads to continously create failure in the cluster
+  auto chaos = [=, &make_chaos]() {
+    while (make_chaos) {
+      sleepMs(chaos_occur_interval);
+      auto leader = GetLeaderId();
+      raft::raft_node_id_t fail_server_id = leader;
+      if (rand() % 2) {
+        fail_server_id = (leader + 1) % node_num_;
+      }
+      Disconnect(fail_server_id);
+      LOG(raft::util::kRaft, ">>>[S%d disconnect]<<<", fail_server_id);
+      sleepMs(chaos_occur_interval);
+      Reconnect(fail_server_id);
+      LOG(raft::util::kRaft, ">>>[S%d reconnect]<<<", fail_server_id);
+    }
+  };
+
+  // Spawn a few client threads to send requests
+  std::thread threads[16];
+  for (int i = 1; i <= thread_cnt; ++i) {
+    threads[i] = std::thread(spawn_clients, static_cast<uint32_t>(i));
+  }
+
+  // Create a thread to run chaos
+  std::thread chaos_thread(chaos);
+  chaos_thread.detach();
+
+  for (int i = 1; i <= thread_cnt; ++i) {
+    threads[i].join();
+  }
+
+  // Motify chaos_thread to stop running in case it affects the next test
+  make_chaos.store(false);
   ClearTestContext(cluster_config);
 }
 }  // namespace kv
