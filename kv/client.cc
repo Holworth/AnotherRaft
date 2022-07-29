@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "encoder.h"
+#include "kv_format.h"
 #include "type.h"
 #include "util.h"
 namespace kv {
@@ -144,25 +145,38 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
     auto fmt = DecodeString(const_cast<std::string*>(&resp.value));
     LOG(raft::util::kRaft, "[C%d] Decode Value: k=%d, m=%d, fragid=%d", ClientId(), fmt.k,
         fmt.m, fmt.frag_id)
-    if (fmt.k == task->k && fmt.m == task->m) {
-      task->decode_input->insert({fmt.frag_id, raft::Slice::Copy(fmt.frag)});
-      LOG(raft::util::kRaft, "[C%d] Add Fragment of %d", ClientId(), fmt.frag_id);
-    }
 
-    // The gather value task is not done, and there is enough fragments to
-    // decode the entry
-    if (!gather_value_done.load() && task->decode_input->size() >= task->k) {
-      raft::Encoder encoder;
-      raft::Slice results;
-      auto stat = encoder.DecodeSlice(*(task->decode_input), task->k, task->m, &results);
-      if (stat) {
-        GetKeyFromPrefixLengthFormat(results.data(), res->value);
-        res->err = kOk;
-        gather_value_done.store(true);
-        LOG(raft::util::kRaft, "[C%d] Decode Value Succ", ClientId());
-      } else {
-        res->err = kKVDecodeFail;
-        LOG(raft::util::kRaft, "[C%d] Decode Value Fail", ClientId());
+    // This is an full entry
+    if (fmt.k == 1 && fmt.m == 0) {
+      GetKeyFromPrefixLengthFormat(fmt.frag.data(), res->value);
+      res->err = kOk;
+      gather_value_done.store(true);
+      LOG(raft::util::kRaft, "[C%d] Get Full Entry, value=%s", ClientId(),
+          res->value->c_str());
+      return;
+    } else {
+      // Collect a fragment
+      if (fmt.k == task->k && fmt.m == task->m) {
+        task->decode_input->insert({fmt.frag_id, raft::Slice::Copy(fmt.frag)});
+        LOG(raft::util::kRaft, "[C%d] Add Fragment%d", ClientId(), fmt.frag_id);
+      }
+
+      // The gather value task is not done, and there is enough fragments to
+      // decode the entry
+      if (!gather_value_done.load() && task->decode_input->size() >= task->k) {
+        raft::Encoder encoder;
+        raft::Slice results;
+        auto stat =
+            encoder.DecodeSlice(*(task->decode_input), task->k, task->m, &results);
+        if (stat) {
+          GetKeyFromPrefixLengthFormat(results.data(), res->value);
+          res->err = kOk;
+          gather_value_done.store(true);
+          LOG(raft::util::kRaft, "[C%d] Decode Value Succ", ClientId());
+        } else {
+          res->err = kKVDecodeFail;
+          LOG(raft::util::kRaft, "[C%d] Decode Value Fail", ClientId());
+        }
       }
     }
   };
@@ -180,6 +194,7 @@ void KvServiceClient::DoGatherValueTask(const GatherValueTask* task,
     if (id != task->replied_id) {
       // GetRPCStub(id)->GetValue(get_req, call_back);
       GetRPCStub(id)->SetRPCTimeOutMs(1000);
+      // Sync call for simplicity
       auto resp = GetRPCStub(id)->GetValue(get_req);
       if (resp.err == kOk) {
         call_back(resp);

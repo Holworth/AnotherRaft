@@ -235,6 +235,7 @@ TEST_F(KvClusterTest, TestConcurrentClientsRequestWithFailure) {
   const int chaos_occur_interval = 1000;
 
   auto spawn_clients = [=](const int client_id) {
+    LOG(raft::util::kRaft, "[C%d] Client Threads spawned", client_id);
     auto client = std::make_shared<KvServiceClient>(cluster_config, client_id);
     auto key_prefix = common_keyprefix + std::to_string(client_id) + "-";
     auto value_prefix = common_valueprefix + std::to_string(client_id) + "-";
