@@ -89,7 +89,7 @@ class KvClusterTest : public ::testing::Test {
       auto key = key_prefix + std::to_string(i);
       auto expect_value = expect_val_prefix + std::to_string(i);
       EXPECT_EQ(client->Get(key, &get_val), kOk);
-      EXPECT_EQ(get_val, expect_value);
+      ASSERT_EQ(get_val, expect_value);
     }
   }
 
