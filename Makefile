@@ -1,22 +1,23 @@
-.PHONY: build
-build: clean configure
-	cmake -B build -DENABLE_RAFT_LOG=false
+.PHONY: release
+build: clean 
+	cmake -B build -DCMAKE_BUILD_TYPE=Release -DDEBUG=false
 	cmake --build build
 
-.PHONY: configure
-configure: 
-	rm -rf build
-	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true
+.PHONY: build
+build: clean 
+	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DDEBUG=false
 	mv build/compile_commands.json ./
+	cmake --build build
+
+.PHONY: debug
+build: clean 
+	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DDEBUG=true
+	mv build/compile_commands.json ./
+	cmake --build build
 
 .PHONY: clean
 clean:
 	rm -rf build
-
-.PHONY: log
-log:
-	cmake -B build -DENABLE_RAFT_LOG=true
-	cmake --build build
 
 .PHONY: format
 format:

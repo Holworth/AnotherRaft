@@ -180,7 +180,7 @@ TEST_F(KvClusterTest, DISABLED_TestFollowerRejoiningAfterLeaderCommitingSomeNewE
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
+TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequest) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
