@@ -35,7 +35,6 @@ class StorageTest : public ::testing::Test {
     LogEntry ent;
     ent.SetTerm(raft_term);
     ent.SetIndex(raft_index);
-    ent.SetSequence(rand());
     ent.SetType(type);
     if (generate_data) {
       switch (ent.Type()) {
