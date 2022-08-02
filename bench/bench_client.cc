@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -9,6 +10,7 @@
 #include "client.h"
 #include "config.h"
 #include "kv_node.h"
+#include "log_manager.h"
 #include "rpc.h"
 #include "util.h"
 
@@ -49,6 +51,17 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
   auto max_lantency = *std::max_element(lantency.begin(), lantency.end());
   printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
          lantency.size(), avg_lantency, max_lantency);
+
+  int err_cnt = 0;
+  // Check if inserted value can be found
+  for (const auto& p : bench) {
+    std::string get_val;
+    auto stat = client->Get(p.first, &get_val);
+    if (stat != kv::kOk || get_val != p.second) {
+      ++err_cnt;
+    }
+  }
+  printf("[Get Results][Error Count=%d]", err_cnt);
 }
 
 int main(int argc, char* argv[]) {
