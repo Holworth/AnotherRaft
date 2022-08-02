@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <thread>
 
 #include "config.h"
 #include "kv_node.h"
@@ -22,6 +23,9 @@ int main(int argc, char* argv[]) {
   auto node = kv::KvServiceNode::NewKvServiceNode(cluster_cfg, node_id);
   node->InitServiceNodeState();
   node->StartServiceNode();
+
+  // sleep for 60s, waiting for clients request
+  std::this_thread::sleep_for(std::chrono::seconds(60));
 
   // Disconnect the kv node
   node->Disconnect();
