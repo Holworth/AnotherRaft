@@ -15,8 +15,8 @@ include_directories(${CMAKE_SOURCE_DIR}/third-party/leveldb/include)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third-party)
 add_subdirectory(${CMAKE_SOURCE_DIR}/raft)
 add_subdirectory(${CMAKE_SOURCE_DIR}/test)
-add_subdirectory(${CMAKE_SOURCE_DIR}/bench)
 add_subdirectory(${CMAKE_SOURCE_DIR}/kv)
+add_subdirectory(${CMAKE_SOURCE_DIR}/bench)
 
 
 
