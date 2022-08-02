@@ -13,7 +13,7 @@ class KvServiceClient {
   static const int kKVRequestTimesoutCnt = 10;
 
  public:
-  KvServiceClient(const KvClusterConfig& config);
+  KvServiceClient(const KvClusterConfig& config, uint32_t client_id);
   ~KvServiceClient();
 
  public:
@@ -22,6 +22,8 @@ class KvServiceClient {
   ErrorType Delete(const std::string& key);
 
   raft::raft_node_id_t LeaderId() const { return curr_leader_; }
+
+  uint32_t ClientId() const { return client_id_; }
 
  private:
   raft::raft_node_id_t DetectCurrentLeader();
@@ -36,5 +38,7 @@ class KvServiceClient {
   raft::raft_node_id_t curr_leader_;
   static const raft::raft_node_id_t kNoDetectLeader = -1;
   raft::raft_term_t curr_leader_term_;
+
+  uint32_t client_id_;
 };
 }  // namespace kv

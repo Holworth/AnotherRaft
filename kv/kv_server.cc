@@ -41,11 +41,11 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
   switch (request->type) {
     case kDetectLeader:
       resp->err = raft_->IsLeader() ? kOk : kNotALeader;
+      LOG(raft::util::kRaft, "S%d reply err: %s, term=%d", id_,
+          ToString(resp->err).c_str(), resp->raft_term);
       return;
     case kPut:
-    case kDelete:
-    // kGet may not need to go along this road?
-    case kGet:
+    case kDelete: {
       auto size = GetRawBytesSizeForRequest(*request);
       auto data = new char[size];
       RequestToRawBytes(*request, data);
@@ -70,6 +70,11 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       // Otherwise timesout
       resp->err = kRequestExecTimeout;
       return;
+    }
+    case kGet: {
+      ExecuteGetOperation(request, resp);
+      return;
+    }
   }
 }
 
@@ -120,25 +125,46 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
       case kDelete:
         server->db_->Delete(req.key);
         break;
-      case kGet:
-        if (!server->db_->Get(req.key, &get_value)) {
-          ar.err = kKeyNotExist;
-          ar.value = "";
-        } else {
-          ar.err = kOk;
-          ar.value = std::move(get_value);
-          LOG(raft::util::kRaft, "S%d apply Get command (get value=%s)", server->Id(),
-              ar.value.c_str());
-        }
-        break;
       default:
         assert(0);
     }
+    // Update applied index for Get operation
+    server->applied_index_ = ent.Index();
     LOG(raft::util::kRaft, "S%d Apply request(%s) to db Done", server->Id(),
         ToString(req).c_str());
+
     // Add the apply result into map
     std::scoped_lock<std::mutex> lck(server->map_mutex_);
     server->applied_cmds_.insert({ent.Index(), ar});
+  }
+}
+
+void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
+  auto read_index = this->raft_->LastIndex();
+  LOG(raft::util::kRaft, "S%d Execute Get Operation, ReadIndex=%d", id_, read_index);
+
+  // spin until the entry has been applied
+  raft::util::Timer timer;
+  timer.Reset();
+  while (LastApplyIndex() < read_index) {
+    if (timer.ElapseMilliseconds() >= 300) {
+      LOG(raft::util::kRaft, "S%d Execute Get Operation Timeout, ReadIndex=%d", id_,
+          read_index);
+      resp->err = kRequestExecTimeout;
+      return;
+    }
+    LOG(raft::util::kRaft, "S%d Execute Get Operation(ApplyIndex:%d) ReadIndex%d", id_,
+        LastApplyIndex(), read_index);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+  auto succ = db_->Get(request->key, &(resp->value));
+  if (!succ) {
+    resp->err = kKeyNotExist;
+    return;
+  } else {
+    resp->err = kOk;
+    return;
   }
 }
 }  // namespace kv

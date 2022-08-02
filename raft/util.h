@@ -31,8 +31,11 @@ enum LogMsgType { kRPC = 1, kRaft = 2, kEc = 3 };
 class Logger {
   // Enable debug messages or not. False means all types
   // of messages will be ignored
-  // static const bool debugFlag = ENABLE_RAFT_LOG;
+#ifdef ENABLE_LOG
+  static const bool debugFlag = true;
+#else
   static const bool debugFlag = false;
+#endif
 
   // On debugFlag = true, enable RPC related messages
   static const bool debugRPCFlag = false;

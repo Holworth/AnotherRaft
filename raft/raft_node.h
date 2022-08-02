@@ -41,6 +41,8 @@ class RaftNode {
   // Check if current node has exited
   bool Exited() { return exit_.load(); }
 
+  raft::raft_index_t LastIndex() const { return raft_state_->LastLogIndex(); }
+
   // To stop and continue current node. This is typically an interface for testing
   // Raft cluster robustness under unstable network condition. We call Pause() on
   // this node to make an illusion that this node is separate from the cluster

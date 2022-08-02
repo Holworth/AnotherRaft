@@ -36,6 +36,8 @@ class KvServer {
  public:
   static KvServer* NewKvServer(const KvServerConfig& kv_server_config);
 
+  raft::raft_index_t LastApplyIndex() const { return applied_index_; }
+
  public:
   void DealWithRequest(const Request* request, Response* resp);
   // Disable this server
@@ -64,6 +66,8 @@ class KvServer {
     std::thread t(ApplyRequestCommandThread, this);
     t.detach();
   }
+
+  void ExecuteGetOperation(const Request* request, Response* resp);
 
  public:
   // For test and debug
@@ -98,5 +102,7 @@ class KvServer {
   std::atomic<bool> exit_;
 
   raft::raft_node_id_t id_;
+
+  raft::raft_index_t applied_index_;
 };
 }  // namespace kv
