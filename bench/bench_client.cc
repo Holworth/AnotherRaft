@@ -52,16 +52,16 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
   printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
          lantency.size(), avg_lantency, max_lantency);
 
-  int err_cnt = 0;
+  int succ_cnt = 0;
   // Check if inserted value can be found
   for (const auto& p : bench) {
     std::string get_val;
     auto stat = client->Get(p.first, &get_val);
-    if (stat != kv::kOk || get_val != p.second) {
-      ++err_cnt;
+    if (stat == kv::kOk && get_val == p.second) {
+      ++succ_cnt;
     }
   }
-  printf("[Get Results][Error Count=%d]", err_cnt);
+  printf("[Get Results][Succ Count=%d]\n", succ_cnt);
 }
 
 int main(int argc, char* argv[]) {
