@@ -51,7 +51,9 @@ auto ParseConfigurationFile(const std::string& filename) -> kv::KvClusterConfig 
     cfg.raft_rpc_addr = ParseNetAddress(raft_rpc_addr);
     auto addr = ParseNetAddress(kv_rpc_addr);
     cfg.kv_rpc_addr = kv::rpc::NetAddress{addr.ip, addr.port};
-    cfg.raft_log_filename = logname;
+    // cfg.raft_log_filename = logname;
+    // Disable persistence for now
+    cfg.raft_log_filename = "";
     cfg.kv_dbname = dbname;
 
     cluster_cfg.insert({cfg.id, cfg});
