@@ -25,7 +25,9 @@ int main(int argc, char* argv[]) {
   node->StartServiceNode();
 
   // sleep for 60s, waiting for clients request
+  // This thread is supposed to running forever
   std::this_thread::sleep_for(std::chrono::seconds(60));
+  while (true);
 
   // Disconnect the kv node
   node->Disconnect();
