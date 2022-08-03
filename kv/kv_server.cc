@@ -4,6 +4,7 @@
 #include <mutex>
 #include <thread>
 
+#include "RCF/RecursionLimiter.hpp"
 #include "RCF/ThreadLibrary.hpp"
 #include "kv_format.h"
 #include "log_entry.h"
@@ -111,9 +112,11 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
   if (ar.raft_term != pr.propose_term) {
     apply->err = kEntryDeleted;
     apply->value = "";
+    apply->elapse_time = ar.elapse_time;
   } else {
     apply->err = ar.err;
     apply->value = ar.value;
+    apply->elapse_time = ar.elapse_time;
   }
   return true;
 }
