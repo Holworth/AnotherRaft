@@ -35,10 +35,12 @@ foreach(test_file_source ${TEST_FILES})
   endif()
 endforeach()
 
-add_executable(counter counter.cc)
-target_link_libraries(counter raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+include_directories(../kv)
 
-add_executable(storage_bench storage_bench.cc)
-target_link_libraries(storage_bench raft rcf ${LIBS} ${GTEST_BOTH_LIBRARIES})
+add_executable(bench_server bench_server.cc)
+target_link_libraries(bench_server kv)
 
-add_executable(file_bench file_bench.cc)
+add_executable(bench_client bench_client.cc)
+target_link_libraries(bench_client kv)
+
+

@@ -1,5 +1,4 @@
 #include "rcf_rpc.h"
-#include <sys/_types/_id_t.h>
 
 #include "RCF/ClientStub.hpp"
 #include "RCF/Endpoint.hpp"
