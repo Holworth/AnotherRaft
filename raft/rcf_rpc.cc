@@ -61,6 +61,8 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
 
+  setMaxTransportLength(client_ptr);
+
   RCF::Future<RCF::ByteBuffer> ret;
   auto cmp_callback = [=]() {
     onRequestVoteComplete(ret, client_ptr, this->raft_, this->id_);
@@ -78,6 +80,8 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   auto serializer = Serializer::NewSerializer();
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
+
+  setMaxTransportLength(client_ptr);
 
   RCF::Future<RCF::ByteBuffer> ret;
   auto cmp_callback = [=]() {
@@ -125,13 +129,14 @@ RCFRpcServer::RCFRpcServer(const NetAddress &my_address)
       service_() {}
 
 void RCFRpcServer::Start() {
+  server_.getServerTransport().setMaxIncomingMessageLength(config::kMaxMessageLength);
   server_.bind<I_RaftRPCService>(service_);
   server_.start();
 }
 
-void RCFRpcServer::Stop() { 
+void RCFRpcServer::Stop() {
   LOG(util::kRaft, "stop running raft rpc server");
-  server_.stop(); 
+  server_.stop();
 }
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {

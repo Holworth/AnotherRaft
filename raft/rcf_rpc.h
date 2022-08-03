@@ -14,6 +14,10 @@
 
 namespace raft {
 namespace rpc {
+namespace config {
+// Each RPC call size must not exceed 512MB
+static constexpr size_t kMaxMessageLength = 512 * 1024 * 1024;
+};  // namespace config
 
 RCF_BEGIN(I_RaftRPCService, "I_RaftRPCService")
 RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
@@ -50,6 +54,13 @@ class RCFRpcClient final : public RpcClient {
   void sendMessage(const RequestVoteArgs &args) override;
   void sendMessage(const AppendEntriesArgs &args) override;
   void setState(void *state) override { raft_ = reinterpret_cast<RaftState *>(state); }
+
+  void setMaxTransportLength(ClientPtr ptr) {
+    ptr->getClientStub().getTransport().setMaxOutgoingMessageLength(
+        config::kMaxMessageLength);
+    ptr->getClientStub().getTransport().setMaxIncomingMessageLength(
+        config::kMaxMessageLength);
+  }
 
   void stop() override { stopped_ = true; };
   void recover() override { stopped_ = false; };
