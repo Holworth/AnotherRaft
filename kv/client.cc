@@ -12,6 +12,7 @@ KvServiceClient::KvServiceClient(const KvClusterConfig& config, uint32_t client_
     servers_.insert({id, new rpc::KvServerRPCClient(conf.kv_rpc_addr, id)});
   }
   curr_leader_ = kNoDetectLeader;
+  curr_leader_term_ = 0;
 }
 
 KvServiceClient::~KvServiceClient() {

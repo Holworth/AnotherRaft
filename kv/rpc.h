@@ -77,7 +77,12 @@ class KvServerRPCClient {
   KvServerRPCClient(const NetAddress& net_addr, raft::raft_node_id_t id)
       : address_(net_addr),
         id_(id),
-        client_stub_(RCF::TcpEndpoint(net_addr.ip, net_addr.port)) {}
+        client_stub_(RCF::TcpEndpoint(net_addr.ip, net_addr.port)) {
+    client_stub_.getClientStub().getTransport().setMaxIncomingMessageLength(
+        raft::rpc::config::kMaxMessageLength);
+    client_stub_.getClientStub().getTransport().setMaxOutgoingMessageLength(
+        raft::rpc::config::kMaxMessageLength);
+  }
 
   Response DealWithRequest(const Request& request);
 
@@ -114,6 +119,8 @@ class KvServerRPCServer {
   KvServerRPCServer() = default;
 
   void Start() {
+    server_.getServerTransport().setMaxIncomingMessageLength(
+        raft::rpc::config::kMaxMessageLength);
     server_.bind<I_KvServerRPCService>(service_);
     server_.start();
   }
