@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <filesystem>
 #include <string>
@@ -95,7 +96,7 @@ class KvClusterTest : public ::testing::Test {
   int node_num_;
 };
 
-TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
+TEST_F(KvClusterTest, TestSimplePutGetOperation) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
@@ -112,7 +113,7 @@ TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestDeleteAndOverWriteValue) {
+TEST_F(KvClusterTest, TestDeleteAndOverWriteValue) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50003}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50004}, "", "./testdb1"}},
@@ -178,7 +179,7 @@ TEST_F(KvClusterTest, TestGetAfterOldLeaderFail) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
+TEST_F(KvClusterTest, TestFollowerRejoiningAfterLeaderCommitingSomeNewEntries) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
@@ -215,11 +216,10 @@ TEST_F(KvClusterTest, DISABLED_TestFollowerRejoiningAfterLeaderCommitingSomeNewE
   LOG(raft::util::kRaft, "S%d disconnect", (leader1 + 1) % node_num_);
 
   CheckBatchGet(client, key_prefix, value_prefix, 1, 3 * put_cnt);
-
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequest) {
+TEST_F(KvClusterTest, TestConcurrentClientsRequest) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
@@ -256,7 +256,7 @@ TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequest) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequestWithFailure) {
+TEST_F(KvClusterTest, TestConcurrentClientsRequestWithFailure) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
@@ -269,7 +269,7 @@ TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequestWithFailure) {
 
   const std::string common_keyprefix = "key-";
   const std::string common_valueprefix = "value-abcdefg-";
-  const int put_cnt = 100;
+  const int put_cnt = 1000;
   const int thread_cnt = 4;
   const int chaos_occur_interval = 1000;
 
@@ -316,7 +316,10 @@ TEST_F(KvClusterTest, DISABLED_TestConcurrentClientsRequestWithFailure) {
   }
 
   // Motify chaos_thread to stop running in case it affects the next test
+  // Sleep 3s so that the chaos thread does not read released object
   make_chaos.store(false);
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+
   ClearTestContext(cluster_config);
 }
 

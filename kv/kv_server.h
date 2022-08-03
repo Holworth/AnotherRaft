@@ -1,5 +1,6 @@
 #pragma once
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 #include "channel.h"
@@ -73,6 +74,7 @@ class KvServer {
   // For test and debug
   void Exit() {
     exit_.store(true);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     raft_->Exit();
     db_->Close();
   };
