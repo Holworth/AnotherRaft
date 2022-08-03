@@ -23,6 +23,7 @@ class KvServer {
     raft::raft_term_t raft_term;
     ErrorType err;
     std::string value;
+    uint64_t elapse_time; // Time used to apply this entry, in us
   };
 
  public:

@@ -61,20 +61,20 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
   return resp;
 }
 
-ErrorType KvServiceClient::Put(const std::string& key, const std::string& value) {
+OperationResults KvServiceClient::Put(const std::string& key, const std::string& value) {
   Request request = {kPut, ClientId(), 0, key, value};
   auto resp = WaitUntilRequestDone(request);
-  return resp.err;
+  return OperationResults{resp.err, resp.apply_elapse_time};
 }
 
-ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
+OperationResults KvServiceClient::Get(const std::string& key, std::string* value) {
   Request request = {kGet, ClientId(), 0, key, std::string("")};
   auto resp = WaitUntilRequestDone(request);
 
   LOG(raft::util::kRaft, "[C%d] Recv Resp from S%d", ClientId(), resp.reply_server_id);
 
   if (resp.err != kOk) {
-    return resp.err;
+    return OperationResults{resp.err, resp.apply_elapse_time};
   }
 
   // Decoding the response byte array for further information: we may need to collect
@@ -83,7 +83,7 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
 
   if (format.k == 1) {
     GetKeyFromPrefixLengthFormat(format.frag.data(), value);
-    return kOk;
+    return OperationResults{kOk, 0};
   }
 
   LOG(raft::util::kRaft, "[Get Partial Value: k=%d m=%d readindex=%d], start collecting",
@@ -100,13 +100,13 @@ ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
   GatherValueTaskResults res{value, kOk};
 
   DoGatherValueTask(&task, &res);
-  return res.err;
+  return OperationResults{res.err, 0};
 }
 
-ErrorType KvServiceClient::Delete(const std::string& key) {
+OperationResults KvServiceClient::Delete(const std::string& key) {
   Request request = {kDelete, ClientId(), 0, key, ""};
   auto resp = WaitUntilRequestDone(request);
-  return resp.err;
+  return OperationResults{resp.err, resp.apply_elapse_time};
 }
 
 raft::raft_node_id_t KvServiceClient::DetectCurrentLeader() {

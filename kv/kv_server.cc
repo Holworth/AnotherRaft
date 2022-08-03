@@ -79,6 +79,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
         if (CheckEntryCommitted(pr, &ar)) {
           resp->err = ar.err;
           resp->value = ar.value;
+          resp->apply_elapse_time = ar.elapse_time;
           LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }
@@ -118,6 +119,7 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
 }
 
 void KvServer::ApplyRequestCommandThread(KvServer* server) {
+  raft::util::Timer elapse_timer;
   while (!server->exit_.load()) {
     raft::LogEntry ent;
     if (!server->channel_->TryPop(ent)) {
@@ -137,12 +139,18 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     std::string get_value;
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
-      case kPut:
+      case kPut: {
+        elapse_timer.Reset();
         server->db_->Put(req.key, req.value);
+        ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;
-      case kDelete:
+      }
+      case kDelete: {
+        elapse_timer.Reset();
         server->db_->Delete(req.key);
+        ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;
+      }
       case kGet:
         // if (!server->db_->Get(req.key, &get_value)) {
         //   ar.err = kKeyNotExist;

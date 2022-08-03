@@ -34,13 +34,16 @@ void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
 
 void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench) {
   std::vector<uint64_t> lantency;
+  std::vector<uint64_t> apply_lantency;
+
   for (const auto& p : bench) {
     auto start = std::chrono::high_resolution_clock::now();
     auto stat = client->Put(p.first, p.second);
     auto end = std::chrono::high_resolution_clock::now();
     auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    if (stat == kv::kOk) {
+    if (stat.err == kv::kOk) {
       lantency.push_back(dura.count());  // us
+      apply_lantency.push_back(stat.apply_elapse_time);
     }
   }
 
@@ -49,15 +52,25 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
                 [&latency_sum](uint64_t n) { latency_sum += n; });
   auto avg_lantency = latency_sum / lantency.size();
   auto max_lantency = *std::max_element(lantency.begin(), lantency.end());
+
   printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
          lantency.size(), avg_lantency, max_lantency);
+
+  uint64_t apply_latency_sum = 0;
+  std::for_each(apply_lantency.begin(), apply_lantency.end(),
+                [&apply_latency_sum](uint64_t n) { apply_latency_sum += n; });
+  auto avg_apply_lantency = apply_latency_sum / apply_lantency.size();
+  auto max_apply_lantency =
+      *std::max_element(apply_lantency.begin(), apply_lantency.end());
+  printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us]\n",
+         avg_apply_lantency, max_apply_lantency);
 
   int succ_cnt = 0;
   // Check if inserted value can be found
   for (const auto& p : bench) {
     std::string get_val;
     auto stat = client->Get(p.first, &get_val);
-    if (stat == kv::kOk && get_val == p.second) {
+    if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
     }
   }

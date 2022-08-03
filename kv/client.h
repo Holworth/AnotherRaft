@@ -1,7 +1,7 @@
 #pragma once
+#include <cstdint>
 #include <thread>
 #include <unordered_map>
-#include <cstdint>
 
 #include "RCF/Future.hpp"
 #include "config.h"
@@ -10,6 +10,11 @@
 #include "rpc.h"
 #include "type.h"
 namespace kv {
+
+struct OperationResults {
+  ErrorType err;
+  uint64_t apply_elapse_time;
+};
 class KvServiceClient {
   // If a KV Request is not done within 10 seconds
   static const int kKVRequestTimesoutCnt = 10;
@@ -27,14 +32,14 @@ class KvServiceClient {
   };
 
   struct GatherValueTaskResults {
-    std::string *value;
+    std::string* value;
     ErrorType err;
   };
 
  public:
-  ErrorType Put(const std::string& key, const std::string& value);
-  ErrorType Get(const std::string&, std::string* value);
-  ErrorType Delete(const std::string& key);
+  OperationResults Put(const std::string& key, const std::string& value);
+  OperationResults Get(const std::string&, std::string* value);
+  OperationResults Delete(const std::string& key);
 
   void DoGatherValueTask(const GatherValueTask* task, GatherValueTaskResults* res);
 
