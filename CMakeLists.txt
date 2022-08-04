@@ -11,6 +11,7 @@ include_directories(${CMAKE_SOURCE_DIR}/RCF/include)
 add_subdirectory(${CMAKE_SOURCE_DIR}/RCF)
 
 include_directories(${CMAKE_SOURCE_DIR}/third-party/leveldb/include)
+include_directories(${CMAKE_SOURCE_DIR}/third-party/rocksdb/include)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/third-party)
 add_subdirectory(${CMAKE_SOURCE_DIR}/raft)
