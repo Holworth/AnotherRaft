@@ -31,6 +31,8 @@ void KvServiceNode::InitServiceNodeState() { kv_server_->Init(); }
 void KvServiceNode::StartServiceNode() {
   kv_server_->Start();
   rpc_server_->Start();
+  printf("[KVNode Start Running]:\n[Storage Engine]: %s\n",
+         kv_server_->DB()->EngineName().c_str());
 }
 
 void KvServiceNode::StopServiceNode() {
