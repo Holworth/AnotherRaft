@@ -1,5 +1,6 @@
 #include "kv_server.h"
 
+#include <cstdio>
 #include <mutex>
 #include <tuple>
 
@@ -23,6 +24,7 @@ KvServer* KvServer::NewKvServer(const KvServerConfig& config) {
   kv_server->raft_ = new raft::RaftNode(raft_config);
 
   kv_server->exit_ = false;
+
   return kv_server;
 }
 

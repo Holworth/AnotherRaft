@@ -1,4 +1,6 @@
 #include "kv_node.h"
+
+#include <cstdio>
 namespace kv {
 KvServiceNode* KvServiceNode::NewKvServiceNode(const KvClusterConfig& config,
                                                raft::raft_node_id_t id) {
@@ -31,6 +33,8 @@ void KvServiceNode::InitServiceNodeState() { kv_server_->Init(); }
 void KvServiceNode::StartServiceNode() {
   kv_server_->Start();
   rpc_server_->Start();
+  printf("[KVNode Start Running]:\n[Storage Engine]: %s\n",
+         kv_server_->DB()->EngineName().c_str());
 }
 
 void KvServiceNode::StopServiceNode() {
