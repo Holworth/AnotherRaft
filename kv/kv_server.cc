@@ -64,6 +64,7 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
         if (CheckEntryCommitted(pr, &ar)) {
           resp->err = ar.err;
           resp->value = ar.value;
+          resp->apply_elapse_time = ar.apply_time;
           LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }
