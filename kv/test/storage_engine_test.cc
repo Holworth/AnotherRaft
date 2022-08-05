@@ -10,6 +10,8 @@
 
 using KvPair = std::pair<std::string, std::string>;
 
+const int kPutCnt = 10000;
+
 struct BenchConfiguration {
   std::string key_prefix;
   std::string value_prefix;
@@ -73,7 +75,7 @@ int main(int argc, char* argv[]) {
 
   std::printf("[Test Engine: %s]\n", db->EngineName().c_str());
 
-  auto cfg = BenchConfiguration{"key-", "value-", 1000, valsize};
+  auto cfg = BenchConfiguration{"key-", "value-", kPutCnt, valsize};
   std::vector<KvPair> bench;
   BuildBench(cfg, &bench);
   ExecuteBench(db, bench);

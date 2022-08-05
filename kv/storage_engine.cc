@@ -100,7 +100,7 @@ class RocksDBEngine final : public StorageEngine {
 };
 
 StorageEngine* StorageEngine::Default(const std::string& dbname) {
-  return new LevelDBEngine(dbname);
+  return NewRocksDBEngine(dbname);
 }
 
 StorageEngine* StorageEngine::NewLevelDBEngine(const std::string& name) {
