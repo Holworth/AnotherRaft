@@ -39,7 +39,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto stat = client->Put(p.first, p.second);
     auto end = std::chrono::high_resolution_clock::now();
     auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    if (stat == kv::kOk) {
+    if (stat.err == kv::kOk) {
       lantency.push_back(dura.count());  // us
     }
   }
@@ -57,7 +57,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
   for (const auto& p : bench) {
     std::string get_val;
     auto stat = client->Get(p.first, &get_val);
-    if (stat == kv::kOk && get_val == p.second) {
+    if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
     }
   }

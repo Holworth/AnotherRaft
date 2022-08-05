@@ -75,7 +75,7 @@ class KvClusterTest : public ::testing::Test {
     for (int i = key_lo; i <= key_hi; ++i) {
       auto key = key_prefix + std::to_string(i);
       auto value = value_prefix + std::to_string(i);
-      ASSERT_EQ(client->Put(key, value), kOk);
+      ASSERT_EQ(client->Put(key, value).err, kOk);
     }
   }
 
@@ -85,7 +85,7 @@ class KvClusterTest : public ::testing::Test {
     for (int i = key_lo; i <= key_hi; ++i) {
       auto key = key_prefix + std::to_string(i);
       auto expect_value = expect_val_prefix + std::to_string(i);
-      EXPECT_EQ(client->Get(key, &get_val), kOk);
+      EXPECT_EQ(client->Get(key, &get_val).err, kOk);
       ASSERT_EQ(get_val, expect_value);
     }
   }
@@ -132,10 +132,10 @@ TEST_F(KvClusterTest, TestDeleteAndOverWriteValue) {
   for (int i = 1; i <= put_cnt; ++i) {
     auto key = "key" + std::to_string(i);
     if (i % 2) {
-      EXPECT_EQ(client->Delete(key), kOk);
+      EXPECT_EQ(client->Delete(key).err, kOk);
     } else {
       auto value = "value2-" + std::to_string(i);
-      EXPECT_EQ(client->Put(key, value), kOk);
+      EXPECT_EQ(client->Put(key, value).err, kOk);
     }
   }
 
@@ -144,10 +144,10 @@ TEST_F(KvClusterTest, TestDeleteAndOverWriteValue) {
   for (int i = 1; i <= put_cnt; ++i) {
     auto key = "key" + std::to_string(i);
     if (i % 2) {
-      EXPECT_EQ(client->Get(key, &value), kKeyNotExist);
+      EXPECT_EQ(client->Get(key, &value).err, kKeyNotExist);
     } else {
       auto expect_val = "value2-" + std::to_string(i);
-      EXPECT_EQ(client->Get(key, &value), kOk);
+      EXPECT_EQ(client->Get(key, &value).err, kOk);
       EXPECT_EQ(value, expect_val);
     }
   }
