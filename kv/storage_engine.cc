@@ -9,9 +9,9 @@
 namespace kv {
 
 // Use leveldb as a storage engine
-class LevelDBStorageEngine final : public StorageEngine {
+class LevelDBEngine final : public StorageEngine {
  public:
-  explicit LevelDBStorageEngine(const std::string& dbname) {
+  explicit LevelDBEngine(const std::string& dbname) {
     leveldb::Options options;
     options.create_if_missing = true;
 
@@ -22,7 +22,11 @@ class LevelDBStorageEngine final : public StorageEngine {
     assert(stat.ok());
   }
 
-  ~LevelDBStorageEngine() { delete dbptr_; }
+  ~LevelDBEngine() { delete dbptr_; }
+
+  std::string EngineName() const override {
+    return std::string("LevelDBEngine");
+  }
 
   bool Put(const std::string& key, const std::string& value) override {
     // NOTE: Should we use wo.sync=true or wo.sync=false, there is a huge performance

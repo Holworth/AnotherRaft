@@ -15,6 +15,8 @@ class StorageEngine {
   static StorageEngine* NewLevelDBEngine(const std::string&name);
   static StorageEngine* NewRocksDBEngine(const std::string&name);
 
+  virtual std::string EngineName() const = 0;
+
   // Makes sure the database successfully exits
   virtual void Close() = 0;
 
