@@ -24,6 +24,7 @@ class KvServer {
     raft::raft_term_t raft_term;
     ErrorType err;
     std::string value;
+    uint64_t apply_time;
   };
 
  public:

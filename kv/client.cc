@@ -61,25 +61,25 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
   return resp;
 }
 
-ErrorType KvServiceClient::Put(const std::string& key, const std::string& value) {
+OperationResults KvServiceClient::Put(const std::string& key, const std::string& value) {
   Request request = {kPut, ClientId(), 0, key, value};
   auto resp = WaitUntilRequestDone(request);
-  return resp.err;
+  return {resp.err, resp.apply_elapse_time};
 }
 
-ErrorType KvServiceClient::Get(const std::string& key, std::string* value) {
+OperationResults KvServiceClient::Get(const std::string& key, std::string* value) {
   Request request = {kGet, ClientId(), 0, key, std::string("")};
   auto resp = WaitUntilRequestDone(request);
   if (resp.err == kOk) {
     *value = resp.value;
   }
-  return resp.err;
+  return {resp.err, resp.apply_elapse_time};
 }
 
-ErrorType KvServiceClient::Delete(const std::string& key) {
+OperationResults KvServiceClient::Delete(const std::string& key) {
   Request request = {kDelete, ClientId(), 0, key, ""};
   auto resp = WaitUntilRequestDone(request);
-  return resp.err;
+  return {resp.err, resp.apply_elapse_time};
 }
 
 raft::raft_node_id_t KvServiceClient::DetectCurrentLeader() {

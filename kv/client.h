@@ -17,9 +17,9 @@ class KvServiceClient {
   ~KvServiceClient();
 
  public:
-  ErrorType Put(const std::string& key, const std::string& value);
-  ErrorType Get(const std::string&, std::string* value);
-  ErrorType Delete(const std::string& key);
+  OperationResults Put(const std::string& key, const std::string& value);
+  OperationResults Get(const std::string&, std::string* value);
+  OperationResults Delete(const std::string& key);
 
   raft::raft_node_id_t LeaderId() const { return curr_leader_; }
 

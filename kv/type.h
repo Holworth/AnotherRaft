@@ -40,11 +40,16 @@ struct Response {
   uint32_t sequence;
   ErrorType err;
   raft::raft_term_t raft_term;
-  std::string value;  // Valid if type is Get
-  //
+  std::string value;           // Valid if type is Get
+  uint64_t apply_elapse_time;  // Time elapsed to apply this entry to state machine
   void serialize(SF::Archive& ar) {
-    ar& type& client_id& sequence& err& raft_term& value;
+    ar& type& client_id& sequence& err& raft_term& value& apply_elapse_time;
   }
+};
+
+struct OperationResults {
+  ErrorType err;
+  uint64_t apply_elapse_time;
 };
 
 inline constexpr size_t RequestHdrSize() {

@@ -1,6 +1,7 @@
 #include "kv_server.h"
 
 #include <mutex>
+#include <tuple>
 
 #include "kv_format.h"
 #include "log_entry.h"
@@ -91,17 +92,18 @@ bool KvServer::CheckEntryCommitted(const raft::ProposeResult& pr,
   if (ar.raft_term != pr.propose_term) {
     apply->err = kEntryDeleted;
     apply->value = "";
+    apply->apply_time = ar.apply_time;
   } else {
     apply->err = ar.err;
     apply->value = ar.value;
+    apply->apply_time = ar.apply_time;
   }
   return true;
 }
 
 void KvServer::ApplyRequestCommandThread(KvServer* server) {
+  raft::util::Timer elapse_timer;
   while (!server->exit_.load()) {
-    // Read committed entry from raft
-    // raft::LogEntry ent = server->channel_->Pop();
     raft::LogEntry ent;
     if (!server->channel_->TryPop(ent)) {
       continue;
@@ -120,10 +122,14 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
       case kPut:
+        elapse_timer.Reset();
         server->db_->Put(req.key, req.value);
+        ar.apply_time = elapse_timer.ElapseMicroseconds();
         break;
       case kDelete:
+        elapse_timer.Reset();
         server->db_->Delete(req.key);
+        ar.apply_time = elapse_timer.ElapseMicroseconds();
         break;
       default:
         assert(0);
