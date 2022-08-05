@@ -1,20 +1,20 @@
 .PHONY: release
 release: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build
 
 .PHONY: build
 build: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build
 
 .PHONY: log
 log: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=on
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=on
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build
 
 .PHONY: clean
 clean:
