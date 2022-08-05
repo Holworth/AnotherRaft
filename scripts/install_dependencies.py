@@ -10,15 +10,15 @@ def install_rocksdb():
     subprocess.run("make static_lib -j 8", shell=True)
     subprocess.run("sudo make install", shell=True)
     os.chdir("..")
-    subprocess.run("rm -rf rocksdbv7.4.5 && rm -rf v7.4.5.tar.gz", shell=True)
+    subprocess.run("rm -rf rocksdb-7.4.5 && rm -rf v7.4.5.tar.gz", shell=True)
 
 def install_rocksdb_dependencies():
     subprocess.run("sudo yum makecache", shell=True)
     subprocess.run("sudo yum -y install zlib-devel", shell=True)
-    subprocess.run("sudo yum -y install bzip2", shell=True)
-    subprocess.run("sudo yum -y install lz4", shell=True)
-    subprocess.run("sudo yum -y install snappy", shell=True)
-    subprocess.run("sudo yum -y install zstd", shell=True)
+    subprocess.run("sudo yum -y install bzip2-devel", shell=True)
+    subprocess.run("sudo yum -y install lz4-devel", shell=True)
+    subprocess.run("sudo yum -y install snappy-devel", shell=True)
+    subprocess.run("sudo yum -y install libzstd-devel", shell=True)
 
 
 if __name__ == "__main__":
