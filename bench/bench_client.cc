@@ -23,6 +23,21 @@ struct BenchConfiguration {
   int bench_put_size;
 };
 
+struct AnalysisResults {
+  uint64_t avg;
+  uint64_t max;
+};
+
+AnalysisResults Analysis(const std::vector<uint64_t>& colleced_data) {
+  uint64_t data_sum = 0;
+  std::for_each(colleced_data.begin(), colleced_data.end(),
+                [&data_sum](uint64_t n) { data_sum += n; });
+  auto avg_lantency = data_sum / colleced_data.size();
+  auto max_lantency = *std::max_element(colleced_data.begin(), colleced_data.end());
+
+  return {avg_lantency, max_lantency};
+}
+
 void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
   const std::string value_suffix(cfg.bench_put_size, 0);
   for (int i = 1; i <= cfg.bench_put_cnt; ++i) {
@@ -33,6 +48,7 @@ void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
 }
 
 void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench) {
+
   std::vector<uint64_t> lantency;
   std::vector<uint64_t> apply_lantency;
 
@@ -47,21 +63,12 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     }
   }
 
-  uint64_t latency_sum = 0;
-  std::for_each(lantency.begin(), lantency.end(),
-                [&latency_sum](uint64_t n) { latency_sum += n; });
-  auto avg_lantency = latency_sum / lantency.size();
-  auto max_lantency = *std::max_element(lantency.begin(), lantency.end());
+  auto [avg_lantency, max_lantency] = Analysis(lantency);
+  auto [avg_apply_lantency, max_apply_lantency] = Analysis(apply_lantency);
 
+  printf("[Client Id %d]\n", client->ClientId());
   printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
          lantency.size(), avg_lantency, max_lantency);
-
-  uint64_t apply_latency_sum = 0;
-  std::for_each(apply_lantency.begin(), apply_lantency.end(),
-                [&apply_latency_sum](uint64_t n) { apply_latency_sum += n; });
-  auto avg_apply_lantency = apply_latency_sum / apply_lantency.size();
-  auto max_apply_lantency =
-      *std::max_element(apply_lantency.begin(), apply_lantency.end());
   printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us]\n",
          avg_apply_lantency, max_apply_lantency);
 

@@ -12,6 +12,8 @@ class StorageEngine {
 
   // Create and return a storage engine pointer using specified database name
   static StorageEngine* Default(const std::string& dbname);
+  static StorageEngine* NewLevelDBEngine(const std::string&name);
+  static StorageEngine* NewRocksDBEngine(const std::string&name);
 
   // Makes sure the database successfully exits
   virtual void Close() = 0;
