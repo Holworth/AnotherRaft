@@ -1,6 +1,7 @@
 include_directories(${LEVELDB_DIR}/include)
-find_library(libleveldb NAMES leveldb)
+include_directories(${ROCKSDB_DIR}/include)
 
+find_library(libleveldb NAMES leveldb)
 if (NOT libleveldb)
     message(FATAL_ERROR "libleveldb not found")
 endif()
