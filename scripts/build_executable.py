@@ -1,6 +1,7 @@
 import paramiko
 import time
 from typing import List
+import threading
 
 class Server:
     def __init__(self, ip, port, username, passwd, id) -> None:
@@ -10,7 +11,7 @@ class Server:
         self.passwd = passwd
         self.id = id
 
-def build_executable(servers: List[Server], type: str):
+def build_executable(server: Server, type: str):
     commands = [
         "cd /home/kangqihan",
         "rm -rf AnotherRaft",
@@ -23,14 +24,14 @@ def build_executable(servers: List[Server], type: str):
         ssh_cmd = ssh_cmd + cmd + ";"
     # print(ssh_cmd)
 
-    for server in servers:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
-        stdin, stdout, stderr = ssh.exec_command(ssh_cmd)
-        stdout.read()
-        ssh.close()
-    print("Finish Build Executable File on Servers")
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
+    stdin, stdout, stderr = ssh.exec_command(ssh_cmd)
+    stdout.read()
+    ssh.close()
+
+    print("Finish Build Executable File on Server {}".format(server.ip))
 
 if __name__ == "__main__":
     servers = [
@@ -40,4 +41,11 @@ if __name__ == "__main__":
         Server("10.118.0.49", "22", "root", "1357246$", 3)
     ]
 
-    build_executable(servers, "main")
+    threads = []
+    for server in servers:
+        t = threading.Thread(target=build_executable, args=(server, "main"))
+        t.start()
+        threads.append(t)
+
+    for t in threads:
+        t.join()
