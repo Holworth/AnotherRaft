@@ -64,7 +64,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
       apply_lantency.push_back(stat.apply_elapse_time);
     }
     if (i > 0 && i % 1000 == 0) {
-      std::cout << "\b[Already Execute " << i << " Ops]" << std::flush;
+      std::cout << "\r[Already Execute " << i << " Ops]" << std::flush;
     }
   }
 
