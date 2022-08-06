@@ -51,7 +51,10 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
   std::vector<uint64_t> lantency;
   std::vector<uint64_t> apply_lantency;
 
-  for (const auto& p : bench) {
+  std::printf("[Execution Process]\n");
+
+  for (int i = 0; i < bench.size(); ++i) {
+    const auto& p = bench[i];
     auto start = std::chrono::high_resolution_clock::now();
     auto stat = client->Put(p.first, p.second);
     auto end = std::chrono::high_resolution_clock::now();
@@ -60,7 +63,12 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
       lantency.push_back(dura.count());  // us
       apply_lantency.push_back(stat.apply_elapse_time);
     }
+    if (i > 0 && i % 1000 == 0) {
+      std::cout << "\b[Already Execute " << i << " Ops]" << std::flush;
+    }
   }
+
+  puts("");
 
   auto [avg_lantency, max_lantency] = Analysis(lantency);
   auto [avg_apply_lantency, max_apply_lantency] = Analysis(apply_lantency);

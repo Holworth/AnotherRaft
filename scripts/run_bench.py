@@ -1,4 +1,5 @@
 import paramiko
+import time
 from typing import List
 
 class Server:
@@ -9,51 +10,66 @@ class Server:
         self.passwd = passwd
         self.id = id
 
+class BenchmarkConfiguration:
+    def __init__(self, client_id, value_size, put_cnt, servers) -> None:
+        self.client_id = client_id
+        self.value_size = value_size
+        self.put_cnt = put_cnt
+        self.servers = servers
 
-def build_executable(servers: List[Server]):
-    commands = [
-        "cd /home/kangqihan",
-        "rm -rf AnotherRaft",
-        "git clone kqh:Holworth/AnotherRaft.git",
-        "cd AnotherRaft",
-        "CMAKE=/usr/bin/cmake3 scl enable devtoolset-10 \"make build\""
-    ]
-    ssh_cmd = ""
-    for cmd in commands:
-        ssh_cmd = ssh_cmd + cmd + ";"
-    # print(ssh_cmd)
 
-    for server in servers:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(server.ip,22,server.username,server.passwd,timeout=5)
-        stdin, stdout, stderr = ssh.exec_command(ssh_cmd)
-        stdout.read()
-        ssh.close()
-    print("Finish Build Executable File on Servers")
 
 def run_kv_server(server: Server):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5)
+    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
 
     cmd = "cd /home/kangqihan/AnotherRaft/build; bench/bench_server ../bench/cluster.cfg " + str(server.id) + "&"
     stdin, stdout, stderr = ssh.exec_command(cmd);
-    stdout.read()
     ssh.close()
 
-    print("[KvServer %d] starts up", server.id)
+    print("[KvServer {}] starts up".format(server.id))
 
 def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5)
+    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5,banner_timeout=300)
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
            bench/bench_client ../bench/cluster.cfg {} {} {}".format(clientid, valueSize, putCnt)
     print("Execute client command {}".format(cmd))
     stdin, stdout, stderr = ssh.exec_command(cmd)
+    # write the results
+    res = stdout.readlines()
+    ssh.close()
+
+    with open("./results", "a") as res_file:
+        res_file.write(">>> [Benchmark: ValueSize={} PutCnt={}] <<<\n".format(valueSize, putCnt))
+        for l in res:
+            res_file.write(l)
+    res_file.close()
+
+
+def stop_kv_server(server: Server):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
+
+    cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*"
+    stdin, stdout, stderr = ssh.exec_command(cmd);
     print(stdout.readlines())
     ssh.close()
+
+    print("[KvServer {}] stop".format(server.id))
+
+def run_benchmark(config: BenchmarkConfiguration):
+    for server in config.servers[:-1]:
+        run_kv_server(server)
+
+    run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
+
+    for server in config.servers[:-1]:
+        stop_kv_server(server)
+    time.sleep(5)
     
 
 
@@ -64,7 +80,19 @@ if __name__ == "__main__":
         Server("10.118.0.48", "22", "root", "1357246$", 2),
         Server("10.118.0.49", "22", "root", "1357246$", 3)
     ]
-    build_executable(servers)
-    for server in servers[:-1]:
-        run_kv_server(server)
-    run_kv_client(servers[-1], 0, "4K", 1000)
+
+    cfgs = [
+        BenchmarkConfiguration(0, "4K", 1000, servers),
+        BenchmarkConfiguration(0, "8K", 1000, servers),
+        BenchmarkConfiguration(0, "16K", 1000, servers),
+        BenchmarkConfiguration(0, "32K", 1000, servers),
+        BenchmarkConfiguration(0, "64K", 1000, servers),
+        BenchmarkConfiguration(0, "128K", 1000, servers),
+        BenchmarkConfiguration(0, "256K", 1000, servers),
+        BenchmarkConfiguration(0, "512K", 1000, servers),
+        BenchmarkConfiguration(0, "1M", 1000, servers),
+        BenchmarkConfiguration(0, "2M", 1000, servers),
+    ]
+
+    for cfg in cfgs:
+        run_benchmark(cfg)
