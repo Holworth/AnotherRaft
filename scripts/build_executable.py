@@ -43,9 +43,10 @@ if __name__ == "__main__":
 
     threads = []
     for server in servers:
-        t = threading.Thread(target=build_executable, args=(server, "main"))
-        t.start()
-        threads.append(t)
+        # t = threading.Thread(target=build_executable, args=(server, "main"))
+        # t.start()
+        # threads.append(t)
+        build_executable(server, "main")
 
     for t in threads:
         t.join()

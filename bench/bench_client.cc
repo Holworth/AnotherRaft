@@ -63,8 +63,9 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
       lantency.push_back(dura.count());  // us
       apply_lantency.push_back(stat.apply_elapse_time);
     }
-    if (i > 0 && i % 1000 == 0) {
-      std::cout << "\r[Already Execute " << i << " Ops]" << std::flush;
+    int done_cnt = i + 1;
+    if (done_cnt > 0 && done_cnt % 1000 == 0) {
+      std::cout << "\r[Already Execute " << done_cnt << " Ops]" << std::flush;
     }
   }
 
