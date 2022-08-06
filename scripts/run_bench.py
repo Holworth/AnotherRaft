@@ -82,16 +82,16 @@ if __name__ == "__main__":
     ]
 
     cfgs = [
-        BenchmarkConfiguration(0, "4K", 1000, servers),
-        BenchmarkConfiguration(0, "8K", 1000, servers),
-        BenchmarkConfiguration(0, "16K", 1000, servers),
-        BenchmarkConfiguration(0, "32K", 1000, servers),
-        BenchmarkConfiguration(0, "64K", 1000, servers),
-        BenchmarkConfiguration(0, "128K", 1000, servers),
-        BenchmarkConfiguration(0, "256K", 1000, servers),
-        BenchmarkConfiguration(0, "512K", 1000, servers),
-        BenchmarkConfiguration(0, "1M", 1000, servers),
-        BenchmarkConfiguration(0, "2M", 1000, servers),
+        # BenchmarkConfiguration(0, "4K", 1000, servers),
+        # BenchmarkConfiguration(0, "8K", 1000, servers),
+        BenchmarkConfiguration(0, "16K", 100000, servers),
+        # BenchmarkConfiguration(0, "32K", 100000, servers),
+        # BenchmarkConfiguration(0, "64K", 100000, servers),
+        # BenchmarkConfiguration(0, "128K", 100000, servers),
+        # BenchmarkConfiguration(0, "256K", 100000, servers),
+        # BenchmarkConfiguration(0, "512K", 100000, servers),
+        # BenchmarkConfiguration(0, "1M", 10000, servers),
+        # BenchmarkConfiguration(0, "2M", 10000, servers),
     ]
 
     for cfg in cfgs:

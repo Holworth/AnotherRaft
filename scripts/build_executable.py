@@ -2,6 +2,9 @@ import paramiko
 import time
 from typing import List
 import threading
+import subprocess
+import os
+
 
 class Server:
     def __init__(self, ip, port, username, passwd, id) -> None:
@@ -17,19 +20,16 @@ def build_executable(server: Server, type: str):
         "rm -rf AnotherRaft",
         "git clone kqh:Holworth/AnotherRaft.git -b {}".format(type),
         "cd AnotherRaft",
-        "CMAKE=/usr/bin/cmake3 scl enable devtoolset-10 \"make build\""
+        "bash scripts/build.sh"
     ]
     ssh_cmd = ""
     for cmd in commands:
         ssh_cmd = ssh_cmd + cmd + ";"
     # print(ssh_cmd)
 
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
-    stdin, stdout, stderr = ssh.exec_command(ssh_cmd)
-    stdout.read()
-    ssh.close()
+    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + ssh_cmd + "\""
+    print(ssh_cmd)
+    subprocess.run(ssh_cmd, shell=True)
 
     print("Finish Build Executable File on Server {}".format(server.ip))
 
