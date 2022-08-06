@@ -1,20 +1,20 @@
 .PHONY: release
 release: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build -j 4
 
 .PHONY: build
 build: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=off
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build -j 4
 
 .PHONY: log
 log: clean 
-	cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=on
+	${CMAKE} -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLOG=on
 	mv build/compile_commands.json ./
-	cmake --build build
+	${CMAKE} --build build -j 4
 
 .PHONY: clean
 clean:
@@ -25,3 +25,4 @@ format:
 	clang-format -i raft/*.h raft/*.cc
 	clang-format -i kv/*.h kv/*.cc
 	clang-format -i bench/*.h bench/*.cc
+
