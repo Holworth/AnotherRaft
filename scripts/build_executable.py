@@ -1,4 +1,3 @@
-import paramiko
 import time
 from typing import List
 import threading
