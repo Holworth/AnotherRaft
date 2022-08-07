@@ -27,7 +27,7 @@ def run_kv_server(server: Server) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; bench/bench_server ../bench/cluster3.cfg " + str(server.id) + "&"
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
     print(ssh_cmd)
-    pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+    pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, shell=True)
     if pr.returncode != 0:
         return pr.returncode
     else: 
@@ -38,7 +38,7 @@ def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int) -> 
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
            bench/bench_client ../bench/cluster3.cfg {} {} {}".format(clientid, valueSize, putCnt)
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
-    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
     if pr.returncode != 0:
         return pr.returncode
