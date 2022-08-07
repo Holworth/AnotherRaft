@@ -1,4 +1,3 @@
-import paramiko
 import time
 from typing import List
 import threading
@@ -53,16 +52,15 @@ def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
 
 
 def stop_kv_server(server: Server):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
-
     cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*"
-    stdin, stdout, stderr = ssh.exec_command(cmd);
-    print(stdout.readlines())
-    ssh.close()
 
-    print("[KvServer {}] stop".format(server.id))
+    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+
+    if pr.returncode != 0:
+        return pr.returncode
+    else: 
+        print("Execute client command {}".format(cmd))
 
 def stop_kv_servers(servers: List[Server]):
     for server in servers:
@@ -73,7 +71,7 @@ def run_benchmark(config: BenchmarkConfiguration):
         r = run_kv_server(server)
         if r != 0:
             stop_kv_servers(config.servers)
-            sys.stdout.write("Failed to launch all servers, exit")
+            sys.stderr.write("Failed to launch server{}, kill all servers".format(server.id))
             exit(1)
 
     run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
@@ -93,9 +91,9 @@ if __name__ == "__main__":
     ]
 
     cfgs = [
-        # BenchmarkConfiguration(0, "4K", 1000, servers),
+        BenchmarkConfiguration(0, "4K", 1000, servers),
         # BenchmarkConfiguration(0, "8K", 1000, servers),
-        BenchmarkConfiguration(0, "16K", 100000, servers),
+        # BenchmarkConfiguration(0, "16K", 100000, servers),
         # BenchmarkConfiguration(0, "32K", 100000, servers),
         # BenchmarkConfiguration(0, "64K", 100000, servers),
         # BenchmarkConfiguration(0, "128K", 100000, servers),
