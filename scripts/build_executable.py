@@ -4,6 +4,7 @@ from typing import List
 import threading
 import subprocess
 import os
+import sys
 
 
 class Server:
@@ -29,7 +30,14 @@ def build_executable(server: Server, type: str):
 
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + ssh_cmd + "\""
     print(ssh_cmd)
-    subprocess.run(ssh_cmd, shell=True)
+    # omit output
+    while True:
+        pr = subprocess.run(ssh_cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        if pr.returncode == 0:
+            break
+        else:
+            print("Execution Wrong, do it again")
+            time.sleep(5)
 
     print("Finish Build Executable File on Server {}".format(server.ip))
 
@@ -43,10 +51,11 @@ if __name__ == "__main__":
 
     threads = []
     for server in servers:
-        # t = threading.Thread(target=build_executable, args=(server, "main"))
-        # t.start()
-        # threads.append(t)
-        build_executable(server, "main")
+        t = threading.Thread(target=build_executable, args=(server, "main"))
+        t.start()
+        threads.append(t)
+        # build_executable(server, "main")
 
     for t in threads:
-        t.join()
+        if t.is_alive():
+            t.join()

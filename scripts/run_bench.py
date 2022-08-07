@@ -1,6 +1,11 @@
 import paramiko
 import time
 from typing import List
+import threading
+import subprocess
+import os
+import sys
+
 
 class Server:
     def __init__(self, ip, port, username, passwd, id) -> None:
@@ -19,34 +24,32 @@ class BenchmarkConfiguration:
 
 
 
-def run_kv_server(server: Server):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5, banner_timeout=300)
-
+def run_kv_server(server: Server) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; bench/bench_server ../bench/cluster.cfg " + str(server.id) + "&"
-    stdin, stdout, stderr = ssh.exec_command(cmd);
-    ssh.close()
-
-    print("[KvServer {}] starts up".format(server.id))
+    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+    pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
+    if pr.returncode != 0:
+        return pr.returncode
+    else: 
+        print("[KvServer {}] starts up".format(server.id))
+        return 0
 
 def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(server.ip,22,server.username,server.passwd,timeout=5,banner_timeout=300)
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
            bench/bench_client ../bench/cluster.cfg {} {} {}".format(clientid, valueSize, putCnt)
-    print("Execute client command {}".format(cmd))
-    stdin, stdout, stderr = ssh.exec_command(cmd)
-    # write the results
-    res = stdout.readlines()
-    ssh.close()
+    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
-    with open("./results", "a") as res_file:
-        res_file.write(">>> [Benchmark: ValueSize={} PutCnt={}] <<<\n".format(valueSize, putCnt))
-        for l in res:
-            res_file.write(l)
-    res_file.close()
+    if pr.returncode != 0:
+        return pr.returncode
+    else: 
+        print("Execute client command {}".format(cmd))
+
+    # with open("./results", "a") as res_file:
+    #     res_file.write(">>> [Benchmark: ValueSize={} PutCnt={}] <<<\n".format(valueSize, putCnt))
+    #     for l in res:
+    #         res_file.write(l)
+    # res_file.close()
 
 
 def stop_kv_server(server: Server):
@@ -61,9 +64,17 @@ def stop_kv_server(server: Server):
 
     print("[KvServer {}] stop".format(server.id))
 
+def stop_kv_servers(servers: List[Server]):
+    for server in servers:
+        stop_kv_server(server)
+
 def run_benchmark(config: BenchmarkConfiguration):
     for server in config.servers[:-1]:
-        run_kv_server(server)
+        r = run_kv_server(server)
+        if r != 0:
+            stop_kv_servers(config.servers)
+            sys.stdout.write("Failed to launch all servers, exit")
+            exit(1)
 
     run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
 
