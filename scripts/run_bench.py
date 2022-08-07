@@ -60,7 +60,7 @@ def stop_kv_server(server: Server):
     if pr.returncode != 0:
         return pr.returncode
     else: 
-        print("Execute client command {}".format(cmd))
+        print("[KvServer {}] shut down".format(server.id))
 
 def stop_kv_servers(servers: List[Server]):
     for server in servers:
