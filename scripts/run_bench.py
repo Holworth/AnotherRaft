@@ -33,7 +33,7 @@ def run_kv_server(server: Server) -> int:
         print("[KvServer {}] starts up".format(server.id))
         return 0
 
-def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
+def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
            bench/bench_client ../bench/cluster.cfg {} {} {}".format(clientid, valueSize, putCnt)
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
@@ -43,6 +43,7 @@ def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
         return pr.returncode
     else: 
         print("Execute client command {}".format(cmd))
+        return 0
 
     # with open("./results", "a") as res_file:
     #     res_file.write(">>> [Benchmark: ValueSize={} PutCnt={}] <<<\n".format(valueSize, putCnt))
@@ -51,34 +52,47 @@ def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int):
     # res_file.close()
 
 
-def stop_kv_server(server: Server):
-    cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*"
-
-    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
-    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
-
-    if pr.returncode != 0:
-        return pr.returncode
-    else: 
-        print("[KvServer {}] shut down".format(server.id))
-
 def stop_kv_servers(servers: List[Server]):
     for server in servers:
         stop_kv_server(server)
 
-def run_benchmark(config: BenchmarkConfiguration):
+def stop_kv_server(server: Server):
+    while True:
+        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*"
+
+        ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+        pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
+
+        if pr.returncode != 0:
+            print("[Stop KvServer {} Failed, retry]".format(server.id))
+            time.sleep(5)
+        else: 
+            print("[KvServer {} successfully shut down]".format(server.id))
+            break
+
+def run_benchmark(config: BenchmarkConfiguration) -> int:
     for server in config.servers[:-1]:
         r = run_kv_server(server)
         if r != 0:
-            stop_kv_servers(config.servers)
-            sys.stderr.write("Failed to launch server{}, kill all servers".format(server.id))
-            exit(1)
+            stop_kv_servers(config.servers[:-1])
+            sys.stderr.write("[Failed to launch server{}, kill all servers, Retry]".format(server.id))
+            return r
 
-    run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
+    r = run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
+    stop_kv_servers(config.servers[:-1])
+    if r != 0:
+        sys.stderr.write("[Failed to execute client, kill all servers, Retry]")
+        return r
+    else:
+        sys.stdout.write("[KvServer successfully exit]")
+        return 0
 
-    for server in config.servers[:-1]:
-        stop_kv_server(server)
-    time.sleep(5)
+def run_benchmark_succ(config: BenchmarkConfiguration):
+    while True:
+        r = run_benchmark(config)
+        time.sleep(10)
+        if r == 0:
+            return
     
 
 
@@ -104,4 +118,4 @@ if __name__ == "__main__":
     ]
 
     for cfg in cfgs:
-        run_benchmark(cfg)
+        run_benchmark_succ(cfg)
