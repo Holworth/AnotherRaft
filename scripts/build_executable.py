@@ -43,10 +43,12 @@ def build_executable(server: Server, type: str):
 
 if __name__ == "__main__":
     servers = [
-        Server("10.118.0.40", "22", "root", "ict#96", 0),
-        Server("10.118.0.42", "22", "root", "ict#96", 1),
-        Server("10.118.0.48", "22", "root", "1357246$", 2),
-        Server("10.118.0.49", "22", "root", "1357246$", 3)
+        Server("10.118.0.18", "22", "root", "ict#96", 0),
+        Server("10.118.0.40", "22", "root", "ict#96", 1),
+        Server("10.118.0.42", "22", "root", "ict#96", 2),
+        Server("10.118.0.43", "22", "root", "ict#96", 3),
+        Server("10.118.0.48", "22", "root", "1357246$", 4),
+        Server("10.118.0.49", "22", "root", "1357246$", 5)
     ]
 
     threads = []
