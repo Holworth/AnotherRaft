@@ -24,7 +24,7 @@ class BenchmarkConfiguration:
 
 
 def run_kv_server(server: Server) -> int:
-    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " > /dev/null &"
+    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " > /dev/null 2> /dev/null &"
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
     pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
     if pr.returncode != 0:
@@ -36,9 +36,12 @@ def run_kv_server(server: Server) -> int:
 
 def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
-           bench/bench_client ../bench/cluster3.cfg {} {} {}".format(clientid, valueSize, putCnt)
+           bench/bench_client ../bench/cluster3.cfg {} {} {} >> /root/results".format(clientid, valueSize, putCnt)
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
-    pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+    f = open("./results", "a")
+    f.write("------------------ [Benchmark: ValueSize={} PutCnt={}] ------------------- <<<\n".format(valueSize, putCnt))
+    pr = subprocess.run(ssh_cmd, stdout=f, shell=True)
 
     if pr.returncode != 0:
         return pr.returncode
@@ -76,16 +79,16 @@ def run_benchmark(config: BenchmarkConfiguration) -> int:
         r = run_kv_server(server)
         if r != 0:
             stop_kv_servers(config.servers[:-1])
-            sys.stderr.write("[Failed to launch server{}, kill all servers, Retry]".format(server.id))
+            print("[Failed to launch server{}, kill all servers, Retry]".format(server.id))
             return r
 
     r = run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt)
     stop_kv_servers(config.servers[:-1])
     if r != 0:
-        sys.stderr.write("[Failed to execute client, kill all servers, Retry]")
+        print("[Failed to execute client, kill all servers, Retry]")
         return r
     else:
-        sys.stdout.write("[KvServer successfully exit]")
+        print("[KvServer successfully exit]")
         return 0
 
 def run_benchmark_succ(config: BenchmarkConfiguration):
@@ -106,16 +109,16 @@ if __name__ == "__main__":
     ]
 
     cfgs = [
-        BenchmarkConfiguration(0, "4K", 1000, servers),
-        # BenchmarkConfiguration(0, "8K", 1000, servers),
-        # BenchmarkConfiguration(0, "16K", 100000, servers),
-        # BenchmarkConfiguration(0, "32K", 100000, servers),
-        # BenchmarkConfiguration(0, "64K", 100000, servers),
-        # BenchmarkConfiguration(0, "128K", 100000, servers),
-        # BenchmarkConfiguration(0, "256K", 100000, servers),
-        # BenchmarkConfiguration(0, "512K", 100000, servers),
-        # BenchmarkConfiguration(0, "1M", 10000, servers),
-        # BenchmarkConfiguration(0, "2M", 10000, servers),
+        BenchmarkConfiguration(0, "4K", 100000, servers),
+        BenchmarkConfiguration(0, "8K", 100000, servers),
+        BenchmarkConfiguration(0, "16K", 100000, servers),
+        BenchmarkConfiguration(0, "32K", 100000, servers),
+        BenchmarkConfiguration(0, "64K", 100000, servers),
+        BenchmarkConfiguration(0, "128K", 100000, servers),
+        BenchmarkConfiguration(0, "256K", 80000, servers),
+        BenchmarkConfiguration(0, "512K", 40000, servers),
+        BenchmarkConfiguration(0, "1M", 20000, servers),
+        BenchmarkConfiguration(0, "2M", 10000, servers),
     ]
 
     for cfg in cfgs:
