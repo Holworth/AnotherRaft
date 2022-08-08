@@ -24,7 +24,7 @@ class BenchmarkConfiguration:
 
 
 def run_kv_server(server: Server) -> int:
-    cmd = "cd /home/kangqihan/AnotherRaft/build; bench/bench_server ../bench/cluster3.cfg " + str(server.id) + "&"
+    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " &"
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
     pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
     if pr.returncode != 0:
@@ -91,7 +91,7 @@ def run_benchmark(config: BenchmarkConfiguration) -> int:
 def run_benchmark_succ(config: BenchmarkConfiguration):
     while True:
         r = run_benchmark(config)
-        time.sleep(10)
+        time.sleep(30)
         if r == 0:
             return
     
