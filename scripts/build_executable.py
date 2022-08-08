@@ -41,6 +41,14 @@ def build_executable(server: Server, type: str):
     print("Finish Build Executable File on Server {}".format(server.ip))
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Expect at least one parameter, got {}".format(len(sys.argv) - 1))
+        exit(1)
+    v = sys.argv[1]
+    if v != "main" and v != "FlexibleK":
+        print("Invalid version parameter {}".format(v))
+        exit(1)
+
     servers = [
         Server("10.118.0.18", "22", "root", "ict#96", 0),
         Server("10.118.0.40", "22", "root", "ict#96", 1),
@@ -52,7 +60,7 @@ if __name__ == "__main__":
 
     threads = []
     for server in servers:
-        t = threading.Thread(target=build_executable, args=(server, "main"))
+        t = threading.Thread(target=build_executable, args=(server, v))
         t.start()
         threads.append(t)
         # build_executable(server, "main")

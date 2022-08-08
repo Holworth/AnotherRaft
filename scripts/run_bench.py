@@ -36,7 +36,7 @@ def run_kv_server(server: Server) -> int:
 
 def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
-           bench/bench_client ../bench/cluster3.cfg {} {} {} >> /root/results".format(clientid, valueSize, putCnt)
+           bench/bench_client ../bench/cluster3.cfg {} {} {}".format(clientid, valueSize, putCnt)
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
 
     f = open("./results", "a")
