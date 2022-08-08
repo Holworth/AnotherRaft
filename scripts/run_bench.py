@@ -24,7 +24,7 @@ class BenchmarkConfiguration:
 
 
 def run_kv_server(server: Server) -> int:
-    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " &"
+    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " > /dev/null &"
     ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
     pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
     if pr.returncode != 0:
