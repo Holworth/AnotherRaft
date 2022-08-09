@@ -26,9 +26,9 @@ class StorageLevelDB : public Storage {
  public:
   static StorageLevelDB* Open(const std::string& logname);
 
-  raft_index_t LastIndex() const { 
+  raft_index_t LastIndex() const {
     // TODO
-    return 0; 
+    return 0;
   };
 
   PersistRaftState PersistState() const {
@@ -36,8 +36,8 @@ class StorageLevelDB : public Storage {
     return PersistRaftState{true, 0, 0};
   }
 
-  void PersistState(const PersistRaftState& state) {
-    // TODO
+  void PersistState(const PersistRaftState& state){
+      // TODO
   };
 
   void LogEntries(std::vector<LogEntry>* entries) {
@@ -46,9 +46,19 @@ class StorageLevelDB : public Storage {
   void PersistEntries(raft_index_t lo, raft_index_t hi,
                       const std::vector<LogEntry>& batch);
 
-  void SetLastIndex(raft_index_t raft_index) {
-    // TODO
+  void SetLastIndex(raft_index_t raft_index){
+      // TODO
   };
+
+ private:
+  void AllocateNewInternalBuffer(size_t size) {
+    if (this->buf_) {
+      delete buf_;
+    }
+
+    this->buf_ = new char[size + 20];
+    this->bufsize_ = size;
+  }
 
  private:
   WritableFile* logfile_;

@@ -1,5 +1,7 @@
 #pragma once
+#include <sys/fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <fstream>
 
@@ -82,6 +84,91 @@ class MemStorage : public Storage {
   raft_term_t persisted_term_;
   raft_node_id_t persisted_vote_for_;
   std::vector<LogEntry> persisted_entries_;
+};
+
+class FileStorage : public Storage {
+ public:
+  // Create or open an existed log file
+  static FileStorage* Open(const std::string& name);
+  static void Close(FileStorage* file);
+
+  ~FileStorage() {
+    delete[] buf_;
+    ::close(fd_);
+  }
+
+  raft_index_t LastIndex() const override { return header_.lastLogIndex; };
+
+  PersistRaftState PersistState() const override {
+    return PersistRaftState{has_header_, header_.currentTerm, header_.voteFor};
+  }
+
+  void PersistState(const PersistRaftState& state) override {
+    if (!state.valid) {
+      return;
+    }
+    header_.voteFor = state.persisted_vote_for;
+    header_.currentTerm = state.persisted_term;
+    has_header_ = true;
+    PersistHeader();
+  };
+
+  void LogEntries(std::vector<LogEntry>* entries) override;
+  void PersistEntries(raft_index_t lo, raft_index_t hi,
+                      const std::vector<LogEntry>& batch) override;
+
+  void SetLastIndex(raft_index_t raft_index) override {
+    header_.lastLogIndex = raft_index;
+    PersistHeader();
+  };
+
+ private:
+  void AllocateNewInternalBuffer(size_t size) {
+    if (this->buf_) {
+      delete[] buf_;
+    }
+
+    this->buf_ = new char[size + 20];
+    this->buf_size_ = size;
+  }
+
+  void PersistHeader() {
+    lseek(fd_, 0, SEEK_SET);
+    ::write(fd_, &header_, kHeaderSize);
+    SyncFd(fd_);
+  }
+
+  // Append data of specified slice to the file
+  void Append(const char* data, size_t size) {
+    lseek(fd_, 0, SEEK_END);
+    while (size > 0) {
+      auto write_size = ::write(fd_, data, size);
+      size -= write_size;
+      data += write_size;
+    }
+  };
+
+  void SyncFd(int fd) { ::fsync(fd); }
+
+ private:
+  struct Header {
+    raft_node_id_t voteFor;
+    raft_term_t currentTerm;
+    raft_index_t lastLogIndex;
+    raft_term_t lastLogTerm;
+    size_t write_off;  // Move file write pointer to off position for next write
+    size_t read_off;
+    size_t last_off;  // Basically the file size, used to check if reaches the end
+  };
+  bool has_header_;
+
+  Header header_;
+  int fd_;
+  char* buf_;
+  size_t buf_size_;
+
+  static constexpr size_t kInitBufSize = 16 * 1024 * 1024;  // 16MB
+  static const size_t kHeaderSize = sizeof(Header);
 };
 
 // A storage implementation that persist log entries and raft state into log file

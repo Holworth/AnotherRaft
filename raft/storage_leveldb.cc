@@ -61,6 +61,10 @@ void WritableFile::Sync() {
   SyncFd(fd_, filename_);
 }
 
+void WritableFile::Flush() {
+  FlushBuffer();
+}
+
 void WritableFile::SyncFd(int fd, const std::string& filename) { ::fsync(fd); }
 
 StorageLevelDB* StorageLevelDB::Open(const std::string& logname) {
@@ -78,11 +82,7 @@ void StorageLevelDB::PersistEntries(raft_index_t lo, raft_index_t hi,
   for (const auto& ent : batch) {
     auto write_buf_size = ser.getSerializeSize(ent);
     if (write_buf_size > bufsize_ || !buf_) {
-      if (buf_) {
-        delete buf_;
-      }
-      buf_ = new char[write_buf_size + 10];
-      bufsize_ = write_buf_size;
+      AllocateNewInternalBuffer(write_buf_size);
     }
     ser.serialize_logentry_helper(&ent, this->buf_);
     logfile_->Append(this->buf_, write_buf_size);

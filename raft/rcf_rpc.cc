@@ -62,6 +62,7 @@ void RCFRpcClient::sendMessage(const RequestVoteArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   setMaxTransportLength(client_ptr);
+  client_ptr->getClientStubPtr()->setRemoteCallTimeoutMs(config::kRPCTimeout);
 
   RCF::Future<RCF::ByteBuffer> ret;
   auto cmp_callback = [=]() {
@@ -82,6 +83,7 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   setMaxTransportLength(client_ptr);
+  client_ptr->getClientStubPtr()->setRemoteCallTimeoutMs(config::kRPCTimeout);
 
   RCF::Future<RCF::ByteBuffer> ret;
   auto cmp_callback = [=]() {
