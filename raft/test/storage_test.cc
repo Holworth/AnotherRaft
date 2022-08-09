@@ -81,52 +81,53 @@ TEST_F(StorageTest, TestPersistRaftState) {
 
     storage = FileStorage::Open(kStorageTestFileName);
     auto state = storage->PersistState();
-    EXPECT_TRUE(state.valid);
-    EXPECT_EQ(state.persisted_term, i);
-    EXPECT_EQ(state.persisted_vote_for, i);
+    ASSERT_TRUE(state.valid);
+    ASSERT_EQ(state.persisted_term, i);
+    ASSERT_EQ(state.persisted_vote_for, i);
   }
   Clear();
 }
 
-// TEST_F(StorageTest, TestPersistLogEntries) {
-//   Clear();
-//   const size_t kPutCnt = 10000;
-//   auto sets = GenerateRandomEntrySets(kPutCnt);
-//   std::vector<LogEntry> entries;
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     entries.push_back(sets[i]);
-//   }
-//   auto storage = FileStorage::Open(kStorageTestFileName);
-//   storage->PersistEntries(1, kPutCnt, entries);
-//   delete storage;
-//
-//   // Reopen
-//   storage = FileStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kPutCnt);
-//
-//   // Get all entries
-//   std::vector<LogEntry> read_ents;
-//   storage->LogEntries(&read_ents);
-//   EXPECT_EQ(read_ents.size() - 1, kPutCnt);
-//   // Check recovered data are equal
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     ASSERT_EQ(read_ents[i], sets[i]);
-//   }
-//
-//   // Modify raft state after check log entries are ok
-//   storage->PersistState(Storage::PersistRaftState{true, 1, 1});
-//   delete storage;
-//
-//   storage = FileStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kPutCnt);
-//
-//   auto state = storage->PersistState();
-//   EXPECT_TRUE(state.valid);
-//   EXPECT_EQ(state.persisted_term, 1);
-//   EXPECT_EQ(state.persisted_vote_for, 1);
-//
-//   Clear();
-// }
+TEST_F(StorageTest, TestPersistLogEntries) {
+  Clear();
+  const size_t kPutCnt = 10000;
+  auto sets = GenerateRandomEntrySets(kPutCnt);
+  std::vector<LogEntry> entries;
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    entries.push_back(sets[i]);
+  }
+  auto storage = FileStorage::Open(kStorageTestFileName);
+  storage->PersistEntries(1, kPutCnt, entries);
+  delete storage;
+
+  // Reopen
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  // Get all entries
+  std::vector<LogEntry> read_ents;
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kPutCnt);
+
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    ASSERT_EQ(read_ents[i], sets[i]);
+  }
+
+  // Modify raft state after check log entries are ok
+  storage->PersistState(Storage::PersistRaftState{true, 1, 1});
+  delete storage;
+
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  auto state = storage->PersistState();
+  EXPECT_TRUE(state.valid);
+  EXPECT_EQ(state.persisted_term, 1);
+  EXPECT_EQ(state.persisted_vote_for, 1);
+
+  Clear();
+}
 //
 // TEST_F(StorageTest, TestOverwriteLogEntries) {
 //   Clear();

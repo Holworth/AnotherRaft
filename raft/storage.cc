@@ -137,7 +137,7 @@ PersistStorage* PersistStorage::Open(const std::string& logname) {
 }
 
 FileStorage* FileStorage::Open(const std::string& filename) {
-  int fd = ::open(filename.c_str(), O_DIRECT | O_CREAT | O_RDWR, 0644);
+  int fd = ::open(filename.c_str(),  O_CREAT | O_RDWR, 0644);
   if (fd < 0) {
     return nullptr;
   }
