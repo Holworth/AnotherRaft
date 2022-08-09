@@ -38,7 +38,7 @@ void RaftNode::Init() {
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, storage_, 150, 300, rsm_};
+  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, storage_, 250, 400, rsm_};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct
