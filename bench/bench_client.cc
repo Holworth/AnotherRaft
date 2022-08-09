@@ -79,6 +79,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
          lantency.size(), avg_lantency, max_lantency);
   printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us]\n",
          avg_apply_lantency, max_apply_lantency);
+  fflush(stdout);
 
   int succ_cnt = 0;
   // Check if inserted value can be found
