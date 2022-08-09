@@ -25,7 +25,7 @@ enum RaftRole {
 };
 
 namespace config {
-const int64_t kHeartbeatInterval = 150;         // 100ms
+const int64_t kHeartbeatInterval = 200;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
 };                                              // namespace config
 
