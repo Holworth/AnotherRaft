@@ -884,7 +884,7 @@ void RaftState::tickOnLeader() {
     broadcastHeartbeat();
     resetHeartbeatTimer();
   }
-  if (replicate_timer_.ElapseMicroseconds() >= config::kReplicateInterval) {
+  if (replicate_timer_.ElapseMilliseconds() >= config::kReplicateInterval) {
     replicateEntries();
     resetReplicateTimer();
   }
