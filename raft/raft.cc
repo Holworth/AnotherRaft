@@ -670,6 +670,7 @@ void RaftState::convertToLeader() {
 
   broadcastHeartbeat();
   resetHeartbeatTimer();
+  resetReplicateTimer();
 }
 
 void RaftState::convertToPreLeader() {
@@ -751,12 +752,12 @@ void RaftState::startElection() {
 }
 
 void RaftState::broadcastHeartbeat() {
-  // for (auto &[id, peer] : peers_) {
-  //   if (id != id_) {
-  //     sendHeartBeat(id);
-  //   }
-  // }
-  replicateEntries();
+  for (auto &[id, peer] : peers_) {
+    if (id != id_) {
+      sendHeartBeat(id);
+    }
+  }
+  // replicateEntries();
 }
 
 void RaftState::collectFragments() {
@@ -837,6 +838,7 @@ void RaftState::resetElectionTimer() {
 
 void RaftState::resetHeartbeatTimer() { heartbeat_timer_.Reset(); }
 void RaftState::resetPreLeaderTimer() { preleader_timer_.Reset(); }
+void RaftState::resetReplicateTimer() { replicate_timer_.Reset(); }
 
 void RaftState::Tick() {
   std::scoped_lock<std::mutex> lck(mtx_);
@@ -878,11 +880,14 @@ void RaftState::tickOnCandidate() {
 
 void RaftState::tickOnLeader() {
   // LOG(util::kRaft, "S%d TickOnLeader", id_);
-  if (heartbeat_timer_.ElapseMilliseconds() < heartbeatTimeInterval) {
-    return;
+  if (heartbeat_timer_.ElapseMilliseconds() >= heartbeatTimeInterval) {
+    broadcastHeartbeat();
+    resetHeartbeatTimer();
   }
-  broadcastHeartbeat();
-  resetHeartbeatTimer();
+  if (replicate_timer_.ElapseMicroseconds() >= config::kReplicateInterval) {
+    replicateEntries();
+    resetReplicateTimer();
+  }
 }
 
 void RaftState::tickOnPreLeader() {
@@ -938,7 +943,7 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
   if (FindFullEntryInStripe(stripe, ent)) {
     return true;
   }
-  
+
   auto version = stripe->collected_fragments[0].GetVersion();
   auto k = version.GetK();
   auto m = version.GetM();
@@ -1199,8 +1204,8 @@ void RaftState::FilterDuplicatedCollectedFragments(Stripe &stripes) {
   // successfully decoded
 }
 
-bool RaftState::FindFullEntryInStripe(const Stripe* stripe, LogEntry* ent) {
-  for (const auto& frag: stripe->collected_fragments) {
+bool RaftState::FindFullEntryInStripe(const Stripe *stripe, LogEntry *ent) {
+  for (const auto &frag : stripe->collected_fragments) {
     if (frag.Type() == kNormal) {
       *ent = frag;
       return true;

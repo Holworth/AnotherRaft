@@ -25,8 +25,9 @@ enum RaftRole {
 };
 
 namespace config {
-const int64_t kHeartbeatInterval = 200;         // 100ms
+const int64_t kHeartbeatInterval = 100;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
+const int64_t kReplicateInterval = 500;
 };                                              // namespace config
 
 struct RaftConfig {
@@ -307,6 +308,7 @@ class RaftState {
   void resetElectionTimer();
   void resetHeartbeatTimer();
   void resetPreLeaderTimer();
+  void resetReplicateTimer();
 
   void convertToFollower(raft_term_t term);
   void convertToCandidate();
@@ -407,6 +409,7 @@ class RaftState {
   util::Timer election_timer_;   // Record elapse time during election
   util::Timer heartbeat_timer_;  // Record elapse time since last heartbeat
   util::Timer preleader_timer_;  // Record fragments collection time
+  util::Timer replicate_timer_;  // Record replication timer
 
   // Election time should be between [min, max), set by configuration
   int64_t electionTimeLimitMin_, electionTimeLimitMax_;
