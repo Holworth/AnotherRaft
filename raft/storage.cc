@@ -137,7 +137,7 @@ PersistStorage* PersistStorage::Open(const std::string& logname) {
 }
 
 FileStorage* FileStorage::Open(const std::string& filename) {
-  int fd = ::open(filename.c_str(),  O_CREAT | O_RDWR, 0644);
+  int fd = ::open(filename.c_str(), O_CREAT | O_RDWR, 0644);
   if (fd < 0) {
     return nullptr;
   }
@@ -146,6 +146,7 @@ FileStorage* FileStorage::Open(const std::string& filename) {
   ret->fd_ = fd;
   if (auto size = ::read(fd, &(ret->header_), kHeaderSize) < kHeaderSize) {
     ret->has_header_ = false;
+    ret->header_.write_off = kHeaderSize;
   } else {
     ret->has_header_ = true;
   }
@@ -153,16 +154,16 @@ FileStorage* FileStorage::Open(const std::string& filename) {
   return ret;
 }
 
-void FileStorage::Close(FileStorage* file) {
-  delete file;
-}
+void FileStorage::Close(FileStorage* file) { delete file; }
 
 void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
                                  const std::vector<LogEntry>& batch) {
   auto ser = Serializer::NewSerializer();
   auto check_raft_index = lo;
   for (const auto& ent : batch) {
-    // auto write_buf_size = alignment(ser.getSerializeSize(ent), 8);
+    auto off = lseek(fd_, header_.write_off, SEEK_SET);
+    printf("Move write cursor to: %lld\n", off);
+
     auto write_buf_size = ser.getSerializeSize(ent);
     if (this->buf_ == nullptr || write_buf_size > this->buf_size_) {
       AllocateNewInternalBuffer(write_buf_size);
@@ -189,7 +190,8 @@ void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
   auto last_index = header_.lastLogIndex;
   entries->clear();
   entries->resize(last_index + 1);
-  lseek(fd_, kHeaderSize, SEEK_SET);
+  auto off = lseek(fd_, kHeaderSize, SEEK_SET);
+  printf("Move write cursor to: %lld\n", off);
 
   auto read_off = kHeaderSize;
 
@@ -198,7 +200,8 @@ void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
     if (read_off + sizeof(LogEntry) > header_.last_off) {
       break;
     }
-    lseek(fd_, read_off, SEEK_SET);
+    auto off = lseek(fd_, read_off, SEEK_SET);
+    printf("Move write cursor to: %lld\n", off);
     ::read(fd_, buf_, this->buf_size_);
 
     LogEntry ent;

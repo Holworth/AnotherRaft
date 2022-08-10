@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <cstdio>
 #include <fstream>
 
 #include "log_entry.h"
@@ -127,7 +128,7 @@ class FileStorage : public Storage {
     if (this->buf_) {
       delete[] buf_;
     }
-
+    printf("[Allocate buffer within file: size=%lu]\n", size + 20);
     this->buf_ = new char[size + 20];
     this->buf_size_ = size;
   }

@@ -128,6 +128,7 @@ char *Serializer::PutPrefixLengthSlice(const Slice &slice, char *buf) {
 
 const char *Serializer::ParsePrefixLengthSlice(const char *buf, Slice *slice) {
   size_t size = *reinterpret_cast<const size_t *>(buf);
+  printf("[Deserialize alloc size=%lu]\n", size);
   char *data = new char[size];
   buf += sizeof(size_t);
   std::memcpy(data, buf, size);
