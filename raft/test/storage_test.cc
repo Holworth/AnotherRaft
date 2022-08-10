@@ -13,7 +13,7 @@
 
 namespace raft {
 
-static const std::string kStorageTestFileName = "./test.log";
+static const std::string kStorageTestFileName = "/mnt/ssd1/test.log";
 class StorageTest : public ::testing::Test {
   static const size_t kMaxDataSize = 16 * 1024;
 
@@ -261,8 +261,14 @@ TEST_F(StorageTest, TestPersistencePerformance) {
   printf("[Average Persistence Latency = %llu us]\n", latency_sum / latency.size());
   printf("[Max     Persistence Latency = %llu us]\n",
          *std::max_element(latency.begin(), latency.end()));
+  std::sort(latency.begin(), latency.end());
+  uint64_t top_latency_sum = 0;
+  int top_cnt = latency.size() / 10;
+  std::for_each(latency.begin(), latency.begin() + top_cnt,
+                [&top_latency_sum](uint64_t n) { top_latency_sum += n; });
+  printf("[Top10 average Latency = %llu us]\n", top_latency_sum / top_cnt);
 
-  delete storage;
+      delete storage;
   Clear();
 }
 
