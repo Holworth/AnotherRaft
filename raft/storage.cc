@@ -187,7 +187,6 @@ void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
       break;
     }
     auto off = lseek(fd_, read_off, SEEK_SET);
-    printf("Move write cursor to: %lld\n", off);
     ::read(fd_, buf_, this->buf_size_);
 
     LogEntry ent;

@@ -124,7 +124,6 @@ class FileStorage : public Storage {
     if (this->buf_) {
       delete[] buf_;
     }
-    printf("[Allocate buffer within file: size=%lu]\n", size + 20);
     this->buf_ = new char[size + 20];
     this->buf_size_ = size;
   }
@@ -149,8 +148,8 @@ class FileStorage : public Storage {
       auto write_size = ::write(fd_, data, size);
       size -= write_size;
       data += write_size;
+      header_.last_off += write_size;
     }
-    header_.last_off += size;
   };
 
   void SyncFd(int fd) { ::fsync(fd); }

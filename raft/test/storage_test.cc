@@ -1,5 +1,7 @@
 #include "storage.h"
 
+#include <algorithm>
+#include <chrono>
 #include <cstdio>
 #include <filesystem>
 #include <unordered_map>
@@ -23,8 +25,13 @@ class StorageTest : public ::testing::Test {
   }
 
   auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
-    auto rand_size = rand() % (max_len - min_len) + min_len;
-    printf("[Generate Random Data Slice: size=%d]\n", rand_size);
+    int rand_size = 0;
+    if (max_len == min_len) {
+      rand_size = max_len;
+    } else {
+      auto rand_size = rand() % (max_len - min_len) + min_len;
+    }
+    // printf("[Generate Random Data Slice: size=%d]\n", rand_size);
     auto rand_data = new char[rand_size];
     for (decltype(rand_size) i = 0; i < rand_size; ++i) {
       rand_data[i] = rand();
@@ -90,9 +97,9 @@ TEST_F(StorageTest, DISABLED_TestPersistRaftState) {
   Clear();
 }
 
-TEST_F(StorageTest, TestPersistLogEntries) {
+TEST_F(StorageTest, DISABLED_TestPersistLogEntries) {
   Clear();
-  const size_t kPutCnt = 1;
+  const size_t kPutCnt = 10000;
   auto sets = GenerateRandomEntrySets(kPutCnt);
   std::vector<LogEntry> entries;
   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
@@ -130,100 +137,131 @@ TEST_F(StorageTest, TestPersistLogEntries) {
 
   Clear();
 }
+
+TEST_F(StorageTest, DISABLED_TestOverwriteLogEntries) {
+  Clear();
+  const size_t kPutCnt = 10000;
+
+  // Stage1: Persist and check all old entries
+  auto sets1 = GenerateRandomEntrySets(kPutCnt);
+  std::vector<LogEntry> entries;
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    entries.push_back(sets1[i]);
+  }
+
+  auto storage = FileStorage::Open(kStorageTestFileName);
+  storage->PersistEntries(1, kPutCnt, entries);
+  delete storage;
+
+  // Reopen
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  // Get all entries
+  std::vector<LogEntry> read_ents;
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kPutCnt);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    ASSERT_EQ(read_ents[i], sets1[i]);
+  }
+
+  // Stage2: Generate another data of sets and persist and them
+  auto sets2 = GenerateRandomEntrySets(kPutCnt);
+  entries.clear();
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    entries.push_back(sets2[i]);
+  }
+  storage->PersistEntries(1, kPutCnt, entries);
+  delete storage;
+
+  // Check new entries
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  // Get all entries
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kPutCnt);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    ASSERT_EQ(read_ents[i], sets2[i]);
+  }
+  Clear();
+}
 //
-// TEST_F(StorageTest, TestOverwriteLogEntries) {
-//   Clear();
-//   const size_t kPutCnt = 10000;
-//
-//   // Stage1: Persist and check all old entries
-//   auto sets1 = GenerateRandomEntrySets(kPutCnt);
-//   std::vector<LogEntry> entries;
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     entries.push_back(sets1[i]);
-//   }
-//
-//   auto storage = PersistStorage::Open(kStorageTestFileName);
-//   storage->PersistEntries(1, kPutCnt, entries);
-//   delete storage;
-//
-//   // Reopen
-//   storage = PersistStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kPutCnt);
-//
-//   // Get all entries
-//   std::vector<LogEntry> read_ents;
-//   storage->LogEntries(&read_ents);
-//   EXPECT_EQ(read_ents.size() - 1, kPutCnt);
-//   // Check recovered data are equal
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     ASSERT_EQ(read_ents[i], sets1[i]);
-//   }
-//
-//   // Stage2: Generate another data of sets and persist and them
-//   auto sets2 = GenerateRandomEntrySets(kPutCnt);
-//   entries.clear();
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     entries.push_back(sets2[i]);
-//   }
-//   storage->PersistEntries(1, kPutCnt, entries);
-//   delete storage;
-//
-//   // Check new entries
-//   storage = PersistStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kPutCnt);
-//
-//   // Get all entries
-//   storage->LogEntries(&read_ents);
-//   EXPECT_EQ(read_ents.size() - 1, kPutCnt);
-//   // Check recovered data are equal
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     ASSERT_EQ(read_ents[i], sets2[i]);
-//   }
-//   Clear();
-// }
-//
-// TEST_F(StorageTest, TestDeleteEntries) {
-//   Clear();
-//   const raft_index_t kPutCnt = 10;
-//   const raft_index_t kLastIndex = kPutCnt / 2;
-//   auto sets = GenerateRandomEntrySets(kPutCnt);
-//   std::vector<LogEntry> entries;
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     entries.push_back(sets[i]);
-//   }
-//
-//   auto storage = PersistStorage::Open(kStorageTestFileName);
-//   storage->PersistEntries(1, kPutCnt, entries);
-//   delete storage;
-//
-//   storage = PersistStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kPutCnt);
-//
-//   std::vector<LogEntry> read_ents;
-//
-//   // Check all entries
-//   storage->LogEntries(&read_ents);
-//   EXPECT_EQ(read_ents.size() - 1, kPutCnt);
-//   // Check recovered data are equal
-//   for (raft_index_t i = 1; i <= kPutCnt; ++i) {
-//     ASSERT_EQ(read_ents[i], sets[i]);
-//   }
-//
-//   // Discard log entries with higher index
-//   storage->SetLastIndex(kLastIndex);
-//   delete storage;
-//
-//   storage = PersistStorage::Open(kStorageTestFileName);
-//   EXPECT_EQ(storage->LastIndex(), kLastIndex);
-//
-//   // Check all entries
-//   storage->LogEntries(&read_ents);
-//   EXPECT_EQ(read_ents.size() - 1, kLastIndex);
-//   // Check recovered data are equal
-//   for (raft_index_t i = 1; i <= kLastIndex; ++i) {
-//     ASSERT_EQ(read_ents[i], sets[i]);
-//   }
-//   Clear();
-// }
+TEST_F(StorageTest, DISABLED_TestDeleteEntries) {
+  Clear();
+  const raft_index_t kPutCnt = 10000;
+  const raft_index_t kLastIndex = kPutCnt / 2;
+  auto sets = GenerateRandomEntrySets(kPutCnt);
+  std::vector<LogEntry> entries;
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    entries.push_back(sets[i]);
+  }
+
+  auto storage = FileStorage::Open(kStorageTestFileName);
+  storage->PersistEntries(1, kPutCnt, entries);
+  delete storage;
+
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kPutCnt);
+
+  std::vector<LogEntry> read_ents;
+
+  // Check all entries
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kPutCnt);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kPutCnt; ++i) {
+    ASSERT_EQ(read_ents[i], sets[i]);
+  }
+
+  // Discard log entries with higher index
+  storage->SetLastIndex(kLastIndex);
+  delete storage;
+
+  storage = FileStorage::Open(kStorageTestFileName);
+  EXPECT_EQ(storage->LastIndex(), kLastIndex);
+
+  // Check all entries
+  storage->LogEntries(&read_ents);
+  EXPECT_EQ(read_ents.size() - 1, kLastIndex);
+  // Check recovered data are equal
+  for (raft_index_t i = 1; i <= kLastIndex; ++i) {
+    ASSERT_EQ(read_ents[i], sets[i]);
+  }
+  Clear();
+}
+
+TEST_F(StorageTest, TestPersistencePerformance) {
+  Clear();
+  const int kPutCnt = 100;
+  const size_t kSize = 2 * 1024 * 1024;  // 2MB
+  auto storage = FileStorage::Open(kStorageTestFileName);
+  std::vector<uint64_t> latency;
+  for (int i = 1; i <= kPutCnt; ++i) {
+    LogEntry ent;
+    ent.SetIndex(static_cast<raft_index_t>(i));
+    ent.SetTerm(1);
+    ent.SetType(kNormal);
+    ent.SetCommandData(GenerateRandomSlice(kSize, kSize));
+
+    std::vector<LogEntry> sets = {ent};
+    auto start = std::chrono::high_resolution_clock::now();
+    storage->PersistEntries(i, i, sets);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    latency.push_back(dura.count());
+  }
+
+  // Deal with collected data
+  uint64_t latency_sum = 0;
+  std::for_each(latency.begin(), latency.end(),
+                [&latency_sum](uint64_t n) { latency_sum += n; });
+  printf("[Average Persistence Latency = %llu us]\n", latency_sum / latency.size());
+
+  delete storage;
+  Clear();
+}
 
 }  // namespace raft
