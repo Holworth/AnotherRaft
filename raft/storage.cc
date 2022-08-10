@@ -145,12 +145,10 @@ FileStorage* FileStorage::Open(const std::string& filename) {
   ret->AllocateNewInternalBuffer(FileStorage::kInitBufSize);
   ret->fd_ = fd;
   if (auto size = ::read(fd, &(ret->header_), kHeaderSize) < kHeaderSize) {
-    ret->has_header_ = false;
-    ret->header_.write_off = kHeaderSize;
-  } else {
-    ret->has_header_ = true;
+    // No complete header
+    ret->InitializeHeaderOnCreation();
+    ret->PersistHeader();
   }
-
   return ret;
 }
 
@@ -161,26 +159,17 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
   auto ser = Serializer::NewSerializer();
   auto check_raft_index = lo;
   for (const auto& ent : batch) {
-    auto off = lseek(fd_, header_.write_off, SEEK_SET);
-    printf("Move write cursor to: %lld\n", off);
-
-    auto write_buf_size = ser.getSerializeSize(ent);
-    if (this->buf_ == nullptr || write_buf_size > this->buf_size_) {
-      AllocateNewInternalBuffer(write_buf_size);
+    auto write_size = ser.getSerializeSize(ent);
+    if (!this->buf_ || write_size > this->buf_size_) {
+      AllocateNewInternalBuffer(write_size);
     }
     ser.serialize_logentry_helper(&ent, this->buf_);
-    Append(this->buf_, write_buf_size);
-
-    header_.write_off += write_buf_size;
-    header_.last_off = header_.write_off;
+    Append(this->buf_, write_size);
 
     assert(check_raft_index == ent.Index());
     check_raft_index++;
 
-    if (ent.Index() > header_.lastLogIndex) {
-      header_.lastLogIndex = ent.Index();
-      header_.lastLogTerm = ent.Term();
-    }
+    MaybeUpdateLastIndexAndTerm(ent.Index(), ent.Term());
   }
   PersistHeader();
 }
@@ -190,11 +179,8 @@ void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
   auto last_index = header_.lastLogIndex;
   entries->clear();
   entries->resize(last_index + 1);
-  auto off = lseek(fd_, kHeaderSize, SEEK_SET);
-  printf("Move write cursor to: %lld\n", off);
 
   auto read_off = kHeaderSize;
-
   // Read log entry one by one
   while (true) {
     if (read_off + sizeof(LogEntry) > header_.last_off) {

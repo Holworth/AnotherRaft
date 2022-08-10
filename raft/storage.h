@@ -100,17 +100,13 @@ class FileStorage : public Storage {
 
   raft_index_t LastIndex() const override { return header_.lastLogIndex; };
 
-  PersistRaftState PersistState() const override {
-    return PersistRaftState{has_header_, header_.currentTerm, header_.voteFor};
-  }
+  PersistRaftState PersistState() const override { return header_.raft_state; }
 
   void PersistState(const PersistRaftState& state) override {
     if (!state.valid) {
       return;
     }
-    header_.voteFor = state.persisted_vote_for;
-    header_.currentTerm = state.persisted_term;
-    has_header_ = true;
+    header_.raft_state = state;
     PersistHeader();
   };
 
@@ -139,33 +135,45 @@ class FileStorage : public Storage {
     SyncFd(fd_);
   }
 
+  void InitializeHeaderOnCreation() {
+    header_.raft_state = PersistRaftState{false, 0, 0};
+    header_.lastLogIndex = 0;
+    header_.lastLogTerm = 0;
+    header_.last_off = kHeaderSize;
+  }
+
   // Append data of specified slice to the file
   void Append(const char* data, size_t size) {
-    lseek(fd_, 0, SEEK_END);
+    lseek(fd_, header_.last_off, SEEK_SET);
     while (size > 0) {
       auto write_size = ::write(fd_, data, size);
       size -= write_size;
       data += write_size;
     }
+    header_.last_off += size;
   };
 
   void SyncFd(int fd) { ::fsync(fd); }
 
+  void MaybeUpdateLastIndexAndTerm(raft::raft_index_t raft_index,
+                                   raft::raft_term_t raft_term) {
+    if (raft_index > header_.lastLogIndex) {
+      header_.lastLogIndex = raft_index;
+      header_.lastLogTerm = raft_term;
+    }
+  }
+
  private:
   struct Header {
-    raft_node_id_t voteFor;
-    raft_term_t currentTerm;
+    PersistRaftState raft_state;
     raft_index_t lastLogIndex;
     raft_term_t lastLogTerm;
-    size_t write_off;  // Move file write pointer to off position for next write
-    size_t read_off;
     size_t last_off;  // Basically the file size, used to check if reaches the end
   };
-  bool has_header_;
 
   Header header_;
   int fd_;
-  char* buf_;
+  char* buf_;  // Internal buffer
   size_t buf_size_;
 
   static constexpr size_t kInitBufSize = 16 * 1024 * 1024;  // 16MB
