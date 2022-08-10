@@ -62,7 +62,7 @@ def stop_kv_servers(servers: List[Server]):
 
 def stop_kv_server(server: Server):
     while True:
-        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*"
+        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*; rm -rf /mnt/ssd1/raft_log*"
 
         ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
