@@ -20,6 +20,8 @@ enum RaftRole {
 
 namespace config {
 const int64_t kHeartbeatInterval = 100;  // 100ms
+const int64_t kElectionTimeoutMin = 500; // 500ms
+const int64_t kElectionTimeoutMax = 1000; // 800ms
 };
 
 struct RaftConfig {

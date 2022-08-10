@@ -12,7 +12,6 @@
 #include "util.h"
 
 namespace raft {
-
 RaftNode::RaftNode(const NodeConfig& node_config)
     : node_id_me_(node_config.node_id_me),
       servers_(node_config.servers),
@@ -38,7 +37,12 @@ void RaftNode::Init() {
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, storage_, 150, 300, rsm_};
+  RaftConfig config = RaftConfig{node_id_me_,
+                                 rcf_clients_,
+                                 storage_,
+                                 config::kElectionTimeoutMin,
+                                 config::kElectionTimeoutMax,
+                                 rsm_};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct
