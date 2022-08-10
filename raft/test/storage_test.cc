@@ -262,6 +262,7 @@ TEST_F(StorageTest, TestPersistencePerformance) {
   printf("[Max     Persistence Latency = %llu us]\n",
          *std::max_element(latency.begin(), latency.end()));
   std::sort(latency.begin(), latency.end());
+  std::reverse(latency.begin(), latency.end());
   uint64_t top_latency_sum = 0;
   int top_cnt = latency.size() / 10;
   std::for_each(latency.begin(), latency.begin() + top_cnt,
