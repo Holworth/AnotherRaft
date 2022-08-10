@@ -259,6 +259,8 @@ TEST_F(StorageTest, TestPersistencePerformance) {
   std::for_each(latency.begin(), latency.end(),
                 [&latency_sum](uint64_t n) { latency_sum += n; });
   printf("[Average Persistence Latency = %llu us]\n", latency_sum / latency.size());
+  printf("[Max     Persistence Latency = %llu us]\n",
+         *std::max_element(latency.begin(), latency.end()));
 
   delete storage;
   Clear();
