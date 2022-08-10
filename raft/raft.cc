@@ -59,8 +59,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->last_applied_ = 0;
   ret->commit_index_ = 0;
 
-  ret->persistVoteFor();
-  ret->persistCurrentTerm();
+  ret->PersistRaftState();
 
   return ret;
 }
@@ -105,7 +104,7 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
     SetVoteFor(args->candidate_id);
 
     // persist vote for since it has been changed
-    persistVoteFor();
+    PersistRaftState();
     resetElectionTimer();
     return;
   }
@@ -267,7 +266,6 @@ void RaftState::Process(RequestVoteReply *reply) {
 
 ProposeResult RaftState::Propose(const CommandData &command) {
   std::scoped_lock<std::mutex> lck(mtx_);
-
   if (Role() != kLeader) {
     return ProposeResult{0, 0, false};
   }
@@ -285,23 +283,21 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
       CurrentTerm(), entry.CommandData().data());
 
-  // Persist this new entry: maybe it can be ignored?
-  if (storage_ != nullptr) {
-    std::vector<LogEntry> persist_ent{entry};
-    auto lo = lm_->LastLogEntryIndex();
-    LOG(util::kRaft, "S%d persist entry(I%d->I%d)", id_, lo, lo);
-    storage_->PersistEntries(lo, lo, persist_ent);
-    storage_->SetLastIndex(lo);
-    LOG(util::kRaft, "S%d persist entry(I%d->I%d) finished", id_, lo, lo);
-  }
-
-  int val = *reinterpret_cast<int *>(entry.CommandData().data());
-
   // Replicate this entry out
   for (auto &[id, _] : peers_) {
     if (id != id_) {
       sendAppendEntries(id);
     }
+  }
+
+  // Persist this new entry: maybe it can be ignored?
+  if (storage_ != nullptr) {
+    std::vector<LogEntry> persist_ent{entry};
+    auto lo = lm_->LastLogEntryIndex();
+    LOG(util::kRaft, "S%d Starts Persisting Propose Entry(I%d)", id_, lo);
+    storage_->PersistEntries(lo, lo, persist_ent);
+    storage_->SetLastIndex(lo);
+    LOG(util::kRaft, "S%d Persist Propose Entry(I%d) Done", id_, lo);
   }
 
   return ProposeResult{next_entry_index, CurrentTerm(), true};
@@ -334,8 +330,8 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args) {
       // Debug --------------------------------------------
       auto old_last_index = lm_->LastLogEntryIndex();
       lm_->DeleteLogEntriesFrom(raft_index);
-      LOG(util::kRaft, "S%d Del Entry (%d->%d)", id_, old_last_index,
-          lm_->LastLogEntryIndex());
+      LOG(util::kRaft, "S%d Del Entry (%d->%d) Conflict Index=%d", id_, old_last_index,
+          lm_->LastLogEntryIndex(), raft_index);
       conflict_index = raft_index;
       break;
     }
@@ -426,8 +422,7 @@ void RaftState::convertToFollower(raft_term_t term) {
   if (term > CurrentTerm()) {
     SetVoteFor(kNotVoted);
     SetCurrentTerm(term);
-    persistCurrentTerm();
-    persistVoteFor();
+    PersistRaftState();
   }
 }
 
@@ -457,18 +452,7 @@ void RaftState::resetNextIndexAndMatchIndex() {
   }
 }
 
-void RaftState::persistVoteFor() {
-  // TODO: The persistVoteFor function is basically a wrapper for calling storage to
-  // persist the voteFor attribute. This function should be filled when we have a
-  // full-functionality persister implementation
-  if (storage_ != nullptr) {
-    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
-  }
-}
-void RaftState::persistCurrentTerm() {
-  // TODO: The persistVoteFor function is basically a wrapper for calling storage to
-  // persist the currentTerm attribute. This function should be filled when we have a
-  // full-functionality persister implementation
+void RaftState::PersistRaftState() {
   if (storage_ != nullptr) {
     storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
   }
@@ -488,10 +472,7 @@ void RaftState::startElection() {
 
   assert(vote_me_cnt_ != kNotVoted);
 
-  // TODO: Persist voteFor and persistCurrentTerm may be combined to one single function,
-  // namely, persistRaftState?
-  persistVoteFor();
-  persistCurrentTerm();
+  PersistRaftState();
 
   // Construct RequestVote args
   auto args = RequestVoteArgs{

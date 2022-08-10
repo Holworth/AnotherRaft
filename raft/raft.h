@@ -148,8 +148,7 @@ class RaftState {
   void convertToCandidate();
   void convertToLeader();
 
-  void persistVoteFor();
-  void persistCurrentTerm();
+  void PersistRaftState();
 
   // A private function that is used to start a new election
   void startElection();

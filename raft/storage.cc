@@ -156,6 +156,9 @@ void FileStorage::Close(FileStorage* file) { delete file; }
 
 void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
                                  const std::vector<LogEntry>& batch) {
+  if (lo > hi) {
+    return;
+  }
   auto ser = Serializer::NewSerializer();
   auto check_raft_index = lo;
   for (const auto& ent : batch) {
