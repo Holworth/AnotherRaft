@@ -29,7 +29,6 @@ set(
   util.cc
   log_manager.cc
   storage.cc
-  storage_leveldb.cc
   rcf_rpc.cc
   raft.cc
   raft_node.cc
