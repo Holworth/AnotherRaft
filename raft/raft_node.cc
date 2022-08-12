@@ -19,7 +19,7 @@ RaftNode::RaftNode(const NodeConfig& node_config)
       raft_state_(nullptr),
       rsm_(node_config.rsm) {
   if (node_config.storage_filename != "") {
-    storage_ = PersistStorage::Open(node_config.storage_filename);
+    storage_ = FileStorage::Open(node_config.storage_filename);
   } else {
     storage_ = nullptr;
   }
