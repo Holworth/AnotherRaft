@@ -38,7 +38,12 @@ void RaftNode::Init() {
   }
 
   // Create Raft State instance
-  RaftConfig config = RaftConfig{node_id_me_, rcf_clients_, storage_, 250, 400, rsm_};
+  RaftConfig config = RaftConfig{node_id_me_,
+                                 rcf_clients_,
+                                 storage_,
+                                 config::kElectionTimeoutMin,
+                                 config::kElectionTimeoutMax,
+                                 rsm_};
   raft_state_ = RaftState::NewRaftState(config);
 
   // Set related state for all RPC related struct
@@ -87,7 +92,8 @@ void RaftNode::startTickerThread() {
       // Tick the raft state for every 10ms so that the raft can make progress
       // std::this_thread::sleep_for(std::chrono::milliseconds(10));
       this->raft_state_->Tick();
-      std::this_thread::sleep_for(std::chrono::milliseconds(config::kRaftTickBaseInterval));
+      std::this_thread::sleep_for(
+          std::chrono::milliseconds(config::kRaftTickBaseInterval));
     }
   };
   std::thread ticker_thread(ticker);

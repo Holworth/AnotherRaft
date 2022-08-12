@@ -28,6 +28,8 @@ namespace config {
 const int64_t kHeartbeatInterval = 100;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
 const int64_t kReplicateInterval = 500;
+const int64_t kElectionTimeoutMin = 500; // 500ms
+const int64_t kElectionTimeoutMax = 1000; // 800ms
 };                                              // namespace config
 
 struct RaftConfig {
@@ -315,8 +317,7 @@ class RaftState {
   void convertToLeader();
   void convertToPreLeader();
 
-  void persistVoteFor();
-  void persistCurrentTerm();
+  void PersistRaftState();
 
   // A private function that is used to start a new election
   void startElection();

@@ -66,8 +66,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->last_applied_ = 0;
   ret->commit_index_ = 0;
 
-  ret->persistVoteFor();
-  ret->persistCurrentTerm();
+  ret->PersistRaftState();
 
   // FlexibleK: Init liveness monitor state
   ret->live_monitor_.node_num = config.rpc_clients.size() + 1;
@@ -121,7 +120,7 @@ void RaftState::Process(RequestVoteArgs *args, RequestVoteReply *reply) {
     SetVoteFor(args->candidate_id);
 
     // persist vote for since it has been changed
-    persistVoteFor();
+    PersistRaftState();
     resetElectionTimer();
     return;
   }
@@ -422,19 +421,19 @@ ProposeResult RaftState::Propose(const CommandData &command) {
   LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
       CurrentTerm(), entry.CommandData().data());
 
+  // Replicate this entry to each of followers
+  replicateEntries();
+
   // Persist this new entry: maybe it can be ignored?
   if (storage_ != nullptr) {
     std::vector<LogEntry> persist_ent{entry};
     auto lo = lm_->LastLogEntryIndex();
-    LOG(util::kRaft, "S%d persist entry(I%d->I%d)", id_, lo, lo);
+    LOG(util::kRaft, "S%d Starts Persisting Propose Entry(I%d)", id_, lo);
     storage_->PersistEntries(lo, lo, persist_ent);
     storage_->SetLastIndex(lo);
-    LOG(util::kRaft, "S%d persist entry(I%d->I%d) finished", id_, lo, lo);
+    LOG(util::kRaft, "S%d Persist Propose Entry(I%d) Done", id_, lo);
   }
 
-  int val = *reinterpret_cast<int *>(entry.CommandData().data());
-
-  replicateEntries();
   return ProposeResult{next_entry_index, CurrentTerm(), true};
 }
 
@@ -477,8 +476,14 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     auto ent = lm_->GetSingleLogEntry(raft_index);
     if (NeedOverwriteLogEntry(ent->GetVersion(),
                               args->entries[array_index].GetVersion())) {
-      LOG(util::kRaft, "S%d OVERWRITE I%d", id_, raft_index);
       lm_->OverWriteLogEntry(args->entries[array_index], raft_index);
+      if (conflict_index == 0) {
+        conflict_index = raft_index;
+      } else {
+        conflict_index = std::min(conflict_index, raft_index);
+      }
+      LOG(util::kRaft, "S%d OVERWRITE I%d ConflictIndex=I%d", id_, raft_index,
+          raft_index);
     } else {
       // Just simply overwrite version number
       LOG(util::kRaft, "S%d UPDATE VERSION I%d VN(%s)", id_, raft_index,
@@ -490,30 +495,6 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
 
     LOG(util::kRaft, "S%d REPLY (I%d T%d V(%s))", id_, raft_index, ent->Term(),
         ent->GetVersion().ToString().c_str());
-
-    // if (ent->Sequence() < args->entries[array_index].Sequence()) {
-    //   auto new_ent = args->entries[array_index];
-    //   lm_->OverWriteLogEntry(args->entries[array_index], raft_index);
-    //
-    //   auto reply_version = Version{raft_index, new_ent.Sequence(), new_ent.GetK(),
-    //                                new_ent.GetN() - new_ent.GetK()};
-    //
-    //   // Debug:
-    //   // --------------------------------------------------------------------------
-    //   LOG(util::kRaft, "S%d overwrite I%d Version(%s)", id_, raft_index,
-    //       reply_version.toString().c_str());
-    //   // --------------------------------------------------------------------------
-    //   reply->versions.push_back(reply_version);
-    // } else {
-    //   auto reply_version =
-    //       Version{raft_index, ent->Sequence(), ent->GetK(), ent->GetN() - ent->GetK()};
-    //   // Debug:
-    //   // --------------------------------------------------------------------------
-    //   LOG(util::kRaft, "S%d maintain I%d Version(%s)", id_, raft_index,
-    //       reply_version.toString().c_str());
-    //   // --------------------------------------------------------------------------
-    //   reply->versions.push_back(reply_version);
-    // }
   }
   // For those new entries
   auto old_last_index = lm_->LastLogEntryIndex();
@@ -647,8 +628,7 @@ void RaftState::convertToFollower(raft_term_t term) {
   if (term > CurrentTerm()) {
     SetVoteFor(kNotVoted);
     SetCurrentTerm(term);
-    persistCurrentTerm();
-    persistVoteFor();
+    PersistRaftState();
   }
 }
 
@@ -696,23 +676,6 @@ void RaftState::resetNextIndexAndMatchIndex() {
   }
 }
 
-void RaftState::persistVoteFor() {
-  // TODO: The persistVoteFor function is basically a wrapper for calling storage to
-  // persist the voteFor attribute. This function should be filled when we have a
-  // full-functionality persister implementation
-  if (storage_ != nullptr) {
-    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
-  }
-}
-void RaftState::persistCurrentTerm() {
-  // TODO: The persistVoteFor function is basically a wrapper for calling storage to
-  // persist the currentTerm attribute. This function should be filled when we have a
-  // full-functionality persister implementation
-  if (storage_ != nullptr) {
-    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
-  }
-}
-
 // [REQUIRE] Current thread holds the lock of raft state
 void RaftState::startElection() {
   assert(Role() == kCandidate);
@@ -729,8 +692,7 @@ void RaftState::startElection() {
 
   // TODO: Persist voteFor and persistCurrentTerm may be combined to one single function,
   // namely, persistRaftState?
-  persistVoteFor();
-  persistCurrentTerm();
+  PersistRaftState();
 
   // Construct RequestVote args
   auto args = RequestVoteArgs{
@@ -887,6 +849,12 @@ void RaftState::tickOnLeader() {
   if (replicate_timer_.ElapseMilliseconds() >= config::kReplicateInterval) {
     replicateEntries();
     resetReplicateTimer();
+  }
+}
+
+void RaftState::PersistRaftState() {
+  if (storage_ != nullptr) {
+    storage_->PersistState(Storage::PersistRaftState{true, CurrentTerm(), VoteFor()});
   }
 }
 
