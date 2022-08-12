@@ -12,9 +12,11 @@
 #include "kv_node.h"
 #include "log_manager.h"
 #include "rpc.h"
+#include "type.h"
 #include "util.h"
 
 using KvPair = std::pair<std::string, std::string>;
+const int kVerboseInterval = 100;
 
 struct BenchConfiguration {
   std::string key_prefix;
@@ -62,9 +64,11 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     if (stat.err == kv::kOk) {
       lantency.push_back(dura.count());  // us
       apply_lantency.push_back(stat.apply_elapse_time);
+    } else {
+      break;
     }
     int done_cnt = i + 1;
-    if (done_cnt > 0 && done_cnt % 1000 == 0) {
+    if (done_cnt > 0 && done_cnt % kVerboseInterval == 0) {
       std::cout << "\r[Already Execute " << done_cnt << " Ops]" << std::flush;
     }
   }
@@ -88,6 +92,10 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto stat = client->Get(p.first, &get_val);
     if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
+    } 
+    // No need to continue executing the benchmark
+    if (stat.err == kv::kRequestExecTimeout) {
+      break;
     }
   }
   printf("[Get Results][Succ Count=%d]\n", succ_cnt);

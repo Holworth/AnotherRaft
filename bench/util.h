@@ -8,14 +8,14 @@
 #include "kv_node.h"
 #include "rpc.h"
 
-auto ParseNetAddress(const std::string& net_addr) -> raft::rpc::NetAddress {
+inline auto ParseNetAddress(const std::string& net_addr) -> raft::rpc::NetAddress {
   auto specifier = net_addr.find(":");
   auto port_str = net_addr.substr(specifier + 1, net_addr.size() - specifier - 1);
   return raft::rpc::NetAddress{net_addr.substr(0, specifier),
                                static_cast<uint16_t>(std::stoi(port_str, nullptr))};
 }
 
-auto ParseCommandSize(const std::string& size_str) -> int {
+inline auto ParseCommandSize(const std::string& size_str) -> int {
   if (std::isdigit(size_str.back())) {
     return std::stoi(size_str);
   }
@@ -35,7 +35,7 @@ auto ParseCommandSize(const std::string& size_str) -> int {
 }
 
 // This is an interface for parsing cluster configurations of config file
-auto ParseConfigurationFile(const std::string& filename) -> kv::KvClusterConfig {
+inline auto ParseConfigurationFile(const std::string& filename) -> kv::KvClusterConfig {
   std::ifstream cfg(filename);
   kv::KvClusterConfig cluster_cfg;
 
@@ -51,9 +51,8 @@ auto ParseConfigurationFile(const std::string& filename) -> kv::KvClusterConfig 
     cfg.raft_rpc_addr = ParseNetAddress(raft_rpc_addr);
     auto addr = ParseNetAddress(kv_rpc_addr);
     cfg.kv_rpc_addr = kv::rpc::NetAddress{addr.ip, addr.port};
-    // cfg.raft_log_filename = logname;
-    // Disable persistence for now
-    cfg.raft_log_filename = "";
+    cfg.raft_log_filename = logname;
+    // cfg.raft_log_filename = "";
     cfg.kv_dbname = dbname;
 
     cluster_cfg.insert({cfg.id, cfg});
