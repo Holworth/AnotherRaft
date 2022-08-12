@@ -16,6 +16,7 @@
 #include "util.h"
 
 using KvPair = std::pair<std::string, std::string>;
+const int kVerboseInterval = 100;
 
 struct BenchConfiguration {
   std::string key_prefix;
@@ -67,7 +68,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
       break;
     }
     int done_cnt = i + 1;
-    if (done_cnt > 0 && done_cnt % 1000 == 0) {
+    if (done_cnt > 0 && done_cnt % kVerboseInterval == 0) {
       std::cout << "\r[Already Execute " << done_cnt << " Ops]" << std::flush;
     }
   }
