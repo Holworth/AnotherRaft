@@ -12,6 +12,14 @@ def install_rocksdb():
     os.chdir("..")
     subprocess.run("rm -rf rocksdb-7.4.5 && rm -rf v7.4.5.tar.gz", shell=True)
 
+def install_gtest():
+    subprocess.run("git clone git@github.com:google/googletest.git", shell=True)
+    os.chdir("googletest")
+    subprocess.run("cmake3 -B build", shell=True)
+    subprocess.run("cmake3 --build build", shell=True)
+    os.chdir("build")
+    subprocess.run("make install", shell=True)
+
 def install_rocksdb_dependencies():
     subprocess.run("sudo yum makecache", shell=True)
     subprocess.run("sudo yum -y install uuid libuuid uuid-devel", shell=True)
@@ -23,6 +31,7 @@ def install_rocksdb_dependencies():
 
 
 if __name__ == "__main__":
+    install_gtest()
     install_rocksdb_dependencies()
     install_rocksdb()
 
