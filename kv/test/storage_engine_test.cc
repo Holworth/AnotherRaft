@@ -67,11 +67,7 @@ int main(int argc, char* argv[]) {
   int type = std::stoi(argv[2]);
   kv::StorageEngine* db = nullptr;
 
-  if (type == 0) {
-    db = kv::StorageEngine::NewLevelDBEngine("./leveldb_testdb");
-  } else {
-    db = kv::StorageEngine::NewRocksDBEngine("./rocksdb_testdb");
-  }
+  db = kv::StorageEngine::NewRocksDBEngine("./rocksdb_testdb");
 
   std::printf("[Test Engine: %s]\n", db->EngineName().c_str());
 
