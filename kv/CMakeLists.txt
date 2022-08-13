@@ -1,13 +1,7 @@
 include_directories(${LEVELDB_DIR}/include)
 include_directories(${ROCKSDB_DIR}/include)
 
-find_library(libleveldb NAMES leveldb)
-if (NOT libleveldb)
-    message(FATAL_ERROR "libleveldb not found")
-endif()
-
 find_library(librocksdb NAMES librocksdb.a rocksdb)
-
 if (NOT librocksdb)
     message(FATAL_ERROR "librocksdb not found")
 else()
@@ -70,7 +64,7 @@ set(
 
 
 add_library(kv ${KV_SRC})
-target_link_libraries(kv raft rcf ${libleveldb} ${ROCKSDB_LIB})
+target_link_libraries(kv raft rcf ${ROCKSDB_LIB})
 target_include_directories(kv PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 
 add_subdirectory(test)
