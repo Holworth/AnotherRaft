@@ -14,7 +14,7 @@ def ClearTestContext (server: Server):
     while True:
         cmd = "killall bench_server; killall bench_client; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
 
-        ssh_cmd = "ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+        ssh_cmd = "ssh -i ~/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
         if pr.returncode != 0:
