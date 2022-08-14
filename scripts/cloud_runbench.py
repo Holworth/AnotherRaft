@@ -103,9 +103,9 @@ def run_benchmark_succ(config: BenchmarkConfiguration):
 if __name__ == "__main__":
     servers = [
         Server("172.20.126.134", "22", "root", "", 0),
-        Server("172.20.126.135", "22", "root", "", 0),
-        Server("172.20.126.136", "22", "root", "", 0),
-        Server("172.20.126.137", "22", "root", "", 0)
+        Server("172.20.126.135", "22", "root", "", 1),
+        Server("172.20.126.136", "22", "root", "", 2),
+        Server("172.20.126.137", "22", "root", "", 3)
     ]
 
     cfgs = [

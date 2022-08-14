@@ -28,9 +28,9 @@ def ClearTestContext (server: Server):
 if __name__ == "__main__":
     cloud_servers = [
         Server("172.20.126.134", "22", "root", "", 0),
-        Server("172.20.126.135", "22", "root", "", 0),
-        Server("172.20.126.136", "22", "root", "", 0),
-        Server("172.20.126.137", "22", "root", "", 0)
+        Server("172.20.126.135", "22", "root", "", 1),
+        Server("172.20.126.136", "22", "root", "", 2),
+        Server("172.20.126.137", "22", "root", "", 3)
     ]
     threads = []
     for server in cloud_servers:
