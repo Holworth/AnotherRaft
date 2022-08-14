@@ -18,7 +18,7 @@ def build_executable(server: Server, type: str):
     commands = [
         "cd /home/kangqihan",
         "rm -rf AnotherRaft",
-        "git clone kqh:Holworth/AnotherRaft.git -b {}".format(type),
+        "git clone git@github.com:Holworth/AnotherRaft.git -b {}".format(type),
         "cd AnotherRaft",
         "bash scripts/build.sh"
     ]
@@ -41,10 +41,11 @@ def build_executable(server: Server, type: str):
     print("Finish Build Executable File on Server {}".format(server.ip))
 
 if __name__ == "__main__":
+    v = ""
     if len(sys.argv) < 2:
-        print("Expect at least one parameter, got {}".format(len(sys.argv) - 1))
-        exit(1)
-    v = sys.argv[1]
+        v = "main"
+    else:
+        v = sys.argv[1]
     if v != "main" and v != "FlexibleK":
         print("Invalid version parameter {}".format(v))
         exit(1)
