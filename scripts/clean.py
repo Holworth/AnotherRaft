@@ -12,7 +12,7 @@ class Server:
 
 def ClearTestContext (server: Server): 
     while True:
-        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*; rm -rf /mnt/ssd1/raft_log*"
+        cmd = "killall bench_server; killall bench_client; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
 
         ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
@@ -32,8 +32,15 @@ if __name__ == "__main__":
         Server("10.118.0.48", "22", "root", "1357246$", 2),
         Server("10.118.0.49", "22", "root", "1357246$", 3)
     ]
+
+    cloud_servers = [
+        Server("172.20.126.134", "22", "root", "", 0),
+        Server("172.20.126.135", "22", "root", "", 0),
+        Server("172.20.126.136", "22", "root", "", 0),
+        Server("172.20.126.137", "22", "root", "", 0)
+    ]
     threads = []
-    for server in servers:
+    for server in cloud_servers:
         t = threading.Thread(target=ClearTestContext, args=(server,))
         t.start()
         threads.append(t)
