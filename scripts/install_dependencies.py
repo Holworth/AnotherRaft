@@ -22,7 +22,7 @@ def install_gtest():
 
 def install_rocksdb_dependencies():
     subprocess.run("sudo yum makecache", shell=True)
-    subprocess.run("sudo yum -y install uuid libuuid uuid-devel", shell=True)
+    subprocess.run("sudo yum -y install uuid uuid-devel libuuid libuuid-devel", shell=True)
     subprocess.run("sudo yum -y install zlib-devel", shell=True)
     subprocess.run("sudo yum -y install bzip2-devel", shell=True)
     subprocess.run("sudo yum -y install lz4-devel", shell=True)

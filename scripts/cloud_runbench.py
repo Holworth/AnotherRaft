@@ -24,8 +24,8 @@ class BenchmarkConfiguration:
 
 
 def run_kv_server(server: Server) -> int:
-    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cluster3.cfg " + str(server.id) + " > /dev/null 2> /dev/null &"
-    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+    cmd = "cd /home/kangqihan/AnotherRaft/build; nohup bench/bench_server ../bench/cloud_cluster3.cfg " + str(server.id) + " > /dev/null 2> /dev/null &"
+    ssh_cmd = "ssh -i /root/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
     pr = subprocess.run(ssh_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
     if pr.returncode != 0:
         print("[KvServer {}] start failed, clear benchmark".format(server.id))
@@ -36,8 +36,8 @@ def run_kv_server(server: Server) -> int:
 
 def run_kv_client(server: Server, clientid: int, valueSize: str, putCnt:int) -> int:
     cmd = "cd /home/kangqihan/AnotherRaft/build; \
-           bench/bench_client ../bench/cluster3.cfg {} {} {}".format(clientid, valueSize, putCnt)
-    ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+           bench/bench_client ../bench/cloud_cluster3.cfg {} {} {}".format(clientid, valueSize, putCnt)
+    ssh_cmd = "ssh -i /root/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
 
     f = open("./results", "a")
     f.write("------------------ [Benchmark: ValueSize={} PutCnt={}] ------------------- <<<\n".format(valueSize, putCnt))
@@ -62,9 +62,9 @@ def stop_kv_servers(servers: List[Server]):
 
 def stop_kv_server(server: Server):
     while True:
-        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf testdb*; rm -rf /mnt/ssd1/raft_log*"
+        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
 
-        ssh_cmd = "sshpass -p {} ssh {}@{}".format(server.passwd, server.username, server.ip) + " \"" + cmd + "\""
+        ssh_cmd = "ssh -i root/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
         if pr.returncode != 0:
@@ -102,22 +102,22 @@ def run_benchmark_succ(config: BenchmarkConfiguration):
 
 if __name__ == "__main__":
     servers = [
-        Server("10.118.0.40", "22", "root", "ict#96", 0),
-        Server("10.118.0.42", "22", "root", "ict#96", 1),
-        Server("10.118.0.48", "22", "root", "1357246$", 2),
-        Server("10.118.0.49", "22", "root", "1357246$", 3)
+        Server("172.20.126.134", "22", "root", "", 0),
+        Server("172.20.126.135", "22", "root", "", 1),
+        Server("172.20.126.136", "22", "root", "", 2),
+        Server("172.20.126.137", "22", "root", "", 3)
     ]
 
     cfgs = [
-        BenchmarkConfiguration(0, "4K", 100000, servers),
-        BenchmarkConfiguration(0, "8K", 100000, servers),
-        BenchmarkConfiguration(0, "16K", 100000, servers),
-        BenchmarkConfiguration(0, "32K", 100000, servers),
-        BenchmarkConfiguration(0, "64K", 100000, servers),
-        BenchmarkConfiguration(0, "128K", 100000, servers),
-        BenchmarkConfiguration(0, "256K", 80000, servers),
-        BenchmarkConfiguration(0, "512K", 40000, servers),
-        BenchmarkConfiguration(0, "1M", 20000, servers),
+        BenchmarkConfiguration(0, "4K", 10000, servers),
+        BenchmarkConfiguration(0, "8K", 10000, servers),
+        BenchmarkConfiguration(0, "16K", 10000, servers),
+        BenchmarkConfiguration(0, "32K", 10000, servers),
+        BenchmarkConfiguration(0, "64K", 10000, servers),
+        BenchmarkConfiguration(0, "128K", 10000, servers),
+        BenchmarkConfiguration(0, "256K", 10000, servers),
+        BenchmarkConfiguration(0, "512K", 10000, servers),
+        BenchmarkConfiguration(0, "1M", 10000, servers),
         BenchmarkConfiguration(0, "2M", 10000, servers),
     ]
 
