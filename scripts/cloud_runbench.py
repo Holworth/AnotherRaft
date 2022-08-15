@@ -62,9 +62,9 @@ def stop_kv_servers(servers: List[Server]):
 
 def stop_kv_server(server: Server):
     while True:
-        cmd = "killall bench_server; cd /home/kangqihan/AnotherRaft/build; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
+        cmd = "killall bench_server; killall bench_client; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
 
-        ssh_cmd = "ssh -i root/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
+        ssh_cmd = "ssh -i ~/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
         if pr.returncode != 0:
