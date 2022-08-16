@@ -28,9 +28,11 @@ namespace config {
 const int64_t kHeartbeatInterval = 100;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
 const int64_t kReplicateInterval = 500;
-const int64_t kElectionTimeoutMin = 500; // 500ms
-const int64_t kElectionTimeoutMax = 1000; // 800ms
-};                                              // namespace config
+const int64_t kElectionTimeoutMin = 500;   // 500ms
+const int64_t kElectionTimeoutMax = 1000;  // 800ms
+const int kCRaftEncodingK = 2;
+const int kCRaftEncodingM = 3;
+};                                         // namespace config
 
 struct RaftConfig {
   // The node id of curernt peer. A node id is the unique identifier to
@@ -232,9 +234,9 @@ class RaftState {
   // copy this entry to its own log and replicate it to other followers
   ProposeResult Propose(const CommandData &command);
 
-  raft::raft_index_t LastIndex() { 
+  raft::raft_index_t LastIndex() {
     std::scoped_lock<std::mutex> mtx(this->mtx_);
-    return lm_->LastLogEntryIndex(); 
+    return lm_->LastLogEntryIndex();
   }
 
  public:
@@ -263,6 +265,9 @@ class RaftState {
   raft_index_t LastLogIndex() const { return lm_->LastLogEntryIndex(); }
   raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index); }
 
+  int CRaftK() const { return craft_k_; }
+  int CRaftM() const { return craft_m_; }
+
  private:
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
@@ -284,13 +289,13 @@ class RaftState {
                          Stripe *stripe);
 
   // Decoding all fragments contained in a stripe into a complete log entry
-  bool DecodingRaftEntry(Stripe* stripe, LogEntry* ent);
+  bool DecodingRaftEntry(Stripe *stripe, LogEntry *ent);
 
-  bool NeedOverwriteLogEntry(const Version& old_version, const Version& new_version);
+  bool NeedOverwriteLogEntry(const Version &old_version, const Version &new_version);
 
-  void FilterDuplicatedCollectedFragments(Stripe& stripes);
+  void FilterDuplicatedCollectedFragments(Stripe &stripes);
 
-  bool FindFullEntryInStripe(const Stripe* stripe, LogEntry* ent);
+  bool FindFullEntryInStripe(const Stripe *stripe, LogEntry *ent);
 
   // Iterate through the entries carried by input args and check if there is conflicting
   // entry: Same index but different term. If there is one, delete all following entries.
@@ -417,6 +422,9 @@ class RaftState {
   // A randomized election timeout based on above interval
   int64_t election_time_out_;
   int64_t heartbeatTimeInterval;
+
+  int craft_k_ = config::kCRaftEncodingK; 
+  int craft_m_ = config::kCRaftEncodingM;
 
  private:
   int vote_me_cnt_;

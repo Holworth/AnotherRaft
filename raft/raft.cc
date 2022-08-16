@@ -953,14 +953,23 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
 // TODO: Update logic
 void RaftState::replicateEntries() {
   LOG(util::kRaft, "S%d REPLICATE ENTRIES", id_);
-  auto live_servers = live_monitor_.LiveNumber();
+  auto live_servers_num = live_monitor_.LiveNumber();
 
-  int encode_k = live_servers - livenessLevel();
-  int encode_m = livenessLevel();
+  int encode_k = 0, encode_m = 0;
+  if (live_servers_num >= livenessLevel() + CRaftK()) {
+    encode_k = CRaftK();
+    encode_m = CRaftM();
+  } else {
+    encode_k = 1;
+    encode_m = live_servers_num - encode_k;
+  }
+
+  assert(encode_k != 0);
+
   auto version_num = VersionNumber{CurrentTerm(), NextSequence()};
 
   LOG(util::kRaft, "S%d Estimate %d Server Alive K:%d M:%d VERSION NUM:%s", id_,
-      live_servers, encode_k, encode_m, version_num.ToString().c_str());
+      live_servers_num, encode_k, encode_m, version_num.ToString().c_str());
 
   // Step1: Encoding all necessary entries from CommitIndex() to LastIndex()
   auto last_index = lm_->LastLogEntryIndex();
@@ -1005,7 +1014,8 @@ void RaftState::replicateEntries() {
   int start_frag_id = 0;
   for (const auto &[id, _] : peers_) {
     if (live_monitor_.IsAlive(id)) {
-      frag_map[id] = start_frag_id++;
+      // QUESTION: What if there are more than k+m servers in current cluster?
+      frag_map[id] = (start_frag_id++) % (encode_k + encode_m);
     }
   }
 
