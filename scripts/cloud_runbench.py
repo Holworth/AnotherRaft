@@ -79,7 +79,7 @@ def stop_kv_server(server: Server):
 def run_benchmark(config: BenchmarkConfiguration) -> int:
     kv_servers = config.servers[:-1]
     alive_num = len(kv_servers) - config.fail_num
-    kv_servers = kv_servers[0: alive_num - 1]
+    kv_servers = kv_servers[0: alive_num]
     kv_client = config.servers[-1]
 
     for server in kv_servers:
