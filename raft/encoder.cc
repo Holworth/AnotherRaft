@@ -13,6 +13,15 @@ bool Encoder::EncodeSlice(const Slice& slice, int k, int m, EncodingResults* res
   auto fragment_size = (encoding_size + k - 1) / k;
   auto start_ptr = reinterpret_cast<unsigned char*>(slice.data());
 
+  // A special case for k = 1, avoiding allocating new memories
+  // i.e. The resultant slice is exactly the same as input slice
+  if (k == 1) {
+    for (int i = 0; i < k + m; ++i) {
+      results->insert({i, slice});
+    }
+    return true;
+  }
+
   // set input vector
   for (int i = 0; i < k; i++, start_ptr += fragment_size) {
     encode_input_[i] = start_ptr;
