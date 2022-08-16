@@ -15,12 +15,13 @@ class Server:
         self.id = id
 
 class BenchmarkConfiguration:
-    def __init__(self, client_id, value_size, put_cnt, servers, cfg_file) -> None:
+    def __init__(self, client_id, value_size, put_cnt, servers, cfg_file, fail_num) -> None:
         self.client_id = client_id
         self.value_size = value_size
         self.put_cnt = put_cnt
         self.servers = servers
         self.cfg_file = cfg_file
+        self.fail_num = fail_num
 
 
 
@@ -76,15 +77,20 @@ def stop_kv_server(server: Server):
             break
 
 def run_benchmark(config: BenchmarkConfiguration) -> int:
-    for server in config.servers[:-1]:
+    kv_servers = config.servers[:-1]
+    alive_num = len(kv_servers) - config.fail_num
+    kv_servers = kv_servers[0: alive_num - 1]
+    kv_client = config.servers[-1]
+
+    for server in kv_servers:
         r = run_kv_server(server, config)
         if r != 0:
             stop_kv_servers(config.servers[:-1])
             print("[Failed to launch server{}, kill all servers, Retry]".format(server.id))
             return r
 
-    r = run_kv_client(config.servers[-1], config.client_id, config.value_size, config.put_cnt, config)
-    stop_kv_servers(config.servers[:-1])
+    r = run_kv_client(kv_client, config.client_id, config.value_size, config.put_cnt, config)
+    stop_kv_servers(kv_servers)
     if r != 0:
         print("[Failed to execute client, kill all servers, Retry]")
         return r
@@ -120,16 +126,29 @@ if __name__ == "__main__":
     ]
 
     cfgs = [
-        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file),
-        BenchmarkConfiguration(0, "2M", 10000, servers, cfg_file),
+        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "2M", 8000, servers, cfg_file, 0),
+    ]
+
+    fail_cfgs = [
+        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "2M", 8000, servers, cfg_file, 1),
     ]
 
     for cfg in cfgs:
