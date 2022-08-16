@@ -82,6 +82,11 @@ def run_benchmark(config: BenchmarkConfiguration) -> int:
     kv_servers = kv_servers[0: alive_num]
     kv_client = config.servers[-1]
 
+    print("Alive Server Number = {}".format(alive_num))
+    if alive_num <= 0:
+        print("Invalid Alive number, check input fail server number")
+        exit(1)
+
     for server in kv_servers:
         r = run_kv_server(server, config)
         if r != 0:
@@ -148,7 +153,20 @@ if __name__ == "__main__":
         BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 1),
         BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 1),
         BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "2M", 8000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "2M", 7000, servers, cfg_file, 1),
+    ]
+
+    fail_cfgs2 = [
+        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "2M", 7000, servers, cfg_file, 2),
     ]
 
     for cfg in cfgs:
