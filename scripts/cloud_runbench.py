@@ -121,7 +121,7 @@ if __name__ == "__main__":
         cfg_file = sys.argv[1]
         print("[Use input configuration file: {}]".format(cfg_file))
 
-    servers = [
+    servers5 = [
         Server("172.20.126.134", "22", "root", "", 0),
         Server("172.20.126.135", "22", "root", "", 1),
         Server("172.20.126.136", "22", "root", "", 2),
@@ -130,43 +130,67 @@ if __name__ == "__main__":
         Server("172.20.126.139", "22", "root", "", 5)
     ]
 
+    servers7 = [
+        Server("172.20.126.134", "22", "root", "", 0),
+        Server("172.20.126.135", "22", "root", "", 1),
+        Server("172.20.126.136", "22", "root", "", 2),
+        Server("172.20.126.137", "22", "root", "", 3),
+        Server("172.20.126.138", "22", "root", "", 4),
+        Server("172.20.126.139", "22", "root", "", 5),
+        Server("172.20.126.140", "22", "root", "", 6),
+        Server("172.20.126.141", "22", "root", "", 7),
+    ]
+
     cfgs = [
-        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 0),
-        BenchmarkConfiguration(0, "2M", 8000, servers, cfg_file, 0),
+        BenchmarkConfiguration(0, "4K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "8K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "16K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "32K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "64K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "128K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "256K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "512K", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "1M", 10000, servers5, cfg_file, 0),
+        BenchmarkConfiguration(0, "2M", 8000, servers5, cfg_file, 0),
     ]
 
     fail_cfgs = [
-        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 1),
-        BenchmarkConfiguration(0, "2M", 7000, servers, cfg_file, 1),
+        BenchmarkConfiguration(0, "4K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "8K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "16K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "32K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "64K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "128K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "256K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "512K", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "1M", 10000, servers5, cfg_file, 1),
+        BenchmarkConfiguration(0, "2M", 7000, servers5, cfg_file, 1),
     ]
 
     fail_cfgs2 = [
-        BenchmarkConfiguration(0, "4K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "8K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "16K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "32K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "64K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "128K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "256K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "512K", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "1M", 10000, servers, cfg_file, 2),
-        BenchmarkConfiguration(0, "2M", 7000, servers, cfg_file, 2),
+        BenchmarkConfiguration(0, "4K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "8K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "16K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "32K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "64K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "128K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "256K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "512K", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "1M", 10000, servers5, cfg_file, 2),
+        BenchmarkConfiguration(0, "2M", 7000, servers5, cfg_file, 2),
+    ]
+
+    cfgs7 = [
+        BenchmarkConfiguration(0, "4K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "8K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "16K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "32K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "64K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "128K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "256K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "512K", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "1M", 10000, servers7, cfg_file, 0),
+        BenchmarkConfiguration(0, "2M", 8000, servers7, cfg_file, 0),
     ]
 
     for cfg in cfgs:
