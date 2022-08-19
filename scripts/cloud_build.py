@@ -46,7 +46,7 @@ if __name__ == "__main__":
         v = "main"
     else:
         v = sys.argv[1]
-    if v != "main" and v != "FlexibleK":
+    if v != "main" and v != "FlexibleK" and v != "CRaft":
         print("Invalid version parameter {}".format(v))
         exit(1)
 
@@ -54,7 +54,12 @@ if __name__ == "__main__":
         Server("172.20.126.134", "22", "root", "", 0),
         Server("172.20.126.135", "22", "root", "", 1),
         Server("172.20.126.136", "22", "root", "", 2),
-        Server("172.20.126.137", "22", "root", "", 3)
+        Server("172.20.126.137", "22", "root", "", 3),
+        Server("172.20.126.138", "22", "root", "", 4),
+        Server("172.20.126.139", "22", "root", "", 5),
+        Server("172.20.126.140", "22", "root", "", 6),
+        Server("172.20.126.141", "22", "root", "", 6),
+        Server("172.20.126.142", "22", "root", "", 6),
     ]
 
     threads = []
