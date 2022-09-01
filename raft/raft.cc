@@ -1220,15 +1220,13 @@ RaftState::MappingTable RaftState::ConstructMappingTable() {
   }
   assert(res.size() >= livenessLevel() + 1);
 
-  auto fillin_fragments = [&](std::pair<raft_node_id_t, std::vector<raft_frag_id_t>> &d) {
-    if (d.first != this->id_) {
+  for (auto iter = res.begin(); iter != res.end(); ++iter) {
+    if (iter->first != this->id_) {
       for (auto frag_id = start_frag_id; frag_id < HRaftK() + HRaftM(); ++frag_id) {
-        d.second.push_back(frag_id);
+        iter->second.push_back(frag_id);
       }
     }
-  };
-
-  std::for_each(res.begin(), res.end(), fillin_fragments);
+  }
   return res;
 }
 
