@@ -1,9 +1,9 @@
 #pragma once
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <sstream>
-#include <cassert>
 
 #include "RCF/RCF.hpp"
 
@@ -75,8 +75,12 @@ struct Version {
   // Encoding related data
   int k, m;
   raft_frag_id_t fragment_id;
+  raft_index_t raft_index;
 
-  static Version Default() { return {VersionNumber::Default(), 0, 0, 0}; }
+  static Version Default() { return {VersionNumber::Default(), 0, 0, 0, 0}; }
+
+  raft_index_t GetRaftIndex() const { return raft_index; }
+  void SetRaftIndex(raft_index_t raft_index) { this->raft_index = raft_index; }
 
   VersionNumber GetVersionNumber() const { return version_number; }
   int GetK() const { return k; }
@@ -91,9 +95,10 @@ struct Version {
   // Dump the data
   std::string ToString() const {
     char buf[256];
-    sprintf(buf, "Version{VersionNumber{Term=%d, Seq=%d}, K=%d, M=%d, FragID=%d}",
+    sprintf(buf,
+            "Version{VersionNumber{Term=%d, Seq=%d}, K=%d, M=%d, FragID=%d, Index=%u}",
             GetVersionNumber().Term(), GetVersionNumber().Seq(), GetK(), GetM(),
-            GetFragmentId());
+            GetFragmentId(), GetRaftIndex());
     return std::string(buf);
   }
 

@@ -30,9 +30,9 @@ const int64_t kCollectFragmentsInterval = 100;  // 100ms
 const int64_t kReplicateInterval = 500;
 const int64_t kElectionTimeoutMin = 500;   // 500ms
 const int64_t kElectionTimeoutMax = 1000;  // 800ms
-const int kCRaftEncodingK = 2;
-const int kCRaftEncodingM = 5;
-};                                         // namespace config
+const int kHRaftEncodingK = 4;
+const int kHRaftEncodingM = 3;
+};  // namespace config
 
 struct RaftConfig {
   // The node id of curernt peer. A node id is the unique identifier to
@@ -204,9 +204,12 @@ class RaftPeer {
  public:
   raft_index_t next_index_, match_index_;
   std::unordered_map<raft_index_t, Version> matchVersion;
+  std::unordered_map<raft_index_t, std::vector<Version>> matchVersions_;
 };
 
 class RaftState {
+  using MappingTable = std::unordered_map<raft_node_id_t, std::vector<raft_frag_id_t>>;
+
  public:
   // Construct a RaftState instance from a specified configuration.
   static RaftState *NewRaftState(const RaftConfig &);
@@ -265,8 +268,8 @@ class RaftState {
   raft_index_t LastLogIndex() const { return lm_->LastLogEntryIndex(); }
   raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index); }
 
-  int CRaftK() const { return craft_k_; }
-  int CRaftM() const { return craft_m_; }
+  int HRaftK() const { return hraft_k_; }
+  int HRaftM() const { return hraft_m_; }
 
  private:
   // Check specified raft_index and raft_term is newer than log entries stored
@@ -357,6 +360,9 @@ class RaftState {
     }
   };
 
+  // Construct a mapping table from current live followers and encoding fragments
+  MappingTable ConstructMappingTable();
+
   // In flexibleK, the leader needs to send AppendEntries arguments in every
   // heartbeat round
   void replicateEntries();
@@ -392,7 +398,14 @@ class RaftState {
   raft_index_t last_applied_;
 
   // Manage all log entries
+  //
+  // (kqh): For simplicity we use multiple LogManager to contain different fragments
+  // each different fragments is added to different LogManager. Then we need a "main"
+  // log manager to get information about RaftIndex and RaftTerm
+  const static int kMaxFragmentNumber = config::kHRaftEncodingK + config::kHRaftEncodingM;
   LogManager *lm_;
+  LogManager *logs_[kMaxFragmentNumber];
+
   Storage *storage_;
 
   // For FlexibleK and CRaft: We need to detect the number of live servers
@@ -423,8 +436,8 @@ class RaftState {
   int64_t election_time_out_;
   int64_t heartbeatTimeInterval;
 
-  int craft_k_ = config::kCRaftEncodingK; 
-  int craft_m_ = config::kCRaftEncodingM;
+  int hraft_k_ = config::kHRaftEncodingK;
+  int hraft_m_ = config::kHRaftEncodingM;
 
  private:
   int vote_me_cnt_;

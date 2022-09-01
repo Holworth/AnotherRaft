@@ -1,5 +1,6 @@
 #include "raft.h"
 
+#include <algorithm>
 #include <cassert>
 #include <chrono>
 #include <cstdio>
@@ -52,7 +53,11 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->rpc_clients_ = config.rpc_clients;
 
   // Construct log manager from persistence storage
-  ret->lm_ = LogManager::NewLogManager(config.storage);
+  for (int i = 0; i < kMaxFragmentNumber; ++i) {
+    ret->logs_[i] = LogManager::NewLogManager(config.storage);
+  }
+  // The main log manager points to the first log manager among all logs
+  ret->lm_ = ret->logs_[0];
 
   LOG(util::kRaft, "S%d Log Recover from storage LI%d", ret->id_,
       ret->lm_->LastLogEntryIndex());
@@ -243,19 +248,30 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
     // TODO: Modify logic here
     for (int i = 0; i < reply->version_cnt; ++i) {
-      auto raft_index = reply->prev_entry_index + i + 1;
+      // auto raft_index = reply->prev_entry_index + i + 1;
+      auto raft_index = reply->versions[i].GetRaftIndex();
       auto reply_version = reply->versions[i];
 
-      if (node->matchVersion.count(raft_index) == 0 ||
-          node->matchVersion[raft_index].GetVersionNumber().compare(
-              reply_version.GetVersionNumber()) < 0) {
-        node->matchVersion[raft_index] = reply_version;
-        // Debug:
-        // -----------------------------------------------------------------
-        LOG(util::kRaft, "S%d Update S%d MATCH VERSION: %s", id_, peer_id,
-            reply_version.ToString().c_str());
-        // -----------------------------------------------------------------
+      // if (node->matchVersion.count(raft_index) == 0 ||
+      //     node->matchVersion[raft_index].GetVersionNumber().compare(
+      //         reply_version.GetVersionNumber()) < 0) {
+      //   node->matchVersion[raft_index] = reply_version;
+      //   // Debug:
+      //   // -----------------------------------------------------------------
+      //   LOG(util::kRaft, "S%d Update S%d MATCH VERSION: %s", id_, peer_id,
+      //       reply_version.ToString().c_str());
+      //   // -----------------------------------------------------------------
+      // }
+
+      if (node->matchVersion.count(raft_index) == 0) {
+        node->matchVersions_[raft_index] = std::vector<Version>();
       }
+      node->matchVersions_[raft_index].push_back(reply_version);
+      // Debug:
+      // -----------------------------------------------------------------
+      LOG(util::kRaft, "S%d Add S%d MATCH VERSION: %s", id_, peer_id,
+          reply_version.ToString().c_str());
+      // -----------------------------------------------------------------
     }
     tryUpdateCommitIndex();
   } else {
@@ -500,8 +516,14 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
   auto old_last_index = lm_->LastLogEntryIndex();
   for (auto i = array_index; i < args->entries.size(); ++i) {
     auto raft_index = args->prev_log_index + i + 1;
+    auto frag_id = args->entries[i].GetVersion().GetFragmentId();
+
+    assert(frag_id < HRaftK() + HRaftM());
+
+    logs_[frag_id]->AppendLogEntry(args->entries[i]);
+
     // Debug -------------------------------------------
-    lm_->AppendLogEntry(args->entries[i]);
+    // lm_->AppendLogEntry(args->entries[i]);
 
     auto reply_version = args->entries[i].GetVersion();
     LOG(util::kRaft, "S%d APPEND I%d V(%s)", id_, raft_index,
@@ -514,21 +536,24 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
 
   reply->version_cnt = reply->versions.size();
 
+  // Do not consider persistent for now
+
   // Persist newly added log entries, or persist the changes to deleted log entries
-  if (storage_ != nullptr) {
-    std::vector<LogEntry> persist_entries;
-    raft_index_t lo =
-        (conflict_index == 0) ? (array_index + args->prev_log_index + 1) : conflict_index;
-    if (lo <= lm_->LastLogEntryIndex()) {
-      lm_->GetLogEntriesFrom(lo, &persist_entries);
-      LOG(util::kRaft, "S%d Persist Entries (I%d->I%d)", id_, lo,
-          lm_->LastLogEntryIndex());
-      storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
-      storage_->SetLastIndex(lm_->LastLogEntryIndex());
-      LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) Finished", id_, lo,
-          lm_->LastLogEntryIndex());
-    }
-  }
+  // if (storage_ != nullptr) {
+  //   std::vector<LogEntry> persist_entries;
+  //   raft_index_t lo =
+  //       (conflict_index == 0) ? (array_index + args->prev_log_index + 1) :
+  //       conflict_index;
+  //   if (lo <= lm_->LastLogEntryIndex()) {
+  //     lm_->GetLogEntriesFrom(lo, &persist_entries);
+  //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d)", id_, lo,
+  //         lm_->LastLogEntryIndex());
+  //     storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
+  //     storage_->SetLastIndex(lm_->LastLogEntryIndex());
+  //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) Finished", id_, lo,
+  //         lm_->LastLogEntryIndex());
+  //   }
+  // }
 }
 
 void RaftState::tryUpdateCommitIndex() {
@@ -563,14 +588,19 @@ void RaftState::tryUpdateCommitIndex() {
       // if (node->matchVersion[N].sequence == request_version.sequence) {
       //   agree_cnt++;
       // }
-      if (node->matchVersion[N].GetVersionNumber().compare(
+      if (node->matchVersions_[N].front().GetVersionNumber().compare(
               request_version.GetVersionNumber()) >= 0) {
         // Two different servers may replicate the same fragment, we must decide the
         // number of different fragments that have been replicated
         auto frag_id = node->matchVersion[N].GetFragmentId();
-        if (replicate_frag[frag_id] == false) {
-          agree_cnt++;
-          replicate_frag[frag_id] = true;
+
+        for (const auto &v : node->matchVersions_[N]) {
+          auto frag_id = v.GetFragmentId();
+          LOG(util::kRaft, "S%d has replicate Frag%d in Ent Index%d", id_, frag_id, N);
+          if (replicate_frag[frag_id] == false) {
+            agree_cnt++;
+            replicate_frag[frag_id] = true;
+          }
         }
       }
     }
@@ -895,7 +925,7 @@ void RaftState::EncodingRaftEntry(raft_index_t raft_index, int k, int m,
     encoded_ent.SetCommandLength(ent->CommandLength());
     encoded_ent.SetNotEncodedSlice(Slice(ent->CommandData().data(), ent->StartOffset()));
     encoded_ent.SetFragmentSlice(frag);
-    encoded_ent.SetVersion(Version{version_num, k, m, frag_id});
+    encoded_ent.SetVersion(Version{version_num, k, m, frag_id, raft_index});
     stripe->fragments[frag_id] = encoded_ent;
   }
 }
@@ -950,19 +980,12 @@ bool RaftState::DecodingRaftEntry(Stripe *stripe, LogEntry *ent) {
   return true;
 }
 
-// TODO: Update logic
 void RaftState::replicateEntries() {
   LOG(util::kRaft, "S%d REPLICATE ENTRIES", id_);
   auto live_servers_num = live_monitor_.LiveNumber();
 
-  int encode_k = 0, encode_m = 0;
-  if (live_servers_num >= livenessLevel() + CRaftK()) {
-    encode_k = CRaftK();
-    encode_m = CRaftM();
-  } else {
-    encode_k = 1;
-    encode_m = live_servers_num - encode_k;
-  }
+  //(kqh) For HRaft, the encoding parameters k and m are fixed
+  int encode_k = HRaftK(), encode_m = HRaftM();
 
   assert(encode_k != 0);
 
@@ -1009,15 +1032,8 @@ void RaftState::replicateEntries() {
     last_replicate_.insert_or_assign(raft_index, new_version);
   }
 
-  // Step2: construct a map to decide which fragment will each follower receive
-  std::map<raft_node_id_t, raft_frag_id_t> frag_map;
-  int start_frag_id = 0;
-  for (const auto &[id, _] : peers_) {
-    if (live_monitor_.IsAlive(id)) {
-      // QUESTION: What if there are more than k+m servers in current cluster?
-      frag_map[id] = (start_frag_id++) % (encode_k + encode_m);
-    }
-  }
+  // Step2: construct a map to decide which fragments should be sent to each follower
+  auto frag_map = ConstructMappingTable();
 
   // Step3: For each follower, send out the messages
   for (const auto &[id, _] : peers_) {
@@ -1059,13 +1075,14 @@ void RaftState::replicateEntries() {
     // Start send entries within the range [CommitIndex()+1, LastIndex()]
     auto send_index = CommitIndex() + 1;
     for (; send_index <= lm_->LastLogEntryIndex(); ++send_index) {
-      assert(encoded_stripe_.count(send_index) != 0);
-      auto fragment_id = frag_map[id];
-      auto fragment = encoded_stripe_[send_index]->fragments[fragment_id];
-      assert(fragment_id == fragment.GetVersion().fragment_id);
-      args.entries.push_back(fragment);
-      LOG(util::kRaft, "S%d Send (I%d T%d FragId%d) To S%d", id_, send_index,
-          fragment.Term(), fragment_id, id);
+      for (const auto &fragment_id : frag_map[id]) {
+        assert(encoded_stripe_.count(send_index) != 0);
+        auto fragment = encoded_stripe_[send_index]->fragments[fragment_id];
+        assert(fragment_id == fragment.GetVersion().fragment_id);
+        args.entries.push_back(fragment);
+        LOG(util::kRaft, "S%d Send (I%d T%d FragId%d) To S%d", id_, send_index,
+            fragment.Term(), fragment_id, id);
+      }
     }
     args.entry_cnt = args.entries.size();
     rpc_clients_[id]->sendMessage(args);
@@ -1190,6 +1207,29 @@ bool RaftState::FindFullEntryInStripe(const Stripe *stripe, LogEntry *ent) {
     }
   }
   return false;
+}
+
+RaftState::MappingTable RaftState::ConstructMappingTable() {
+  raft_frag_id_t start_frag_id = 0;
+  MappingTable res;
+  for (const auto &[id, _] : peers_) {
+    if (live_monitor_.IsAlive(id)) {
+      res.insert({id, std::vector<raft_frag_id_t>()});
+      res[id].push_back(start_frag_id++);
+    }
+  }
+  assert(res.size() >= livenessLevel() + 1);
+
+  auto fillin_fragments = [&](std::pair<raft_node_id_t, std::vector<raft_frag_id_t>> &d) {
+    if (d.first != this->id_) {
+      for (auto frag_id = start_frag_id; frag_id < HRaftK() + HRaftM(); ++frag_id) {
+        d.second.push_back(frag_id);
+      }
+    }
+  };
+
+  std::for_each(res.begin(), res.end(), fillin_fragments);
+  return res;
 }
 
 }  // namespace raft
