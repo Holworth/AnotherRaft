@@ -1224,6 +1224,8 @@ RaftState::MappingTable RaftState::ConstructMappingTable() {
     if (iter->first != this->id_) {
       for (auto frag_id = start_frag_id; frag_id < HRaftK() + HRaftM(); ++frag_id) {
         iter->second.push_back(frag_id);
+        LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, iter->first,
+            frag_id);
       }
     }
   }
