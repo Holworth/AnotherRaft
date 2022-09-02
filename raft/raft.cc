@@ -574,15 +574,14 @@ void RaftState::tryUpdateCommitIndex() {
     for (auto &[id, node] : peers_) {
       // If the node's last response version matches the last requested
       // version by leader
-      if (node->matchVersion.count(N) == 0) {
+      if (node->matchVersions_.count(N) == 0) {
         continue;
       }
 
       // Debug:
       // ------------------------------------------------------------------------------
-      LOG(util::kRaft, "S%d COMMIT VERSION: %s S%d REPLY VERSION: %s", id_,
-          request_version.ToString().c_str(), id,
-          node->matchVersion[N].ToString().c_str());
+      LOG(util::kRaft, "S%d COMMIT REQUEST VERSION: %s", id_,
+          request_version.ToString().c_str());
       // ------------------------------------------------------------------------------
 
       // TODO: Is it ok to only check the version number?
@@ -593,11 +592,9 @@ void RaftState::tryUpdateCommitIndex() {
               request_version.GetVersionNumber()) >= 0) {
         // Two different servers may replicate the same fragment, we must decide the
         // number of different fragments that have been replicated
-        auto frag_id = node->matchVersion[N].GetFragmentId();
-
         for (const auto &v : node->matchVersions_[N]) {
           auto frag_id = v.GetFragmentId();
-          LOG(util::kRaft, "S%d has replicate Frag%d in Ent Index%d", id_, frag_id, N);
+          LOG(util::kRaft, "S%d MatchVersions: %s", id_, v.ToString().c_str());
           if (replicate_frag[frag_id] == false) {
             agree_cnt++;
             replicate_frag[frag_id] = true;
