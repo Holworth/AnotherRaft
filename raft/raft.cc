@@ -927,6 +927,8 @@ void RaftState::EncodingRaftEntry(raft_index_t raft_index, int k, int m,
     encoded_ent.SetNotEncodedSlice(Slice(ent->CommandData().data(), ent->StartOffset()));
     encoded_ent.SetFragmentSlice(frag);
     encoded_ent.SetVersion(Version{version_num, k, m, frag_id, raft_index});
+    LOG(util::kRaft, "S%d EncodeEnt Version:%s", id_,
+        encoded_ent.GetVersion().ToString().c_str());
     stripe->fragments[frag_id] = encoded_ent;
   }
 }
