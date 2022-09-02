@@ -1216,7 +1216,9 @@ RaftState::MappingTable RaftState::ConstructMappingTable() {
     if (live_monitor_.IsAlive(id)) {
       res.insert({id, std::vector<raft_frag_id_t>()});
       res[id].push_back(start_frag_id++);
-      LOG(util::kRaft, "S%d detect S%d is alive", id_, id);
+      // LOG(util::kRaft, "S%d detect S%d is alive", id_, id);
+      LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id,
+          start_frag_id - 1);
     }
   }
   assert(res.size() >= livenessLevel() + 1);
