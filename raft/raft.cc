@@ -49,6 +49,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
     auto peer = new RaftPeer();
     ret->peers_.insert({id, peer});
   }
+  ret->peers_.insert({ret->id_, new RaftPeer()});
 
   ret->rpc_clients_ = config.rpc_clients;
 

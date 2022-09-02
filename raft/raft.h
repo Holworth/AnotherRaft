@@ -422,7 +422,7 @@ class RaftState {
   PreLeaderStripeStore preleader_stripe_store_;
 
  private:
-  std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
+  std::map<raft_node_id_t, RaftPeer *> peers_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient *> rpc_clients_;
 
   util::Timer election_timer_;   // Record elapse time during election
