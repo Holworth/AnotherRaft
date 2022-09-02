@@ -1081,8 +1081,9 @@ void RaftState::replicateEntries() {
         auto fragment = encoded_stripe_[send_index]->fragments[fragment_id];
         assert(fragment_id == fragment.GetVersion().fragment_id);
         args.entries.push_back(fragment);
-        LOG(util::kRaft, "S%d Send (I%d T%d FragId%d) To S%d", id_, send_index,
-            fragment.Term(), fragment_id, id);
+        LOG(util::kRaft, "S%d Send (I%d T%d FragId%d) To S%d VersionIndex%d", id_,
+            send_index, fragment.Term(), fragment_id, id,
+            fragment.GetVersion().GetRaftIndex());
       }
     }
     args.entry_cnt = args.entries.size();
