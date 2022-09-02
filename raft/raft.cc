@@ -58,7 +58,7 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
     ret->logs_[i] = LogManager::NewLogManager(config.storage);
   }
   // The main log manager points to the first log manager among all logs
-  ret->lm_ = ret->logs_[0];
+  ret->lm_ = ret->logs_[ret->id_];
 
   LOG(util::kRaft, "S%d Log Recover from storage LI%d", ret->id_,
       ret->lm_->LastLogEntryIndex());
@@ -1017,7 +1017,7 @@ void RaftState::replicateEntries() {
       assert(stripe->version.GetM() == encode_m);
     }
 
-    auto new_version = Version{version_num, encode_k, encode_m};
+    auto new_version = Version{version_num, encode_k, encode_m, raft_index};
     auto stripe = encoded_stripe_[raft_index];
     stripe->version = new_version;
 
@@ -1212,28 +1212,38 @@ bool RaftState::FindFullEntryInStripe(const Stripe *stripe, LogEntry *ent) {
 }
 
 RaftState::MappingTable RaftState::ConstructMappingTable() {
-  raft_frag_id_t start_frag_id = 0;
   MappingTable res;
   for (const auto &[id, _] : peers_) {
+    assert(static_cast<raft_frag_id_t>(id) < HRaftK() + HRaftM());
     if (live_monitor_.IsAlive(id)) {
       res.insert({id, std::vector<raft_frag_id_t>()});
-      res[id].push_back(start_frag_id++);
+      res[id].push_back(static_cast<raft_frag_id_t>(id));
       // LOG(util::kRaft, "S%d detect S%d is alive", id_, id);
-      LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id,
-          start_frag_id - 1);
+      LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id, id);
     }
   }
   assert(res.size() >= livenessLevel() + 1);
 
-  for (auto iter = res.begin(); iter != res.end(); ++iter) {
-    if (iter->first != this->id_) {
-      for (auto frag_id = start_frag_id; frag_id < HRaftK() + HRaftM(); ++frag_id) {
+  auto iter = res.begin();
+  int cnt = 0;
+  while (iter != res.end()) {
+    if (iter->first == id_) {
+      iter++;
+      continue;
+    }
+    for (auto frag_id = 0; frag_id < HRaftK() + HRaftM(); ++frag_id) {
+      if (!live_monitor_.IsAlive(frag_id)) {
         iter->second.push_back(frag_id);
         LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, iter->first,
             frag_id);
       }
     }
+    ++cnt;
+    if (cnt == livenessLevel()) {
+      break;
+    }
   }
+
   return res;
 }
 
