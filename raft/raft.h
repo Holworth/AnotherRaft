@@ -208,7 +208,7 @@ class RaftPeer {
 };
 
 class RaftState {
-  using MappingTable = std::unordered_map<raft_node_id_t, std::vector<raft_frag_id_t>>;
+  using MappingTable = std::map<raft_node_id_t, std::vector<raft_frag_id_t>>;
 
  public:
   // Construct a RaftState instance from a specified configuration.
