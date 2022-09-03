@@ -1239,6 +1239,7 @@ RaftState::MappingTable RaftState::ConstructMappingTable() {
       }
     }
     ++cnt;
+    ++iter;
     if (cnt == livenessLevel()) {
       break;
     }
