@@ -126,9 +126,8 @@ TEST_F(KvClusterTest, TestFollowerFailPutAndGet) {
       {4, {4, {"127.0.0.1", 50004}, {"127.0.0.1", 50009}, "", "./testdb4"}},
   };
   LaunchKvServiceNodes(cluster_config);
+  Disconnect(rand() % node_num_);
   sleepMs(1000);
-  auto leader = GetLeaderId();
-  Disconnect((leader + 1) % node_num_);
 
   auto client = std::make_shared<KvServiceClient>(cluster_config, 0);
   int put_cnt = 10;
