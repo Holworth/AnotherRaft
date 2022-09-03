@@ -264,7 +264,7 @@ void RaftState::Process(AppendEntriesReply *reply) {
       //   // -----------------------------------------------------------------
       // }
 
-      if (node->matchVersion.count(raft_index) == 0) {
+      if (node->matchVersions_.count(raft_index) == 0) {
         node->matchVersions_[raft_index] = std::vector<Version>();
       }
       node->matchVersions_[raft_index].push_back(reply_version);
