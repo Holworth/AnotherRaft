@@ -157,6 +157,29 @@ TEST_F(KvClusterTest, TestOneFollowerFailPutAndGet) {
   ClearTestContext(cluster_config);
 }
 
+TEST_F(KvClusterTest, TestTwoFollowersFailPutAndGet) {
+  auto cluster_config = KvClusterConfig{
+      {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50010}, "", "./testdb0"}},
+      {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50011}, "", "./testdb1"}},
+      {2, {2, {"127.0.0.1", 50002}, {"127.0.0.1", 50012}, "", "./testdb2"}},
+      {3, {3, {"127.0.0.1", 50003}, {"127.0.0.1", 50013}, "", "./testdb3"}},
+      {4, {4, {"127.0.0.1", 50004}, {"127.0.0.1", 50014}, "", "./testdb4"}},
+      {5, {5, {"127.0.0.1", 50005}, {"127.0.0.1", 50015}, "", "./testdb5"}},
+      {6, {6, {"127.0.0.1", 50006}, {"127.0.0.1", 50016}, "", "./testdb6"}},
+  };
+  LaunchKvServiceNodes(cluster_config);
+  auto rand_start = rand();
+  Disconnect(rand_start % node_num_);
+  Disconnect((rand_start + 1) % node_num_);
+  sleepMs(1000);
+
+  auto client = std::make_shared<KvServiceClient>(cluster_config, 0);
+  int put_cnt = 10;
+  CheckBatchPut(client, "key", "value-abcdefg-", 1, put_cnt);
+  CheckBatchGet(client, "key", "value-abcdefg-", 1, put_cnt);
+  ClearTestContext(cluster_config);
+}
+
 TEST_F(KvClusterTest, DISABLED_TestGetAfterOldLeaderFail) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
