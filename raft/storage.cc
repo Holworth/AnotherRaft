@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
+#include "util.h"
 
 static inline size_t alignment(size_t size, size_t align) {
   return ((size - 1) / align + 1) * align;
@@ -47,6 +48,7 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
     }
     ser.serialize_logentry_helper(&ent, this->buf_);
     Append(this->buf_, write_size);
+    LOG(util::kRaft, "Persist Size=%d", write_size);
 
     assert(check_raft_index == ent.Index());
     check_raft_index++;
