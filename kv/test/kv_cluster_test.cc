@@ -117,7 +117,7 @@ TEST_F(KvClusterTest, DISABLED_TestSimplePutGetOperation) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, DISABLED_TestOneFollowerFailPutAndGet) {
+TEST_F(KvClusterTest, DISABLED_TestOneFollowerFailPutAndGetForFiveServers) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50005}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50006}, "", "./testdb1"}},
@@ -136,7 +136,7 @@ TEST_F(KvClusterTest, DISABLED_TestOneFollowerFailPutAndGet) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestOneFollowerFailPutAndGet) {
+TEST_F(KvClusterTest, TestOneFollowerFailPutAndGetForSevenServers) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50010}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50011}, "", "./testdb1"}},
@@ -157,7 +157,7 @@ TEST_F(KvClusterTest, TestOneFollowerFailPutAndGet) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestTwoFollowersFailPutAndGet) {
+TEST_F(KvClusterTest, TestTwoFollowersFailPutAndGetForSevenServers) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50010}, "", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50011}, "", "./testdb1"}},
