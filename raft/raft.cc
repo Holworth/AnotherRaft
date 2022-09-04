@@ -552,7 +552,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
             lm->LastLogEntryIndex(), log_id);
         storage_->PersistEntries(lo, lm->LastLogEntryIndex(), persist_entries);
         storage_->SetLastIndex(lm_->LastLogEntryIndex());
-        LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) Finished for LOGS[%d]", id_, lo,
+        LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d] Finished", id_, lo,
             lm->LastLogEntryIndex(), log_id);
       }
     }
@@ -1091,6 +1091,9 @@ void RaftState::replicateEntries() {
     args.entry_cnt = args.entries.size();
     rpc_clients_[id]->sendMessage(args);
   }
+
+  // Reset the timer once there is a replication call
+  resetReplicateTimer();
 }
 
 void RaftState::sendHeartBeat(raft_node_id_t peer) {
