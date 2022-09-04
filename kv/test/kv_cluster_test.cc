@@ -17,6 +17,7 @@ namespace kv {
 // smoothly without interpretation
 class KvClusterTest : public ::testing::Test {
   static constexpr int kMaxNodeNum = 10;
+  static constexpr size_t kValueSuffixSize = 1024;
 
  public:
   using KvClientPtr = std::shared_ptr<KvServiceClient>;
@@ -77,7 +78,7 @@ class KvClusterTest : public ::testing::Test {
                      const std::string& value_prefix, int key_lo, int key_hi) {
     for (int i = key_lo; i <= key_hi; ++i) {
       auto key = key_prefix + std::to_string(i);
-      auto value = value_prefix + std::to_string(i);
+      auto value = value_prefix + std::to_string(i) + std::string(kValueSuffixSize, 'a');
       EXPECT_EQ(client->Put(key, value).err, kOk);
     }
   }
@@ -87,7 +88,8 @@ class KvClusterTest : public ::testing::Test {
     std::string get_val;
     for (int i = key_lo; i <= key_hi; ++i) {
       auto key = key_prefix + std::to_string(i);
-      auto expect_value = expect_val_prefix + std::to_string(i);
+      auto expect_value =
+          expect_val_prefix + std::to_string(i) + std::string(kValueSuffixSize, 'a');
       EXPECT_EQ(client->Get(key, &get_val).err, kOk);
       ASSERT_EQ(get_val, expect_value);
     }
@@ -136,7 +138,7 @@ TEST_F(KvClusterTest, DISABLED_TestOneFollowerFailPutAndGetForFiveServers) {
   ClearTestContext(cluster_config);
 }
 
-TEST_F(KvClusterTest, TestOneFollowerFailPutAndGetForSevenServers) {
+TEST_F(KvClusterTest, DISABLED_TestOneFollowerFailPutAndGetForSevenServers) {
   auto cluster_config = KvClusterConfig{
       {0, {0, {"127.0.0.1", 50000}, {"127.0.0.1", 50010}, "/mnt/ssd1/log0", "./testdb0"}},
       {1, {1, {"127.0.0.1", 50001}, {"127.0.0.1", 50011}, "/mnt/ssd1/log1", "./testdb1"}},
