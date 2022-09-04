@@ -144,9 +144,10 @@ class FileStorage : public Storage {
   // Append data of specified slice to the file
   void Append(const char* data, size_t size) {
     lseek(fd_, header_.last_off, SEEK_SET);
-    while (size > 0) {
-      auto write_size = ::write(fd_, data, size);
-      size -= write_size;
+    auto remain_size = size;
+    while (remain_size > 0) {
+      auto write_size = ::write(fd_, data, remain_size);
+      remain_size -= write_size;
       data += write_size;
       header_.last_off += write_size;
     }

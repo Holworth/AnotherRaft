@@ -24,7 +24,7 @@ FileStorage* FileStorage::Open(const std::string& filename) {
   ret->AllocateNewInternalBuffer(FileStorage::kInitBufSize);
   ret->fd_ = fd;
   if (auto size = ::read(fd, &(ret->header_), kHeaderSize) < kHeaderSize) {
-    // No complete header
+    // No complete header yet
     ret->InitializeHeaderOnCreation();
     ret->PersistHeader();
   }
