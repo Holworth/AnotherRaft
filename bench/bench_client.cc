@@ -51,7 +51,7 @@ AnalysisResults Analysis(const std::vector<uint64_t>& colleced_data) {
   auto max_lantency = *std::max_element(colleced_data.begin(), colleced_data.end());
   auto std_dev = CalculateStandardDeviation(colleced_data);
 
-  return {avg_lantency, max_lantency};
+  return {avg_lantency, max_lantency, std_dev};
 }
 
 void DumpResults(const std::vector<uint64_t>& collected_data,
