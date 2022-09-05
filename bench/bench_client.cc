@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -28,7 +29,19 @@ struct BenchConfiguration {
 struct AnalysisResults {
   uint64_t avg;
   uint64_t max;
+  double std_dev;  // standard deviation
 };
+
+double CalculateStandardDeviation(const std::vector<uint64_t>& data) {
+  double mean = 0.0;
+  std::for_each(data.begin(), data.end(), [&mean](uint64_t d) { mean += d; });
+  mean /= data.size();
+
+  double pow_sum;
+  std::for_each(data.begin(), data.end(),
+                [&](uint64_t d) { pow_sum += std::pow((double)d - mean, 2); });
+  return std::sqrt(pow_sum / data.size());
+}
 
 AnalysisResults Analysis(const std::vector<uint64_t>& colleced_data) {
   uint64_t data_sum = 0;
@@ -36,8 +49,19 @@ AnalysisResults Analysis(const std::vector<uint64_t>& colleced_data) {
                 [&data_sum](uint64_t n) { data_sum += n; });
   auto avg_lantency = data_sum / colleced_data.size();
   auto max_lantency = *std::max_element(colleced_data.begin(), colleced_data.end());
+  auto std_dev = CalculateStandardDeviation(colleced_data);
 
   return {avg_lantency, max_lantency};
+}
+
+void DumpResults(const std::vector<uint64_t>& collected_data,
+                 const std::string& filename) {
+  std::ofstream of;
+  of.open(filename, std::ios::app);
+  for (const auto& data : collected_data) {
+    of << data << "\n";
+  }
+  of.close();
 }
 
 void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
@@ -75,14 +99,14 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
 
   puts("");
 
-  auto [avg_lantency, max_lantency] = Analysis(lantency);
-  auto [avg_apply_lantency, max_apply_lantency] = Analysis(apply_lantency);
+  auto [avg_lantency, max_lantency, std_dev] = Analysis(lantency);
+  auto [avg_apply_lantency, max_apply_lantency, apply_std_dev] = Analysis(apply_lantency);
 
   printf("[Client Id %d]\n", client->ClientId());
-  printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
-         lantency.size(), avg_lantency, max_lantency);
-  printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us]\n",
-         avg_apply_lantency, max_apply_lantency);
+  printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us][StdDev = %f]\n",
+         lantency.size(), avg_lantency, max_lantency, std_dev);
+  printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us][StdDev = %f]\n",
+         avg_apply_lantency, max_apply_lantency, apply_std_dev);
   fflush(stdout);
 
   int succ_cnt = 0;
@@ -92,7 +116,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto stat = client->Get(p.first, &get_val);
     if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
-    } 
+    }
     // No need to continue executing the benchmark
     if (stat.err == kv::kRequestExecTimeout) {
       break;

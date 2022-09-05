@@ -46,7 +46,7 @@ if __name__ == "__main__":
         v = "main"
     else:
         v = sys.argv[1]
-    if v != "main" and v != "FlexibleK" and v != "CRaft":
+    if v != "main" and v != "FlexibleK" and v != "CRaft" and v != "HRaft":
         print("Invalid version parameter {}".format(v))
         exit(1)
 
