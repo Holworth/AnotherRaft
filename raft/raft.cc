@@ -545,7 +545,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     raft_index_t lo =
         (conflict_index == 0) ? (array_index + args->prev_log_index + 1) : conflict_index;
     for (int log_id = 0; log_id < kMaxFragmentNumber; ++log_id) {
-      LogManager* lm = logs_[log_id];
+      LogManager *lm = logs_[log_id];
       if (lo <= lm->LastLogEntryIndex()) {
         lm->GetLogEntriesFrom(lo, &persist_entries);
         LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d]", id_, lo,
@@ -1058,22 +1058,25 @@ void RaftState::replicateEntries() {
 
     auto next_index = peers_[id]->NextIndex();
 
-    if (next_index < CommitIndex() + 1) {
-      // Fill in with leader's entries to replenish entries that this follower lacks
-      for (auto idx = next_index; idx <= CommitIndex(); ++idx) {
-        args.entries.push_back(*lm_->GetSingleLogEntry(idx));
-      }
-      // For those followers whoes required entries fall behind the CommitIndex(), the
-      // leader simply sends its local data. Most notably, send an empty entry to such
-      // follower does not affect the safety
-      LOG(util::kRaft, "S%d Replenish ent I(%d->%d) To S%d", id_, next_index,
-          CommitIndex(), id);
-      args.prev_log_index = next_index - 1;
-      args.prev_log_term = lm_->TermAt(args.prev_log_index);
-    } else {
-      args.prev_log_index = CommitIndex();
-      args.prev_log_term = lm_->TermAt(args.prev_log_index);
-    }
+    // if (next_index < CommitIndex() + 1) {
+    //   // Fill in with leader's entries to replenish entries that this follower lacks
+    //   for (auto idx = next_index; idx <= CommitIndex(); ++idx) {
+    //     args.entries.push_back(*lm_->GetSingleLogEntry(idx));
+    //   }
+    //   // For those followers whoes required entries fall behind the CommitIndex(), the
+    //   // leader simply sends its local data. Most notably, send an empty entry to such
+    //   // follower does not affect the safety
+    //   LOG(util::kRaft, "S%d Replenish ent I(%d->%d) To S%d", id_, next_index,
+    //       CommitIndex(), id);
+    //   args.prev_log_index = next_index - 1;
+    //   args.prev_log_term = lm_->TermAt(args.prev_log_index);
+    // } else {
+    //   args.prev_log_index = CommitIndex();
+    //   args.prev_log_term = lm_->TermAt(args.prev_log_index);
+    // }
+
+    args.prev_log_index = CommitIndex();
+    args.prev_log_term = lm_->TermAt(args.prev_log_index);
 
     // Start send entries within the range [CommitIndex()+1, LastIndex()]
     auto send_index = CommitIndex() + 1;
