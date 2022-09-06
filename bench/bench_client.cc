@@ -73,8 +73,9 @@ void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
   }
 }
 
-void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench) {
-  std::vector<uint64_t> lantency;
+void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench,
+                  const std::string& dump_file) {
+  std::vector<uint64_t> latency;
   std::vector<uint64_t> apply_lantency;
 
   std::printf("[Execution Process]\n");
@@ -86,7 +87,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto end = std::chrono::high_resolution_clock::now();
     auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     if (stat.err == kv::kOk) {
-      lantency.push_back(dura.count());  // us
+      latency.push_back(dura.count());  // us
       apply_lantency.push_back(stat.apply_elapse_time);
     } else {
       break;
@@ -99,15 +100,19 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
 
   puts("");
 
-  auto [avg_lantency, max_lantency, std_dev] = Analysis(lantency);
+  auto [avg_lantency, max_lantency, std_dev] = Analysis(latency);
   auto [avg_apply_lantency, max_apply_lantency, apply_std_dev] = Analysis(apply_lantency);
 
   printf("[Client Id %d]\n", client->ClientId());
-  printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us][StdDev = %f]\n",
-         lantency.size(), avg_lantency, max_lantency, std_dev);
-  printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us][StdDev = %f]\n",
-         avg_apply_lantency, max_apply_lantency, apply_std_dev);
+  printf(
+      "[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu "
+      "us][StdDev = %f]\n",
+      latency.size(), avg_lantency, max_lantency, std_dev);
+  printf(
+      "[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us][StdDev = %f]\n",
+      avg_apply_lantency, max_apply_lantency, apply_std_dev);
   fflush(stdout);
+  DumpResults(latency, dump_file);
 
   int succ_cnt = 0;
   // Check if inserted value can be found
@@ -143,7 +148,8 @@ int main(int argc, char* argv[]) {
   BuildBench(bench_cfg, &bench);
 
   auto client = new kv::KvServiceClient(cluster_cfg, client_id);
-  ExecuteBench(client, bench);
+  auto dump_filename = "results-" + std::string(argv[3]);
+  ExecuteBench(client, bench, dump_filename);
 
   delete client;
   return 0;
