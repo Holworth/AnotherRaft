@@ -544,18 +544,31 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     std::vector<LogEntry> persist_entries;
     raft_index_t lo =
         (conflict_index == 0) ? (array_index + args->prev_log_index + 1) : conflict_index;
+    // for (int log_id = 0; log_id < kMaxFragmentNumber; ++log_id) {
+    //   LogManager *lm = logs_[log_id];
+    //   if (lo <= lm->LastLogEntryIndex()) {
+    //     lm->GetLogEntriesFrom(lo, &persist_entries);
+    //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d]", id_, lo,
+    //         lm->LastLogEntryIndex(), log_id);
+    //     storage_->PersistEntries(lo, lm->LastLogEntryIndex(), persist_entries);
+    //     storage_->SetLastIndex(lm_->LastLogEntryIndex());
+    //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d] Finished", id_, lo,
+    //         lm->LastLogEntryIndex(), log_id);
+    //   }
+    // }
+
+    // Collect all newly added log entries and write them to log file in a batch
     for (int log_id = 0; log_id < kMaxFragmentNumber; ++log_id) {
       LogManager *lm = logs_[log_id];
       if (lo <= lm->LastLogEntryIndex()) {
-        lm->GetLogEntriesFrom(lo, &persist_entries);
+        lm->GetLogEntriesFromAppend(lo, &persist_entries);
         LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d]", id_, lo,
-            lm->LastLogEntryIndex(), log_id);
-        storage_->PersistEntries(lo, lm->LastLogEntryIndex(), persist_entries);
-        storage_->SetLastIndex(lm_->LastLogEntryIndex());
-        LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d] Finished", id_, lo,
             lm->LastLogEntryIndex(), log_id);
       }
     }
+    storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
+    storage_->SetLastIndex(lm_->LastLogEntryIndex());
+    LOG(util::kRaft, "S%d Persist Entries (I%d->I%d)", id_, lo, lm_->LastLogEntryIndex());
   }
 }
 

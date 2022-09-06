@@ -74,6 +74,8 @@ class LogManager {
   // Get all log entries whose raft index >= idx up to the newest
   Status GetLogEntriesFrom(raft_index_t idx, std::vector<LogEntry> *vec);
 
+  Status GetLogEntriesFromAppend(raft_index_t idx, std::vector<LogEntry>* vec);
+
   // Discard all log entries whose raft index < idx
   Status DiscardLogEntriesBefore(raft_index_t idx);
 

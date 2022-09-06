@@ -40,7 +40,7 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
     return;
   }
   auto ser = Serializer::NewSerializer();
-  auto check_raft_index = lo;
+  // auto check_raft_index = lo;
   for (const auto& ent : batch) {
     auto write_size = ser.getSerializeSize(ent);
     if (!this->buf_ || write_size > this->buf_size_) {
@@ -48,10 +48,10 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
     }
     ser.serialize_logentry_helper(&ent, this->buf_);
     Append(this->buf_, write_size);
-    LOG(util::kRaft, "Persist Size=%d", write_size);
+    // LOG(util::kRaft, "Persist Size=%d", write_size);
 
-    assert(check_raft_index == ent.Index());
-    check_raft_index++;
+    // assert(check_raft_index == ent.Index());
+    // check_raft_index++;
 
     MaybeUpdateLastIndexAndTerm(ent.Index(), ent.Term());
   }

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "log_entry.h"
+#include "raft_type.h"
 #include "storage.h"
 #include "util.h"
 
@@ -156,7 +157,10 @@ Status LogManager::DeleteLogEntriesFrom(raft_index_t idx) {
 Status LogManager::GetLogEntriesFrom(raft_index_t idx, std::vector<LogEntry> *vec) {
   // std::lock_guard<std::mutex> lock(mtx_);
   vec->clear();
+  return GetLogEntriesFromAppend(idx, vec);
+}
 
+Status LogManager::GetLogEntriesFromAppend(raft_index_t idx, std::vector<LogEntry>* vec) {
   if (Count() <= 0 || idx > LastLogEntryIndex()) {
     return kIndexBeyondRange;
   }
