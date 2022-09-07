@@ -45,5 +45,10 @@ Logger* LoggerInstance() {
   return &logger;
 }
 
+PerfLogger* PerfLoggerInstance() {
+  static PerfLogger perf_logger("/tmp/perf.log");
+  return &perf_logger;
+}
+
 }  // namespace util
 }  // namespace raft

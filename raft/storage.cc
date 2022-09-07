@@ -1,4 +1,5 @@
 #include "storage.h"
+#include "util.h"
 
 #include <sys/fcntl.h>
 #include <unistd.h>
@@ -8,7 +9,6 @@
 #include <filesystem>
 #include <fstream>
 #include <ios>
-#include "util.h"
 
 static inline size_t alignment(size_t size, size_t align) {
   return ((size - 1) / align + 1) * align;
@@ -25,7 +25,7 @@ FileStorage* FileStorage::Open(const std::string& filename) {
   ret->AllocateNewInternalBuffer(FileStorage::kInitBufSize);
   ret->fd_ = fd;
   if (auto size = ::read(fd, &(ret->header_), kHeaderSize) < kHeaderSize) {
-    // No complete header yet
+    // No complete header
     ret->InitializeHeaderOnCreation();
     ret->PersistHeader();
   }
@@ -36,26 +36,39 @@ void FileStorage::Close(FileStorage* file) { delete file; }
 
 void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
                                  const std::vector<LogEntry>& batch) {
+#ifdef ENABLE_PERF_RECORDING
+  util::PersistencePerfCounter perf_counter(0);
+#endif
+
   if (lo > hi) {
     return;
   }
   auto ser = Serializer::NewSerializer();
-  // auto check_raft_index = lo;
+  auto check_raft_index = lo;
   for (const auto& ent : batch) {
     auto write_size = ser.getSerializeSize(ent);
+
+#ifdef ENABLE_PERF_RECORDING
+    perf_counter.persist_size += write_size;
+#endif
+
     if (!this->buf_ || write_size > this->buf_size_) {
       AllocateNewInternalBuffer(write_size);
     }
     ser.serialize_logentry_helper(&ent, this->buf_);
     Append(this->buf_, write_size);
-    // LOG(util::kRaft, "Persist Size=%d", write_size);
 
-    // assert(check_raft_index == ent.Index());
-    // check_raft_index++;
+    assert(check_raft_index == ent.Index());
+    check_raft_index++;
 
     MaybeUpdateLastIndexAndTerm(ent.Index(), ent.Term());
   }
   PersistHeader();
+
+#ifdef ENABLE_PERF_RECORDING
+  perf_counter.Record();
+  PERF_LOG(&perf_counter);
+#endif
 }
 
 void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
