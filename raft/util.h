@@ -85,12 +85,14 @@ class PerfLogger {
   std::ofstream* file_;
 };
 
-struct AppendEntriesPerfCounter final : public PerfCounter {
+struct AppendEntriesRPCPerfCounter final : public PerfCounter {
   // Default constructor
-  AppendEntriesPerfCounter(uint64_t size)
+  AppendEntriesRPCPerfCounter(uint64_t size)
       : start_time(std::chrono::high_resolution_clock::now()),
         transfer_size(size),
         pass_time(0) {}
+
+  AppendEntriesRPCPerfCounter(const AppendEntriesRPCPerfCounter&) = default;
 
   TimePoint start_time;
   uint64_t transfer_size;

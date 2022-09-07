@@ -84,7 +84,7 @@ class RCFRpcClient final : public RpcClient {
   static void onAppendEntriesCompleteRecordTimer(RCF::Future<RCF::ByteBuffer> buf,
                                                  ClientPtr client_ptr, RaftState *raft,
                                                  raft_node_id_t peer,
-                                                 util::AppendEntriesPerfCounter counter);
+                                                 util::AppendEntriesRPCPerfCounter counter);
 
   static void onRequestFragmentsComplete(RCF::Future<RCF::ByteBuffer> buf,
                                          ClientPtr client_ptr, RaftState *raft,

@@ -179,7 +179,7 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
 
 void RCFRpcClient::onAppendEntriesCompleteRecordTimer(
     RCF::Future<RCF::ByteBuffer> ret, ClientPtr client_ptr, RaftState *raft,
-    raft_node_id_t peer, util::AppendEntriesPerfCounter counter) {
+    raft_node_id_t peer, util::AppendEntriesRPCPerfCounter counter) {
   (void)client_ptr;
 
   auto ePtr = ret.getAsyncException();
@@ -187,10 +187,12 @@ void RCFRpcClient::onAppendEntriesCompleteRecordTimer(
     LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
         ePtr->getErrorString().c_str());
   } else {
+
+    RCF::ByteBuffer ret_buf = *ret;
+
     counter.Record();
     PERF_LOG(&counter);
 
-    RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
     raft->Process(&reply);
