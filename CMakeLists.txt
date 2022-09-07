@@ -7,6 +7,11 @@ if(${LOG} STREQUAL on)
   add_compile_definitions(ENABLE_LOG)
 endif()
 
+# enable recording more fine granularity performance records
+if(${PERF} STREQUAL on)
+  add_compile_definitions(ENABLE_PERF_RECORDING)
+endif()
+
 include_directories(${CMAKE_SOURCE_DIR}/RCF/include)
 add_subdirectory(${CMAKE_SOURCE_DIR}/RCF)
 

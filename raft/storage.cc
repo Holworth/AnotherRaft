@@ -35,6 +35,10 @@ void FileStorage::Close(FileStorage* file) { delete file; }
 
 void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
                                  const std::vector<LogEntry>& batch) {
+#ifdef ENABLE_PERF_RECORDING
+  util::PersistencePerfCounter perf_counter(0);
+#endif
+
   if (lo > hi) {
     return;
   }
@@ -42,6 +46,11 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
   auto check_raft_index = lo;
   for (const auto& ent : batch) {
     auto write_size = ser.getSerializeSize(ent);
+
+#ifdef ENABLE_PERF_RECORDING
+    perf_counter.persist_size += write_size;
+#endif
+
     if (!this->buf_ || write_size > this->buf_size_) {
       AllocateNewInternalBuffer(write_size);
     }
@@ -54,6 +63,11 @@ void FileStorage::PersistEntries(raft_index_t lo, raft_index_t hi,
     MaybeUpdateLastIndexAndTerm(ent.Index(), ent.Term());
   }
   PersistHeader();
+
+#ifdef ENABLE_PERF_RECORDING
+  perf_counter.Record();
+  PERF_LOG(&perf_counter);
+#endif
 }
 
 void FileStorage::LogEntries(std::vector<LogEntry>* entries) {
