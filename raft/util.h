@@ -92,7 +92,8 @@ struct AppendEntriesRPCPerfCounter final : public PerfCounter {
         transfer_size(size),
         pass_time(0) {}
 
-  AppendEntriesRPCPerfCounter(const AppendEntriesRPCPerfCounter&) = default;
+  AppendEntriesRPCPerfCounter(const AppendEntriesRPCPerfCounter& rhs)
+      : start_time(rhs.start_time), transfer_size(rhs.transfer_size), pass_time(0) {}
 
   TimePoint start_time;
   uint64_t transfer_size;
@@ -100,7 +101,7 @@ struct AppendEntriesRPCPerfCounter final : public PerfCounter {
 
   std::string ToString() const override {
     char buf[512];
-    sprintf(buf, "[AppendEntriesPerfCounter: transfer_size(%llu) time(%llu us)]",
+    sprintf(buf, "[AppendEntriesPerfRPCCounter: transfer_size(%llu) time(%llu us)]",
             this->transfer_size, this->pass_time);
     return std::string(buf);
   }
