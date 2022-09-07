@@ -189,12 +189,12 @@ void RCFRpcClient::onAppendEntriesCompleteRecordTimer(
   } else {
 
     RCF::ByteBuffer ret_buf = *ret;
+    AppendEntriesReply reply;
+    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
 
     counter.Record();
     PERF_LOG(&counter);
 
-    AppendEntriesReply reply;
-    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
     raft->Process(&reply);
   }
 }
