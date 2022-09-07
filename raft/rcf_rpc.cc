@@ -112,9 +112,13 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
-  auto cmp_callback = [=]() {
+
 #ifdef ENABLE_PERF_RECORDING
     util::AppendEntriesRPCPerfCounter counter(arg_buf.getLength());
+#endif
+
+  auto cmp_callback = [=]() {
+#ifdef ENABLE_PERF_RECORDING
     onAppendEntriesCompleteRecordTimer(ret, client_ptr, this->raft_, this->id_, counter);
 #else
     onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_);
@@ -187,14 +191,12 @@ void RCFRpcClient::onAppendEntriesCompleteRecordTimer(
     LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
         ePtr->getErrorString().c_str());
   } else {
+    counter.Record();
+    PERF_LOG(&counter);
 
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
-
-    counter.Record();
-    PERF_LOG(&counter);
-
     raft->Process(&reply);
   }
 }
