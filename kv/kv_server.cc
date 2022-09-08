@@ -68,6 +68,9 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       LOG(raft::util::kRaft, "S%d propose request startoffset(%d)", id_, start_offset);
 
       // Construct a raft command
+      raft::util::Timer commit_timer;
+      commit_timer.Reset();
+
       auto cmd = raft::CommandData{start_offset, raft::Slice(data, size)};
       auto pr = raft_->Propose(cmd);
 
@@ -81,6 +84,9 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
           resp->err = ar.err;
           resp->value = ar.value;
           resp->apply_elapse_time = ar.elapse_time;
+          // Calculate the time elapsed for commit
+          resp->commit_elapse_time =
+              commit_timer.ElapseMicroseconds() - resp->apply_elapse_time;
           LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }
