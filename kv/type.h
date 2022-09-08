@@ -45,10 +45,12 @@ struct Response {
   int k, m;                       // The parameter needed to construct an original value
   raft::raft_index_t read_index;  // This is valid only when type is Get
   raft::raft_node_id_t reply_server_id;  // The id of server that makes this response
-  uint64_t apply_elapse_time;  // Time elapsed to apply this entry to state machine
+  uint64_t apply_elapse_time;   // Time elapsed to apply this entry to state machine
+  uint64_t commit_elapse_time;  // Time elapsed to commit a raft entry: From proposal to
+                                // append it into channel
   void serialize(SF::Archive& ar) {
     ar& type& client_id& sequence& err& raft_term& value& k& m& read_index&
-        reply_server_id& apply_elapse_time;
+        reply_server_id& apply_elapse_time& commit_elapse_time;
   }
 };
 

@@ -10,7 +10,7 @@ using std::chrono::microseconds;
 using std::chrono::milliseconds;
 class Timer {
  public:
-  Timer() = default;
+  Timer() : start_time_point_(std::chrono::high_resolution_clock::now()) {}
   ~Timer() = default;
 
   void Reset() { start_time_point_ = std::chrono::high_resolution_clock::now(); }

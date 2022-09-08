@@ -64,7 +64,7 @@ Response KvServiceClient::WaitUntilRequestDone(const Request& request) {
 OperationResults KvServiceClient::Put(const std::string& key, const std::string& value) {
   Request request = {kPut, ClientId(), 0, key, value};
   auto resp = WaitUntilRequestDone(request);
-  return OperationResults{resp.err, resp.apply_elapse_time};
+  return OperationResults{resp.err, resp.apply_elapse_time, resp.commit_elapse_time};
 }
 
 OperationResults KvServiceClient::Get(const std::string& key, std::string* value) {
