@@ -170,7 +170,10 @@ struct EncodingEntryPerfCounter final : public PerfCounter {
   int encoding_k, encoding_m;
   uint64_t pass_time;
 
-  EncodingEntryPerfCounter(int k, int m) : encoding_k(k), encoding_m(m) {}
+  EncodingEntryPerfCounter(int k, int m)
+      : start_time(std::chrono::high_resolution_clock::now()),
+        encoding_k(k),
+        encoding_m(m) {}
 
   std::string ToString() const override {
     char buf[512];
