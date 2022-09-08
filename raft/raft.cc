@@ -976,7 +976,14 @@ void RaftState::replicateEntries() {
     }
     if (need_encoding) {
       auto stripe = new Stripe();
+#ifdef ENABLE_PERF_RECORDING
+      util::EncodingEntryPerfCounter perf_counter(encode_k, encode_m);
+#endif
       EncodingRaftEntry(raft_index, encode_k, encode_m, version_num, stripe);
+#ifdef ENABLE_PERF_RECORDING
+      perf_counter.Record();
+      PERF_LOG(&perf_counter);
+#endif
       encoded_stripe_.insert_or_assign(raft_index, stripe);
     } else {
       // Simply update the encoding version
