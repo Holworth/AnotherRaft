@@ -6,6 +6,7 @@
 
 namespace raft {
 namespace util {
+using TimePoint = decltype(std::chrono::high_resolution_clock::now());
 using std::chrono::microseconds;
 using std::chrono::milliseconds;
 class Timer {

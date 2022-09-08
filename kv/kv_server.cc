@@ -137,6 +137,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", server->Id(), ent.Index(),
         ent.Term());
 
+    elapse_timer.Reset();
+
     // Apply this entry to state machine(i.e. Storage Engine)
     Request req;
     // RawBytesToRequest(ent.CommandData().data(), &req);
@@ -149,13 +151,11 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
       case kPut: {
-        elapse_timer.Reset();
         server->db_->Put(req.key, req.value);
         ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;
       }
       case kDelete: {
-        elapse_timer.Reset();
         server->db_->Delete(req.key);
         ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;
