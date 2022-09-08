@@ -164,6 +164,32 @@ struct RaftAppendEntriesProcessPerfCounter final : public PerfCounter {
   }
 };
 
+struct EncodingEntryPerfCounter final : public PerfCounter {
+  TimePoint start_time;
+  // uint64_t encoding_size;
+  int encoding_k, encoding_m;
+  uint64_t pass_time;
+
+  EncodingEntryPerfCounter(int k, int m)
+      : start_time(std::chrono::high_resolution_clock::now()),
+        encoding_k(k),
+        encoding_m(m) {}
+
+  std::string ToString() const override {
+    char buf[512];
+    sprintf(buf,
+            "[EncodingEntryPerfCounter]: encoding_parameters(k=%d m=%d) time(%llu us)]",
+            this->encoding_k, this->encoding_m, this->pass_time);
+    return std::string(buf);
+  }
+
+  void Record() override {
+    auto end = std::chrono::high_resolution_clock::now();
+    pass_time =
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start_time).count();
+  }
+};
+
 // Use singleton to access the global-only logger
 Logger* LoggerInstance();
 PerfLogger* PerfLoggerInstance();
