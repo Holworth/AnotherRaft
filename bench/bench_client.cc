@@ -65,7 +65,9 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     if (stat.err == kv::kOk) {
       latency.push_back(dura.count());  // us
       apply_latency.push_back(stat.apply_elapse_time);
-      commit_latency.push_back(stat.commit_elapse_time);
+      if (stat.commit_elapse_time != -1) {
+        commit_latency.push_back(stat.commit_elapse_time);
+      }
     } else {
       break;
     }
@@ -97,7 +99,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto stat = client->Get(p.first, &get_val);
     if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
-    } 
+    }
     // No need to continue executing the benchmark
     if (stat.err == kv::kRequestExecTimeout) {
       break;

@@ -263,6 +263,14 @@ class RaftState {
   raft_index_t LastLogIndex() const { return lm_->LastLogEntryIndex(); }
   raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index); }
 
+  uint64_t CommitLatency(raft_index_t raft_index) const {
+    if (commit_elapse_time_.count(raft_index) == 0) {
+      return -1;
+    } else {
+      return commit_elapse_time_.at(raft_index);
+    }
+  }
+
  private:
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
@@ -362,6 +370,7 @@ class RaftState {
 
   void DecodeCollectedStripe();
 
+
  private:
   // For concurrency control. A raft state instance might be accessed via
   // multiple threads, e.g. RPC thread that receives request; The state machine
@@ -417,6 +426,11 @@ class RaftState {
   // A randomized election timeout based on above interval
   int64_t election_time_out_;
   int64_t heartbeatTimeInterval;
+
+  // For calculating the commit latency
+  std::unordered_map<raft_index_t, util::TimePoint> commit_start_time_;
+  // Elapse time of microseconds
+  std::unordered_map<raft_index_t, uint64_t> commit_elapse_time_; 
 
  private:
   int vote_me_cnt_;

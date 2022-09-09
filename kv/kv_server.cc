@@ -85,8 +85,9 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
           resp->value = ar.value;
           resp->apply_elapse_time = ar.elapse_time;
           // Calculate the time elapsed for commit
-          resp->commit_elapse_time =
-              commit_timer.ElapseMicroseconds() - resp->apply_elapse_time;
+          // resp->commit_elapse_time =
+              // commit_timer.ElapseMicroseconds() - resp->apply_elapse_time;
+          resp->commit_elapse_time = raft_->CommitLatency(pr.propose_index);
           LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }

@@ -418,6 +418,10 @@ ProposeResult RaftState::Propose(const CommandData &command) {
 
   lm_->AppendLogEntry(entry);
 
+  // [PERF]
+  // Record the start time of commiting an entry
+  commit_start_time_[entry.Index()] = std::chrono::high_resolution_clock::now();
+
   LOG(util::kRaft, "S%d Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
       CurrentTerm(), entry.CommandData().data());
 
@@ -612,6 +616,16 @@ void RaftState::tryApplyLogEntries() {
 
       rsm_->ApplyLogEntry(ent);
       LOG(util::kRaft, "S%d Push ent(I%d T%d) to channel", id_, ent.Index(), ent.Term());
+
+      // !!! [PERF]: Record the end time of commit and calculating the elapse time
+      //
+      if (commit_start_time_.count(ent.Index()) != 0) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto dura = std::chrono::duration_cast<std::chrono::microseconds>(
+            end - commit_start_time_[ent.Index()]);
+        commit_elapse_time_[ent.Index()] = dura.count();
+      }
+      //
     }
     last_applied_ += 1;
     LOG(util::kRaft, "S%d APPLY(%d->%d)", id_, old_apply_idx, last_applied_);

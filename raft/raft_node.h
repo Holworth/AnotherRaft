@@ -17,7 +17,7 @@ namespace raft {
 // creating timer thread and so on.
 
 namespace config {
-  static const int kRaftTickBaseInterval = 20;
+static const int kRaftTickBaseInterval = 20;
 }
 class RaftNode {
  public:
@@ -64,6 +64,10 @@ class RaftNode {
   Rsm* getRsm() { return rsm_; }
 
   ProposeResult Propose(const CommandData& cmd) { return raft_state_->Propose(cmd); }
+
+  uint64_t CommitLatency(raft_index_t raft_index) {
+    return raft_state_->CommitLatency(raft_index);
+  }
 
   // Return the last raft index of this raft node
   raft::raft_index_t LastIndex() const { return raft_state_->LastIndex(); }
