@@ -1,5 +1,8 @@
 #include "rcf_rpc.h"
 
+#include <chrono>
+#include <ratio>
+
 #include "RCF/ByteBuffer.hpp"
 #include "RCF/ClientStub.hpp"
 #include "RCF/Endpoint.hpp"
@@ -34,7 +37,17 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 
   auto serializer = Serializer::NewSerializer();
   serializer.Deserialize(&arg_buf, &args);
+
+#ifdef ENABLE_PERF_RECORDING
+  util::RaftAppendEntriesProcessPerfCounter counter(arg_buf.getLength());
+#endif
+
   raft_->Process(&args, &reply);
+
+#ifdef ENABLE_PERF_RECORDING
+  counter.Record();
+  PERF_LOG(&counter);
+#endif
 
   RCF::ByteBuffer reply_buf(serializer.getSerializeSize(reply));
   serializer.Serialize(&reply, &reply_buf);
@@ -99,8 +112,17 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   serializer.Serialize(&args, &arg_buf);
 
   RCF::Future<RCF::ByteBuffer> ret;
+
+#ifdef ENABLE_PERF_RECORDING
+    util::AppendEntriesRPCPerfCounter counter(arg_buf.getLength());
+#endif
+
   auto cmp_callback = [=]() {
+#ifdef ENABLE_PERF_RECORDING
+    onAppendEntriesCompleteRecordTimer(ret, client_ptr, this->raft_, this->id_, counter);
+#else
     onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_);
+#endif
   };
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
@@ -152,6 +174,26 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
     LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
         ePtr->getErrorString().c_str());
   } else {
+    RCF::ByteBuffer ret_buf = *ret;
+    AppendEntriesReply reply;
+    Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
+    raft->Process(&reply);
+  }
+}
+
+void RCFRpcClient::onAppendEntriesCompleteRecordTimer(
+    RCF::Future<RCF::ByteBuffer> ret, ClientPtr client_ptr, RaftState *raft,
+    raft_node_id_t peer, util::AppendEntriesRPCPerfCounter counter) {
+  (void)client_ptr;
+
+  auto ePtr = ret.getAsyncException();
+  if (ePtr.get()) {
+    LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
+        ePtr->getErrorString().c_str());
+  } else {
+    counter.Record();
+    PERF_LOG(&counter);
+
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);

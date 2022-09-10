@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <memory>
 
 #include "RCF/ByteBuffer.hpp"
@@ -79,6 +80,11 @@ class RCFRpcClient final : public RpcClient {
   static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf,
                                       ClientPtr client_ptr, RaftState *raft,
                                       raft_node_id_t peer);
+
+  static void onAppendEntriesCompleteRecordTimer(RCF::Future<RCF::ByteBuffer> buf,
+                                                 ClientPtr client_ptr, RaftState *raft,
+                                                 raft_node_id_t peer,
+                                                 util::AppendEntriesRPCPerfCounter counter);
 
   static void onRequestFragmentsComplete(RCF::Future<RCF::ByteBuffer> buf,
                                          ClientPtr client_ptr, RaftState *raft,
