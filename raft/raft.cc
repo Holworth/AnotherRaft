@@ -1070,6 +1070,7 @@ void RaftState::replicateEntries() {
     args.entry_cnt = args.entries.size();
     rpc_clients_[id]->sendMessage(args);
   }
+  resetReplicateTimer();
 }
 
 void RaftState::sendHeartBeat(raft_node_id_t peer) {

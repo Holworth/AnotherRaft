@@ -68,6 +68,9 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
       LOG(raft::util::kRaft, "S%d propose request startoffset(%d)", id_, start_offset);
 
       // Construct a raft command
+      raft::util::Timer commit_timer;
+      commit_timer.Reset();
+
       auto cmd = raft::CommandData{start_offset, raft::Slice(data, size)};
       auto pr = raft_->Propose(cmd);
 
@@ -81,6 +84,10 @@ void KvServer::DealWithRequest(const Request* request, Response* resp) {
           resp->err = ar.err;
           resp->value = ar.value;
           resp->apply_elapse_time = ar.elapse_time;
+          // Calculate the time elapsed for commit
+          resp->commit_elapse_time =
+              commit_timer.ElapseMicroseconds() - resp->apply_elapse_time;
+          // resp->commit_elapse_time = raft_->CommitLatency(pr.propose_index);
           LOG(raft::util::kRaft, "S%d ApplyResult value=%s", id_, resp->value.c_str());
           return;
         }
@@ -131,6 +138,8 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     LOG(raft::util::kRaft, "S%d Pop Ent From Raft I%d T%d", server->Id(), ent.Index(),
         ent.Term());
 
+    elapse_timer.Reset();
+
     // Apply this entry to state machine(i.e. Storage Engine)
     Request req;
     // RawBytesToRequest(ent.CommandData().data(), &req);
@@ -143,13 +152,11 @@ void KvServer::ApplyRequestCommandThread(KvServer* server) {
     KvRequestApplyResult ar = {ent.Term(), kOk, std::string("")};
     switch (req.type) {
       case kPut: {
-        elapse_timer.Reset();
         server->db_->Put(req.key, req.value);
         ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;
       }
       case kDelete: {
-        elapse_timer.Reset();
         server->db_->Delete(req.key);
         ar.elapse_time = elapse_timer.ElapseMicroseconds();
         break;

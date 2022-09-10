@@ -14,6 +14,7 @@ namespace kv {
 struct OperationResults {
   ErrorType err;
   uint64_t apply_elapse_time;
+  uint64_t commit_elapse_time;
 };
 class KvServiceClient {
   // If a KV Request is not done within 10 seconds
