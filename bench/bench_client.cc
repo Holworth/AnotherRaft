@@ -50,8 +50,9 @@ void BuildBench(const BenchConfiguration& cfg, std::vector<KvPair>* bench) {
 }
 
 void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench) {
-  std::vector<uint64_t> lantency;
-  std::vector<uint64_t> apply_lantency;
+  std::vector<uint64_t> latency;
+  std::vector<uint64_t> apply_latency;
+  std::vector<uint64_t> commit_latency;
 
   std::printf("[Execution Process]\n");
 
@@ -62,8 +63,11 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto end = std::chrono::high_resolution_clock::now();
     auto dura = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     if (stat.err == kv::kOk) {
-      lantency.push_back(dura.count());  // us
-      apply_lantency.push_back(stat.apply_elapse_time);
+      latency.push_back(dura.count());  // us
+      apply_latency.push_back(stat.apply_elapse_time);
+      if (stat.commit_elapse_time != -1) {
+        commit_latency.push_back(stat.commit_elapse_time);
+      }
     } else {
       break;
     }
@@ -75,14 +79,17 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
 
   puts("");
 
-  auto [avg_lantency, max_lantency] = Analysis(lantency);
-  auto [avg_apply_lantency, max_apply_lantency] = Analysis(apply_lantency);
+  auto [avg_latency, max_latency] = Analysis(latency);
+  auto [avg_apply_latency, max_apply_latency] = Analysis(apply_latency);
+  auto [avg_commit_latency, max_commit_latency] = Analysis(commit_latency);
 
   printf("[Client Id %d]\n", client->ClientId());
-  printf("[Results][Succ Cnt=%lu][Average Lantency = %llu us][Max Lantency = %llu us]\n",
-         lantency.size(), avg_lantency, max_lantency);
-  printf("[Average Apply Lantency = %llu us][Max Apply Lantency = %llu us]\n",
-         avg_apply_lantency, max_apply_lantency);
+  printf("[Results][Succ Cnt=%lu][Average Latency = %llu us][Max Latency = %llu us]\n",
+         latency.size(), avg_latency, max_latency);
+  printf("[Average Apply Latency = %llu us][Max Apply Latency = %llu us]\n",
+         avg_apply_latency, max_apply_latency);
+  printf("[Average Commit Latency = %llu us][Max Commit Latency = %llu us]\n",
+         avg_commit_latency, max_commit_latency);
   fflush(stdout);
 
   int succ_cnt = 0;
@@ -92,7 +99,7 @@ void ExecuteBench(kv::KvServiceClient* client, const std::vector<KvPair>& bench)
     auto stat = client->Get(p.first, &get_val);
     if (stat.err == kv::kOk && get_val == p.second) {
       ++succ_cnt;
-    } 
+    }
     // No need to continue executing the benchmark
     if (stat.err == kv::kRequestExecTimeout) {
       break;
