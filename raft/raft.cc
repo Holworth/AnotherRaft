@@ -72,6 +72,9 @@ RaftState *RaftState::NewRaftState(const RaftConfig &config) {
   ret->live_monitor_.node_num = config.rpc_clients.size() + 1;
   ret->live_monitor_.me = ret->id_;
 
+  // Reserve space for recording commit start time
+  ret->commit_start_time_.reserve(100000);
+
   return ret;
 }
 
@@ -591,6 +594,15 @@ void RaftState::tryUpdateCommitIndex() {
       // Index N is committed, no need to track them any more
       removeLastReplicateVersionAt(N);
       removeTrackVersionOfAll(N);
+
+      // Update the commit latency of all entry before N
+      // !!! Perf: Recoding Commit latency
+      if (commit_start_time_.count(N) != 0) {
+        auto end = std::chrono::high_resolution_clock::now();
+        auto dura = std::chrono::duration_cast<std::chrono::microseconds>(
+            end - commit_start_time_[N]);
+        commit_elapse_time_[N] = dura.count();
+      }
     }
   }
 }
@@ -619,12 +631,12 @@ void RaftState::tryApplyLogEntries() {
 
       // !!! [PERF]: Record the end time of commit and calculating the elapse time
       //
-      if (commit_start_time_.count(ent.Index()) != 0) {
-        auto end = std::chrono::high_resolution_clock::now();
-        auto dura = std::chrono::duration_cast<std::chrono::microseconds>(
-            end - commit_start_time_[ent.Index()]);
-        commit_elapse_time_[ent.Index()] = dura.count();
-      }
+      // if (commit_start_time_.count(ent.Index()) != 0) {
+      //   auto end = std::chrono::high_resolution_clock::now();
+      //   auto dura = std::chrono::duration_cast<std::chrono::microseconds>(
+      //       end - commit_start_time_[ent.Index()]);
+      //   commit_elapse_time_[ent.Index()] = dura.count();
+      // }
       //
     }
     last_applied_ += 1;
