@@ -14,7 +14,7 @@ def ClearTestContext (server: Server):
     while True:
         cmd = "killall bench_server; killall bench_client; rm -rf /tmp/testdb*; rm -rf /tmp/raft_log*"
 
-        ssh_cmd = "ssh -i ~/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
+        ssh_cmd = "ssh -i ~/.ssh/FlexRaft.pem {}@{}".format(server.username, server.ip) + " \"" + cmd + "\""
         pr = subprocess.run(ssh_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, shell=True)
 
         if pr.returncode != 0:
@@ -27,15 +27,12 @@ def ClearTestContext (server: Server):
 
 if __name__ == "__main__":
     cloud_servers = [
-        Server("172.20.126.134", "22", "root", "", 0),
-        Server("172.20.126.135", "22", "root", "", 1),
-        Server("172.20.126.136", "22", "root", "", 2),
-        Server("172.20.126.137", "22", "root", "", 3),
-        Server("172.20.126.138", "22", "root", "", 4),
-        Server("172.20.126.139", "22", "root", "", 5),
-        Server("172.20.126.140", "22", "root", "", 6),
-        Server("172.20.126.141", "22", "root", "", 6),
-        Server("172.20.126.142", "22", "root", "", 6)
+        Server("172.20.83.188", "22", "root", "", 0),
+        Server("172.20.83.186", "22", "root", "", 1),
+        Server("172.18.226.146", "22", "root", "", 2),
+        Server("172.18.226.145", "22", "root", "", 3),
+        Server("172.18.226.144", "22", "root", "", 4),
+        Server("172.20.83.185", "22", "root", "", 5),
     ]
     threads = []
     for server in cloud_servers:
