@@ -31,8 +31,7 @@ static bool inline AppendEntriesArgsEqual(const AppendEntriesArgs &l,
   // bool hdr_equal = std::memcmp(&l, &r, kAppendEntriesArgsHdrSize) == 0;
   bool hdr_equal = l.term == r.term & l.prev_log_index == r.prev_log_index &
                    l.prev_log_term == r.prev_log_term & l.leader_id == r.leader_id &
-                   l.leader_commit == r.leader_commit & l.entry_cnt == r.entry_cnt &
-                   l.seq == r.seq;
+                   l.leader_commit == r.leader_commit & l.entry_cnt == r.entry_cnt;
   if (!hdr_equal || l.entries.size() != r.entries.size()) {
     return false;
   }
@@ -405,7 +404,7 @@ TEST_F(RaftElectionTest, TestBecomeLeaderIfWinMajorityReply) {
 
   // Check if heartbeat messages are sent correctly
   auto ref_appendentries_args =
-      AppendEntriesArgs{1, 1, 0, 0, 0, 0, 0, std::vector<LogEntry>()};
+      AppendEntriesArgs{1, 1, 0, 0, 0, 0, std::vector<LogEntry>()};
 
   for (const auto &entry : channel2) {
     ASSERT_TRUE(AppendEntriesArgsEqual(ref_appendentries_args, entry));

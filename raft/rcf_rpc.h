@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 #include "RCF/ClientStub.hpp"
 #include "RCF/Future.hpp"
@@ -25,6 +26,47 @@ RCF_METHOD_R1(RCF::ByteBuffer, RequestVote, const RCF::ByteBuffer &)
 RCF_METHOD_R1(RCF::ByteBuffer, AppendEntries, const RCF::ByteBuffer &)
 RCF_END(I_RaftService)
 
+// Some statistics about one rpc call arguments
+struct RPCArgStats {
+  size_t arg_size;
+  util::TimePoint start_time;
+};
+
+// Some statistics about one rpc call
+struct RPCStats {
+  size_t arg_size;
+  size_t resp_size;
+  uint64_t total_time;
+  uint64_t transfer_time;
+  uint64_t process_time;
+
+  std::string ToString() const {
+    char buf[512];
+    sprintf(
+        buf,
+        "[Total Time = %llu us][Process Time = %llu us][Transfer Time = %llu us][Args "
+        "size=%luB][Reply size=%luB]",
+        total_time, process_time, total_time - process_time, arg_size, resp_size);
+    return std::string(buf);
+  }
+};
+
+struct RPCStatsRecorder {
+ public:
+  RPCStatsRecorder() : history_() { 
+    history_.reserve(10000); 
+    // Add a default history result
+    history_.push_back({0, 0, 0, 0, 0});
+  }
+
+  // Write the results to a specified file
+  void Dump(const std::string &dst);
+
+  void Add(const RPCStats &stat) { history_.push_back(stat); }
+
+  std::vector<RPCStats> history_;
+};
+
 class RaftRPCService {
  public:
   RaftRPCService() = default;
@@ -46,6 +88,11 @@ class RCFRpcClient final : public RpcClient {
 
   RCFRpcClient &operator=(const RCFRpcClient &) = delete;
   RCFRpcClient(const RCFRpcClient &) = delete;
+
+  ~RCFRpcClient() {
+    auto filename = std::to_string(raft_->Id()) + "-" + std::to_string(id_);
+    recorder_.Dump(filename);
+  }
 
  public:
   void SetRaftState(RaftState *raft) { raft_ = raft; }
@@ -74,7 +121,8 @@ class RCFRpcClient final : public RpcClient {
 
   static void onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> buf,
                                       ClientPtr client_ptr, RaftState *raft,
-                                      raft_node_id_t peer);
+                                      raft_node_id_t peer, RPCArgStats rpc_stats,
+                                      RPCStatsRecorder *recorder);
 
  private:
   RaftState *raft_;
@@ -82,6 +130,8 @@ class RCFRpcClient final : public RpcClient {
   NetAddress target_address_;
   bool stopped_;
   raft_node_id_t id_;
+
+  RPCStatsRecorder recorder_;
 };
 
 class RCFRpcServer final : public RpcServer {

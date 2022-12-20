@@ -42,9 +42,6 @@ struct AppendEntriesArgs {
   // The number of entries contained in this AppendEntries arguments
   int64_t entry_cnt;
 
-  // The sequence number of all sent log entries contained in this args
-  uint64_t seq;
-
   // We simply use std::vector to denote an array of log entries. NOTE: This may
   // cause shallow copy multiple times
   std::vector<LogEntry> entries;
@@ -66,6 +63,9 @@ struct AppendEntriesReply {
 
   // The raft node id of the server that makes this reply
   raft_node_id_t reply_id;
+
+  // The time receiver process this AppendEntries RPC (us)
+  uint64_t process_time;
 };
 
 // A struct that indicates the command specified by user of the raft cluster
@@ -79,7 +79,7 @@ struct CommandData {
 enum {
   // kAppendEntriesArgsHdrSize = sizeof(raft_term_t) * 2 + sizeof(raft_index_t) * 2 +
   // sizeof(uint64_t) * 2 + sizeof(raft_node_id_t)
-  kAppendEntriesArgsHdrSize = 40
+  kAppendEntriesArgsHdrSize = 32 
 };
 
 }  // namespace raft

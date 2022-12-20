@@ -186,6 +186,7 @@ TEST_F(KvServerTest, TestSimplePutAndGet) {
   std::string value;
   const int test_cnt = 1000;
   for (int i = 0; i < test_cnt; ++i) {
+    // printf("Put %d\n", i);
     auto key = "key" + std::to_string(i);
     auto value = "value" + std::to_string(i);
     EXPECT_EQ(Put(key, value), kOk);

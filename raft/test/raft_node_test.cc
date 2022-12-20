@@ -83,7 +83,7 @@ TEST_F(RaftNodeBasicTest, TestSimplyProposeEntry) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestProposeEntryWhenServerShutdown) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestProposeEntryWhenServerShutdown) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -103,7 +103,7 @@ TEST_F(RaftNodeBasicTest, TestProposeEntryWhenServerShutdown) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestFailReachAgreementIfMajorityShutDown) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestFailReachAgreementIfMajorityShutDown) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -129,7 +129,7 @@ TEST_F(RaftNodeBasicTest, TestFailReachAgreementIfMajorityShutDown) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestOldLeaderRejoin) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestOldLeaderRejoin) {
   auto config = ConstructNodesConfig(3, false);
   LaunchAllServers(config);
   sleepMs(10);
@@ -167,7 +167,7 @@ TEST_F(RaftNodeBasicTest, TestOldLeaderRejoin) {
   ClearTestContext(config);
 }
 
-TEST_F(RaftNodeBasicTest, TestRecoverAfterLongIncorrectLogs) {
+TEST_F(RaftNodeBasicTest, DISABLED_TestRecoverAfterLongIncorrectLogs) {
   auto config = ConstructNodesConfig(5, false);
   LaunchAllServers(config);
   sleepMs(10);

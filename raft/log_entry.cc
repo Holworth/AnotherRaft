@@ -55,16 +55,18 @@ namespace raft {
 // This function is basically only used to test if network transfer is ok
 auto operator==(const LogEntry &lhs, const LogEntry &rhs) -> bool {
   auto hdr_equal = lhs.Index() == rhs.Index() && lhs.Term() == rhs.Term() &&
-                   lhs.Type() == rhs.Type() && lhs.Sequence() == rhs.Sequence();
+                   lhs.Type() == rhs.Type();
   if (!hdr_equal) {
     return false;
   }
 
+  /*
   auto fragment_meta_equal = lhs.GetN() == rhs.GetN() && lhs.GetK() == rhs.GetK() &&
                              lhs.FragId() == rhs.FragId();
   if (!fragment_meta_equal) {
     return false;
   }
+  */
 
   auto lhs_cmd_data = lhs.CommandData(), rhs_cmd_data = rhs.CommandData();
   auto cmd_data_equal = !lhs_cmd_data.valid() && !rhs_cmd_data.valid();

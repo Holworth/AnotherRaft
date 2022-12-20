@@ -1,5 +1,10 @@
 #include "rcf_rpc.h"
 
+#include <sys/stat.h>
+
+#include <ctime>
+#include <fstream>
+
 #include "RCF/ClientStub.hpp"
 #include "RCF/Endpoint.hpp"
 #include "RCF/Future.hpp"
@@ -33,7 +38,12 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 
   auto serializer = Serializer::NewSerializer();
   serializer.Deserialize(&arg_buf, &args);
+
+  // Record the time of processing an AppendEntries RPC call
+  auto start = util::NowTime();
   raft_->Process(&args, &reply);
+  auto dura = util::DurationToMicros(start, util::NowTime());
+  reply.process_time = dura;
 
   RCF::ByteBuffer reply_buf(serializer.getSerializeSize(reply));
   serializer.Serialize(&reply, &reply_buf);
@@ -85,9 +95,12 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   setMaxTransportLength(client_ptr);
   client_ptr->getClientStubPtr()->setRemoteCallTimeoutMs(config::kRPCTimeout);
 
+  auto start_time = util::NowTime();
+
   RCF::Future<RCF::ByteBuffer> ret;
   auto cmp_callback = [=]() {
-    onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_);
+    onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_,
+                            {arg_buf.getLength(), start_time}, &(this->recorder_));
   };
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
@@ -110,7 +123,8 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
                                            ClientPtr client_ptr, RaftState *raft,
-                                           raft_node_id_t peer) {
+                                           raft_node_id_t peer, RPCArgStats rpc_stats,
+                                           RPCStatsRecorder *recorder) {
   (void)client_ptr;
 
   auto ePtr = ret.getAsyncException();
@@ -118,10 +132,19 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
     LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
         ePtr->getErrorString().c_str());
   } else {
+    auto time = util::DurationToMicros(rpc_stats.start_time, util::NowTime());
+
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
     raft->Process(&reply);
+
+    // Only record stat that is not heartbeat messages
+    if (rpc_stats.arg_size > kAppendEntriesArgsHdrSize) {
+      auto stat = RPCStats{rpc_stats.arg_size, ret_buf.getLength(), time,
+                           time - reply.process_time, reply.process_time};
+      recorder->Add(stat);
+    }
   }
 }
 
@@ -143,6 +166,26 @@ void RCFRpcServer::Stop() {
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {
   // Nothing to do
+}
+
+void RPCStatsRecorder::Dump(const std::string &dst) {
+  std::ofstream of;
+  of.open(dst);
+
+  uint64_t total_total_time = 0;
+  uint64_t total_transfer_time = 0;
+  uint64_t total_process_time = 0;
+
+  for (const auto &stat : history_) {
+    of << stat.ToString() << "\n";
+    total_total_time += stat.total_time;
+    total_process_time += stat.process_time;
+    total_transfer_time += stat.transfer_time;
+  }
+
+  of << "[Average Total Time]:" << total_total_time / history_.size()
+     << "[Average Process Time]:" << total_process_time / history_.size()
+     << "[Average Transfer Time]:" << total_transfer_time / history_.size();
 }
 
 }  // namespace rpc

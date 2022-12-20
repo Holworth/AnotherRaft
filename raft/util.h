@@ -5,6 +5,9 @@ namespace raft {
 namespace util {
 using std::chrono::microseconds;
 using std::chrono::milliseconds;
+
+using TimePoint = decltype(std::chrono::steady_clock::now());
+
 class Timer {
  public:
   Timer() = default;
@@ -59,6 +62,14 @@ class Logger {
   decltype(std::chrono::steady_clock::now()) startTimePoint_;
   char buf[512]{};
 };
+
+inline TimePoint NowTime() {
+  return std::chrono::steady_clock::now();
+}
+
+inline uint64_t DurationToMicros(TimePoint start, TimePoint end) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+}
 
 // Use singleton to access the global-only logger
 Logger* LoggerInstance();

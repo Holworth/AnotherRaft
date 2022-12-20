@@ -564,8 +564,9 @@ void RaftState::sendHeartBeat(raft_node_id_t peer) {
 
   LOG(util::kRaft, "S%d send heartbeat to S%d(I%d->I%d)", id_, peer, next_index,
       next_index);
-  auto args = AppendEntriesArgs{CurrentTerm(), id_, prev_index, prev_term,
-                                CommitIndex(), 0,   0,          std::vector<LogEntry>()};
+  auto args = AppendEntriesArgs{
+      CurrentTerm(),          id_, prev_index, prev_term, CommitIndex(), 0,
+      std::vector<LogEntry>()};
   rpc_clients_[peer]->sendMessage(args);
 }
 

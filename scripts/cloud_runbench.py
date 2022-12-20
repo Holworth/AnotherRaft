@@ -121,6 +121,7 @@ if __name__ == "__main__":
         cfg_file = sys.argv[1]
         print("[Use input configuration file: {}]".format(cfg_file))
 
+    # A cluster that consists of 5 servers
     servers5 = [
         Server("172.20.126.134", "22", "root", "", 0),
         Server("172.20.126.135", "22", "root", "", 1),
@@ -130,6 +131,7 @@ if __name__ == "__main__":
         Server("172.20.126.139", "22", "root", "", 5)
     ]
 
+    # A cluster that consists of 7 servers
     servers7 = [
         Server("172.20.126.134", "22", "root", "", 0),
         Server("172.20.126.135", "22", "root", "", 1),

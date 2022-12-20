@@ -104,7 +104,6 @@ class SerializerTest : public ::testing::Test {
     LogEntry ent;
     ent.SetTerm(rand());
     ent.SetIndex(rand());
-    ent.SetSequence(rand());
     ent.SetType(type);
     if (generate_data) {
       switch (ent.Type()) {
@@ -205,14 +204,13 @@ void SerializerTest::TestSerializeAppendEntriesArgs(bool async) {
       static_cast<raft_term_t>(rand()),  static_cast<raft_node_id_t>(rand()),
       static_cast<raft_index_t>(rand()), static_cast<raft_term_t>(rand()),
       static_cast<raft_index_t>(rand()), 1,
-      static_cast<uint64_t>(rand()),     {GenerateRandomLogEntry(true, kFragments)},
+      {GenerateRandomLogEntry(true, kFragments)},
   };
 
   auto cmp = [](const AppendEntriesArgs &l, const AppendEntriesArgs &r) -> bool {
     bool hdr_equal = l.term == r.term & l.prev_log_index == r.prev_log_index &
                      l.prev_log_term == r.prev_log_term & l.leader_id == r.leader_id &
-                     l.leader_commit == r.leader_commit & l.entry_cnt == r.entry_cnt &
-                     l.seq == r.seq;
+                     l.leader_commit == r.leader_commit & l.entry_cnt == r.entry_cnt;
     if (!hdr_equal || l.entries.size() != r.entries.size()) {
       return false;
     }

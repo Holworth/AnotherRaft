@@ -91,6 +91,7 @@ class RaftState {
   ProposeResult Propose(const CommandData &command);
 
  public:
+  raft_node_id_t Id() const { return id_; }
   // Init all necessary status of raft state, including reset election timer
   void Init();
 
