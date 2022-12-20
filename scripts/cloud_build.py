@@ -27,7 +27,7 @@ def build_executable(server: Server, type: str):
         ssh_cmd = ssh_cmd + cmd + ";"
     # print(ssh_cmd)
 
-    ssh_cmd = "ssh -i /root/.ssh/FlexibleK_Experiment.pem {}@{}".format(server.username, server.ip) + " \"" + ssh_cmd + "\""
+    ssh_cmd = "ssh -i /root/.ssh/FlexRaft.pem {}@{}".format(server.username, server.ip) + " \"" + ssh_cmd + "\""
     print(ssh_cmd)
     # omit output
     while True:
@@ -46,20 +46,17 @@ if __name__ == "__main__":
         v = "main"
     else:
         v = sys.argv[1]
-    if v != "main" and v != "FlexibleK" and v != "CRaft":
+    if v != "main" and v != "FlexibleK" and v != "CRaft" and v != "HRaft":
         print("Invalid version parameter {}".format(v))
         exit(1)
 
     cloud_servers = [
-        Server("172.20.126.134", "22", "root", "", 0),
-        Server("172.20.126.135", "22", "root", "", 1),
-        Server("172.20.126.136", "22", "root", "", 2),
-        Server("172.20.126.137", "22", "root", "", 3),
-        Server("172.20.126.138", "22", "root", "", 4),
-        Server("172.20.126.139", "22", "root", "", 5),
-        Server("172.20.126.140", "22", "root", "", 6),
-        Server("172.20.126.141", "22", "root", "", 6),
-        Server("172.20.126.142", "22", "root", "", 6),
+        Server("172.20.83.188", "22", "root", "", 0),
+        Server("172.20.83.186", "22", "root", "", 1),
+        Server("172.18.226.146", "22", "root", "", 2),
+        Server("172.18.226.145", "22", "root", "", 3),
+        Server("172.18.226.144", "22", "root", "", 4),
+        Server("172.20.83.185", "22", "root", "", 5),
     ]
 
     threads = []
