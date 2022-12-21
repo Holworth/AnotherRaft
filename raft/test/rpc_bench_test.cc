@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 #include <thread>
 
 #include "RCF/ThreadLibrary.hpp"
@@ -58,7 +59,9 @@ void RunRPCClient(std::string ip, int size, int cnt) {
     printf("\e[?25l");
     printf("Already Done: %5d / %5d\r", i, cnt);
   }
-  rpc_client->Dump("results.txt");
+
+  auto filename = std::string("results.txt") + std::to_string(size);
+  rpc_client->Dump(filename);
 }
 
 void RunRPCServer(std::string ip) {
