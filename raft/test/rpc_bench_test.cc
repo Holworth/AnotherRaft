@@ -60,6 +60,7 @@ void RunRPCClient(std::string ip, int size, int cnt) {
     printf("\e[?25l");
     printf("Already Done: %5d / %5d\r", i, cnt);
   }
+  printf("\e[?25h");
   puts("");
 
   auto filename = std::string("results-") + std::to_string(size) + ".txt";
