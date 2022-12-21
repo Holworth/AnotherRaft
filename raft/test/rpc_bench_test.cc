@@ -1,3 +1,4 @@
+#include <cctype>
 #include <memory>
 #include <string>
 #include <thread>
@@ -78,10 +79,27 @@ void RunRPCServer(std::string ip) {
 
 }  // namespace raft
 
+int ParseSize(const char* s) {
+  auto str = std::string(s);
+  if (std::isdigit(str.back())) {
+    return std::atoi(s);
+  }
+  auto num = std::atoi(str.substr(0, str.length() - 1).c_str());
+  switch (str.back()) {
+    case 'K':
+    case 'k':
+      return num * 1024;
+    case 'M':
+    case 'm':
+      return num * 1024 * 1024;
+  }
+  return 0;
+}
+
 int main(int argc, char* argv[]) {
   auto type = std::atoi(argv[1]);
   auto ip = std::string(argv[2]);
-  auto size = std::atoi(argv[3]);
+  auto size = ParseSize(argv[3]);
   auto cnt = std::atoi(argv[4]);
 
   if (type == 0) {
