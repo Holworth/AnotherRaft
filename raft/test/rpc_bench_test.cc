@@ -59,6 +59,7 @@ void RunRPCClient(std::string ip, int size, int cnt) {
     printf("\e[?25l");
     printf("Already Done: %5d / %5d\r", i, cnt);
   }
+  puts("");
 
   auto filename = std::string("results.txt") + std::to_string(size);
   rpc_client->Dump(filename);
