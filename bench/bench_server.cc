@@ -27,8 +27,12 @@ int main(int argc, char* argv[]) {
   // sleep for 60s, waiting for clients request
   // This thread is supposed to running forever
   std::this_thread::sleep_for(std::chrono::seconds(60));
-  while (true);
+  // while (true);
+  std::cout << "Wait for exit signal: ";
+  char c;
+  std::cin >> c;
 
   // Disconnect the kv node
   node->Disconnect();
+  delete node;
 }
