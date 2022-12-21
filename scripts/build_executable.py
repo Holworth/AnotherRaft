@@ -15,13 +15,23 @@ class Server:
         self.id = id
 
 def build_executable(server: Server, type: str):
-    commands = [
-        "cd /home/kangqihan",
-        "rm -rf AnotherRaft",
-        "git clone kqh:Holworth/AnotherRaft.git -b {}".format(type),
-        "cd AnotherRaft",
-        "bash scripts/build.sh"
-    ]
+    # We have to dealing with the FlexRaft branch individually 
+    if str != 'FlexRaft': 
+        commands = [
+            "cd /home/kangqihan",
+            "rm -rf AnotherRaft",
+            "git clone kqh:Holworth/AnotherRaft.git -b {}".format(type),
+            "cd AnotherRaft",
+            "bash scripts/build.sh"
+        ]
+    else:
+        commands = [
+            "cd /home/kangqihan",
+            "rm -rf FlexRaft",
+            "git clone kqh:Holworth/FlexRaft.git -b main",
+            "cd FlexRaft",
+            "bash scripts/build.sh"
+        ]
     ssh_cmd = ""
     for cmd in commands:
         ssh_cmd = ssh_cmd + cmd + ";"

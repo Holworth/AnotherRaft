@@ -6,7 +6,7 @@ namespace util {
 using std::chrono::microseconds;
 using std::chrono::milliseconds;
 
-using TimePoint = decltype(std::chrono::steady_clock::now());
+using TimePoint = decltype(std::chrono::high_resolution_clock::now());
 
 class Timer {
  public:
@@ -64,7 +64,7 @@ class Logger {
 };
 
 inline TimePoint NowTime() {
-  return std::chrono::steady_clock::now();
+  return std::chrono::high_resolution_clock::now();
 }
 
 inline int64_t DurationToMicros(TimePoint start, TimePoint end) {
