@@ -36,9 +36,9 @@ struct RPCArgStats {
 struct RPCStats {
   size_t arg_size;
   size_t resp_size;
-  uint64_t total_time;
-  uint64_t transfer_time;
-  uint64_t process_time;
+  int64_t total_time;
+  int64_t transfer_time;
+  int64_t process_time;
 
   std::string ToString() const {
     char buf[512];

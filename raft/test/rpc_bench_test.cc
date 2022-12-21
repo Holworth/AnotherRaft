@@ -62,7 +62,7 @@ void RunRPCClient(std::string ip, int size, int cnt) {
   }
   puts("");
 
-  auto filename = std::string("results.txt") + std::to_string(size);
+  auto filename = std::string("results-") + std::to_string(size) + ".txt";
   rpc_client->Dump(filename);
 }
 

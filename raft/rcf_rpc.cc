@@ -177,9 +177,9 @@ void RPCStatsRecorder::Dump(const std::string &dst) {
   std::ofstream of;
   of.open(dst);
 
-  uint64_t total_total_time = 0;
-  uint64_t total_transfer_time = 0;
-  uint64_t total_process_time = 0;
+  int64_t total_total_time = 0;
+  int64_t total_transfer_time = 0;
+  int64_t total_process_time = 0;
 
   for (const auto &stat : history_) {
     of << stat.ToString() << "\n";
@@ -188,18 +188,18 @@ void RPCStatsRecorder::Dump(const std::string &dst) {
     total_transfer_time += stat.transfer_time;
   }
 
-  uint64_t avg_total_time = total_total_time / history_.size();
-  uint64_t avg_process_time = total_process_time / history_.size();
-  uint64_t avg_transfer_time = total_transfer_time / history_.size();
+  int64_t avg_total_time = total_total_time / history_.size();
+  int64_t avg_process_time = total_process_time / history_.size();
+  int64_t avg_transfer_time = total_transfer_time / history_.size();
 
   of << "[Average Total Time]:" << total_total_time / history_.size()
      << "[Average Process Time]:" << total_process_time / history_.size()
      << "[Average Transfer Time]:" << total_transfer_time / history_.size();
 
   // Calculate standard dev
-  uint64_t total_time_sq_sum = 0;
-  uint64_t process_time_sq_sum = 0;
-  uint64_t transfer_time_sq_sum = 0;
+  int64_t total_time_sq_sum = 0;
+  int64_t process_time_sq_sum = 0;
+  int64_t transfer_time_sq_sum = 0;
   for (const auto &stat : history_) {
     total_time_sq_sum += std::pow(stat.total_time - avg_total_time, 2);
     process_time_sq_sum += std::pow(stat.process_time - avg_process_time, 2);

@@ -65,7 +65,7 @@ struct AppendEntriesReply {
   raft_node_id_t reply_id;
 
   // The time receiver process this AppendEntries RPC (us)
-  uint64_t process_time;
+  int64_t process_time;
 };
 
 // A struct that indicates the command specified by user of the raft cluster
