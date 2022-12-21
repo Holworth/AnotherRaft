@@ -41,7 +41,9 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 
   // Record the time of processing an AppendEntries RPC call
   auto start = util::NowTime();
-  raft_->Process(&args, &reply);
+  if (raft_ != nullptr) {
+    raft_->Process(&args, &reply);
+  }
   auto dura = util::DurationToMicros(start, util::NowTime());
   reply.process_time = dura;
 
@@ -137,7 +139,9 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
-    raft->Process(&reply);
+    if (raft != nullptr) {
+      raft->Process(&reply);
+    }
 
     // Only record stat that is not heartbeat messages
     if (rpc_stats.arg_size > kAppendEntriesArgsHdrSize) {

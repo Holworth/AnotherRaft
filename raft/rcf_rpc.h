@@ -53,8 +53,8 @@ struct RPCStats {
 
 struct RPCStatsRecorder {
  public:
-  RPCStatsRecorder() : history_() { 
-    history_.reserve(10000); 
+  RPCStatsRecorder() : history_() {
+    history_.reserve(10000);
     // Add a default history result
     history_.push_back({0, 0, 0, 0, 0});
   }
@@ -75,7 +75,7 @@ class RaftRPCService {
   RCF::ByteBuffer AppendEntries(const RCF::ByteBuffer &arg_buf);
 
  private:
-  RaftState *raft_;
+  RaftState *raft_ = nullptr;
 };
 
 // An implementation of RpcClient interface using RCF (Remote Call Framework)
@@ -90,12 +90,13 @@ class RCFRpcClient final : public RpcClient {
   RCFRpcClient(const RCFRpcClient &) = delete;
 
   ~RCFRpcClient() {
-    auto filename = std::to_string(raft_->Id()) + "-" + std::to_string(id_);
-    recorder_.Dump(filename);
+    // auto filename = std::to_string(raft_->Id()) + "-" + std::to_string(id_);
+    // recorder_.Dump(filename);
   }
 
  public:
   void SetRaftState(RaftState *raft) { raft_ = raft; }
+  void Dump(const std::string &filename) { recorder_.Dump(filename); }
 
  public:
   void Init() override;
@@ -125,7 +126,7 @@ class RCFRpcClient final : public RpcClient {
                                       RPCStatsRecorder *recorder);
 
  private:
-  RaftState *raft_;
+  RaftState *raft_ = nullptr;
   RCF::RcfInit rcf_init_;
   NetAddress target_address_;
   bool stopped_;
