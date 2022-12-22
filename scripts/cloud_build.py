@@ -20,7 +20,7 @@ def build_executable(server: Server, type: str):
         commands = [
             "cd /home/kangqihan",
             "rm -rf AnotherRaft",
-            "git clone kqh:Holworth/AnotherRaft.git -b {}".format(type),
+            "git clone git@github.com:Holworth/AnotherRaft.git -b {}".format(type),
             "cd AnotherRaft",
             "bash scripts/build.sh"
         ]
@@ -28,7 +28,7 @@ def build_executable(server: Server, type: str):
         commands = [
             "cd /home/kangqihan",
             "rm -rf FlexRaft",
-            "git clone kqh:Holworth/FlexRaft.git -b main",
+            "git clone git@github.com:Holworth/FlexRaft.git -b main",
             "cd FlexRaft",
             "bash scripts/build.sh"
         ]
@@ -56,7 +56,7 @@ if __name__ == "__main__":
         v = "main"
     else:
         v = sys.argv[1]
-    if v != "main" and v != "FlexibleK" and v != "CRaft" and v != "HRaft":
+    if v != "main" and v != "FlexRaft" and v != "CRaft" and v != "HRaft":
         print("Invalid version parameter {}".format(v))
         exit(1)
 

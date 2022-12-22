@@ -21,6 +21,8 @@ auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
   return Slice(rand_data, rand_size);
 }
 
+void DestructSlice(const Slice& slice) { delete[] slice.data(); }
+
 auto GenerateRandomLogEntry(int min_len, int max_len) -> LogEntry {
   LogEntry ent;
   ent.SetTerm(rand());
@@ -29,6 +31,8 @@ auto GenerateRandomLogEntry(int min_len, int max_len) -> LogEntry {
   ent.SetCommandData(GenerateRandomSlice(min_len, max_len));
   return ent;
 }
+
+void DestructLogEntry(const LogEntry& ent) { DestructSlice(ent.CommandData()); }
 
 auto GenerateRandomAppendEntryArgs(int len, int ent_cnt) -> AppendEntriesArgs {
   AppendEntriesArgs args;
@@ -45,25 +49,33 @@ auto GenerateRandomAppendEntryArgs(int len, int ent_cnt) -> AppendEntriesArgs {
   return args;
 }
 
+void DestructAppendEntriesArgs(const AppendEntriesArgs& args) {
+  for (auto& ent : args.entries) {
+    DestructLogEntry(ent);
+  }
+}
+
 // The server will send "cnt" AppendEntries RPC call to remote server
 // and evaluate the processing time
-void RunRPCClient(std::string ip, int size, int cnt) {
+void RunRPCClient(std::string ip, int size, int ent_cnt, int rpc_cnt) {
   rpc::NetAddress net;
   net.ip = ip;
   net.port = kRPCBenchTestPort;
   auto rpc_client = std::make_shared<rpc::RCFRpcClient>(net, 0);
 
-  for (int i = 1; i <= cnt; ++i) {
-    auto arg = GenerateRandomAppendEntryArgs(size, 1);
+  for (int i = 1; i <= rpc_cnt; ++i) {
+    auto arg = GenerateRandomAppendEntryArgs(size, ent_cnt);
     rpc_client->sendMessage(arg);
+    DestructAppendEntriesArgs(arg);
     RCF::sleepMs(10);
     printf("\e[?25l");
-    printf("Already Done: %5d / %5d\r", i, cnt);
+    printf("Already Done: %5d / %5d\r", i, rpc_cnt);
   }
   printf("\e[?25h");
   puts("");
 
-  auto filename = std::string("results-") + std::to_string(size) + ".txt";
+  auto filename = std::string("results-") + std::to_string(size) + "-" +
+                  std::to_string(ent_cnt) + ".txt";
   rpc_client->Dump(filename);
 }
 
@@ -101,11 +113,13 @@ int main(int argc, char* argv[]) {
   auto type = std::atoi(argv[1]);
   auto ip = std::string(argv[2]);
   auto size = ParseSize(argv[3]);
-  auto cnt = std::atoi(argv[4]);
+  // # of entry an AppendEntries RPC carries
+  auto ent_cnt = std::atoi(argv[4]);
+  auto rpc_cnt = std::atoi(argv[5]);
 
   if (type == 0) {
     raft::RunRPCServer(ip);
   } else {
-    raft::RunRPCClient(ip, size, cnt);
+    raft::RunRPCClient(ip, size, ent_cnt, rpc_cnt);
   }
 }
