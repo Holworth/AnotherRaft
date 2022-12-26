@@ -40,6 +40,7 @@ if __name__ == "__main__":
         Server("172.18.226.145", "22", "root", "", 3),
         Server("172.18.226.144", "22", "root", "", 4),
         Server("172.20.83.185", "22", "root", "", 5),
+        Server("172.18.226.147", "22", "root", "", 6),
     ]
     for server in cloud_servers:
         LimitBandwidth(server, band)

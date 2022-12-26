@@ -22,7 +22,11 @@ static const NodesConfig kLocalConfigs = {
     {4, {"127.0.0.1", 50004}},
 };
 
-static const NodesConfig kCloudConfigs = {};
+static const NodesConfig kCloudConfigs = {
+    {1, {"172.20.83.186", 50001}},  {2, {"172.18.226.146", 50001}},
+    {3, {"172.18.226.145", 50001}}, {4, {"172.18.226.144", 50001}},
+    {5, {"172.20.83.185", 50001}},  {6, {"172.18.226.147", 50001}},
+};
 
 struct CommitLatencyRecorder {
  public:
@@ -98,7 +102,6 @@ void DumpRPCClients(std::shared_ptr<RaftState> raft_stat, int data_size) {
   of.open(filename);
   for (const auto& [id, rpc] : raft_stat->rpc_clients_) {
     reinterpret_cast<rpc::RCFRpcClient*>(rpc)->Dump(of);
-
   }
   of.close();
 }
