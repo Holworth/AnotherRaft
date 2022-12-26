@@ -16,7 +16,7 @@ class Server:
 
 def build_executable(server: Server, type: str):
     # We have to dealing with the FlexRaft branch individually 
-    if str != 'FlexRaft': 
+    if type != "FlexRaft": 
         commands = [
             "cd /home/kangqihan",
             "rm -rf AnotherRaft",
@@ -61,12 +61,12 @@ if __name__ == "__main__":
         exit(1)
 
     cloud_servers = [
-        Server("172.20.83.188", "22", "root", "", 0),
-        Server("172.20.83.186", "22", "root", "", 1),
+        Server("172.18.226.148", "22", "root", "", 0),
+        Server("172.18.226.150", "22", "root", "", 1),
         Server("172.18.226.146", "22", "root", "", 2),
         Server("172.18.226.145", "22", "root", "", 3),
         Server("172.18.226.144", "22", "root", "", 4),
-        Server("172.20.83.185", "22", "root", "", 5),
+        Server("172.18.226.149", "22", "root", "", 5),
         Server("172.18.226.147", "22", "root", "", 6),
     ]
 

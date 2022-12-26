@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -27,6 +28,8 @@ static const NodesConfig kCloudConfigs = {
     {3, {"172.18.226.145", 50001}}, {4, {"172.18.226.144", 50001}},
     {5, {"172.20.83.185", 50001}},  {6, {"172.18.226.147", 50001}},
 };
+
+std::string GetRaftLogName(raft_node_id_t id) { return "raftlog" + std::to_string(id); }
 
 struct CommitLatencyRecorder {
  public:
@@ -58,9 +61,11 @@ void DestructSlice(const Slice& slice) { delete[] slice.data(); }
 void RunRaftFollower(raft_node_id_t id, const NodesConfig& config) {
   // Create a raft follower
   auto rpc_server = std::make_shared<rpc::RCFRpcServer>(config.at(id));
+  auto filename = GetRaftLogName(id);
+  auto storage = FileStorage::Open(filename);
 
   // Construct and initialize a raft state
-  auto raft_config = RaftConfig{id, {}, nullptr, 10000, 10000, nullptr};
+  auto raft_config = RaftConfig{id, {}, storage, 10000, 10000, nullptr};
   auto raft_stat = RaftState::NewRaftState(raft_config);
   raft_stat->SetRole(kFollower);
   raft_stat->SetCurrentTerm(1);
@@ -72,6 +77,8 @@ void RunRaftFollower(raft_node_id_t id, const NodesConfig& config) {
   std::cout << "[Input to exit]:";
   char c;
   std::cin >> c;
+
+  std::filesystem::remove(filename);
 }
 
 std::shared_ptr<RaftState> ConstructRaftLeader(raft_node_id_t id,
@@ -81,8 +88,11 @@ std::shared_ptr<RaftState> ConstructRaftLeader(raft_node_id_t id,
     rpc_clients.insert({id, new rpc::RCFRpcClient(net, id)});
   }
 
+  auto filename = GetRaftLogName(id);
+  auto storage = FileStorage::Open(filename);
+
   std::shared_ptr<RaftState> ret;
-  auto raft_config = RaftConfig{id, rpc_clients, nullptr, 10000, 10000, nullptr};
+  auto raft_config = RaftConfig{id, rpc_clients, storage, 10000, 10000, nullptr};
   ret.reset(RaftState::NewRaftState(raft_config));
   ret->convertToLeader();
   ret->SetCurrentTerm(1);
@@ -109,6 +119,7 @@ void DumpRPCClients(std::shared_ptr<RaftState> raft_stat, int data_size) {
 void RunRaftLeader(raft_node_id_t id, const NodesConfig& configs, int data_size,
                    int propose_cnt) {
   auto leader = ConstructRaftLeader(id, configs);
+  RCF::sleepMs(1000);
   CommitLatencyRecorder recorder;
   for (int i = 1; i <= propose_cnt; ++i) {
     auto data = GenerateRandomSlice(data_size, data_size);
