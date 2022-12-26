@@ -117,7 +117,7 @@ class RaftState {
   raft_index_t LastLogIndex() const { return lm_->LastLogEntryIndex(); }
   raft_term_t TermAt(raft_index_t raft_index) const { return lm_->TermAt(raft_index); }
 
- private:
+ public:
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
   bool isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term);
@@ -200,7 +200,7 @@ class RaftState {
   LogManager *lm_;
   Storage *storage_;
 
- private:
+ public:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient *> rpc_clients_;
 

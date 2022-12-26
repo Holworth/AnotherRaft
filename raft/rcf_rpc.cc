@@ -44,6 +44,7 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
   auto start = util::NowTime();
   if (raft_ != nullptr) {
     raft_->Process(&args, &reply);
+  } else {
   }
   auto dura = util::DurationToMicros(start, util::NowTime());
   reply.process_time = dura;
@@ -171,6 +172,12 @@ void RCFRpcServer::Stop() {
 
 void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {
   // Nothing to do
+}
+
+void RPCStatsRecorder::Dump(std::ofstream &of) {
+  for (const auto &stat : history_) {
+    of << stat.ToString() << "\n";
+  }
 }
 
 void RPCStatsRecorder::Dump(const std::string &dst) {

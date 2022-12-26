@@ -18,7 +18,7 @@ namespace rpc {
 namespace config {
 // Each RPC call size must not exceed 512MB
 static constexpr size_t kMaxMessageLength = 512 * 1024 * 1024;
-static constexpr size_t kRPCTimeout = 500;
+static constexpr size_t kRPCTimeout = 800;
 };  // namespace config
 
 RCF_BEGIN(I_RaftRPCService, "I_RaftRPCService")
@@ -61,6 +61,7 @@ struct RPCStatsRecorder {
 
   // Write the results to a specified file
   void Dump(const std::string &dst);
+  void Dump(std::ofstream& of);
 
   void Add(const RPCStats &stat) { history_.push_back(stat); }
 
@@ -97,6 +98,7 @@ class RCFRpcClient final : public RpcClient {
  public:
   void SetRaftState(RaftState *raft) { raft_ = raft; }
   void Dump(const std::string &filename) { recorder_.Dump(filename); }
+  void Dump(std::ofstream& of) { recorder_.Dump(of); }
 
  public:
   void Init() override;

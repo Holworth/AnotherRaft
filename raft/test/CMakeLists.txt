@@ -15,3 +15,4 @@ foreach(test_file_source ${TEST_FILES})
     target_link_libraries(${test_exec_name} raft ${GTEST_BOTH_LIBRARIES})
   endif()
 endforeach()
+
