@@ -3,6 +3,10 @@
 #include <chrono>
 #include <ratio>
 
+#include <cmath>
+#include <ctime>
+#include <fstream>
+
 #include "RCF/ByteBuffer.hpp"
 #include "RCF/ClientStub.hpp"
 #include "RCF/Endpoint.hpp"
