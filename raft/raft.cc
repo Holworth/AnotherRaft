@@ -678,7 +678,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
       }
     }
     storage_->PersistEntries(lo, lm_->LastLogEntryIndex(), persist_entries);
-    storage_->SetLastIndex(lm_->LastLogEntryIndex());
+    // storage_->SetLastIndex(lm_->LastLogEntryIndex());
     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d)", id_, lo, lm_->LastLogEntryIndex());
   }
 }
