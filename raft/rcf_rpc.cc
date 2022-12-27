@@ -47,11 +47,11 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
 #endif
 
   if (raft_ != nullptr) {
-    auto start = util::NowTime();
+    // auto start = util::NowTime();
     raft_->Process(&args, &reply);
-    auto end = util::NowTime();
-    auto dura = util::DurationToMicros(start, end);
-    printf("Process Time: %llu\n", dura);
+    // auto end = util::NowTime();
+    // auto dura = util::DurationToMicros(start, end);
+    // printf("Process Time: %llu\n", dura);
   } else {
     reply.versions.reserve(args.entry_cnt);
     for (int i = 0; i < args.entry_cnt; ++i) {
