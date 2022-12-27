@@ -127,6 +127,7 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
   for (int i = 1; i <= propose_cnt; ++i) {
     auto data = GenerateRandomSlice(data_size, data_size);
     auto start = util::NowTime();
+    leader->livenss_monitor_.SetLivenessNumber(6);
     leader->SetReTransferRPCCount(0);
     auto pr = leader->ReTransferOnFailure(CommandData{0, data});
     assert(pr.is_leader == true);

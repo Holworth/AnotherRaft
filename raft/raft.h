@@ -77,6 +77,12 @@ struct LivenessMonitor {
     response_time[me] = 0;
   }
 
+  void SetLivenessNumber(int num) {
+    for (int i = 0; i < std::min(num, node_num); ++i) {
+      response[i] = true;
+    }
+  }
+
   void UpdateLiveness(raft_node_id_t id) {
     response[id] = true;
     response_time[id] = timer.ElapseMilliseconds();
