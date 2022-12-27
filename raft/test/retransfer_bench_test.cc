@@ -132,7 +132,13 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
     while (leader->GetReTransferRPCCount() < leader->GetReTransferRPCRequireCount()) {
       assert(leader->Role() == kLeader);
       // leader->Tick();
+      if (util::DurationToMicros(start, util::NowTime()) > 300000) {
+        printf("[Error] Propose timeout, exit\n");
+        std::filesystem::remove(GetRaftLogName(id));
+        return;
+      }
     }
+
     auto end = util::NowTime();
     recorder.Add(util::DurationToMicros(start, end));
 
