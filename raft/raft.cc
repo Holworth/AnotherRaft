@@ -217,8 +217,10 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
   std::scoped_lock<std::mutex> lck(mtx_);
 
+  /*
   printf("require count: %d get count: %d\n", GetReTransferRPCRequireCount(),
          GetReTransferRPCCount());
+         */
   // Increment the rpc count
   if (reply->version_cnt >= 1) {
     retransfer_rpc_count += 1;
