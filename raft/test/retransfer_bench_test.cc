@@ -129,7 +129,7 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
     auto pr = leader->ReTransferOnFailure(CommandData{0, data});
     assert(pr.is_leader == true);
     // Loop until this entry is committed
-    while (leader->ReTransferRPCCount() < leader->ReTransferRPCRequireCount()) {
+    while (leader->GetReTransferRPCCount() < leader->GetReTransferRPCRequireCount()) {
       assert(leader->Role() == kLeader);
       leader->Tick();
     }
