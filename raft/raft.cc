@@ -217,7 +217,9 @@ void RaftState::Process(AppendEntriesReply *reply) {
 
   std::scoped_lock<std::mutex> lck(mtx_);
   // Increment the rpc count
-  retransfer_rpc_count += 1;
+  if (reply->version_cnt > 1) {
+    retransfer_rpc_count += 1;
+  }
 
   LOG(util::kRaft, "S%d RECV AE RESP From S%d (Accept%d Expect I%d Term %d)", id_,
       reply->reply_id, reply->success, reply->expect_index, reply->term);
@@ -509,7 +511,7 @@ void RaftState::ReTransferRaftEntry(raft_index_t raft_index) {
       continue;
     }
 
-    // Construct an AppendEntries arguments struct 
+    // Construct an AppendEntries arguments struct
     AppendEntriesArgs args;
     args.term = CurrentTerm();
     args.leader_id = id_;

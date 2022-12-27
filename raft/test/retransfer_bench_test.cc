@@ -133,7 +133,7 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
     // Loop until this entry is committed
     while (leader->GetReTransferRPCCount() < leader->GetReTransferRPCRequireCount()) {
       assert(leader->Role() == kLeader);
-      leader->Tick();
+      // leader->Tick();
     }
     auto end = util::NowTime();
     recorder.Add(util::DurationToMicros(start, end));
