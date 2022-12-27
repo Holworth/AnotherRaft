@@ -21,6 +21,8 @@ static const NodesConfig kLocalConfigs = {
     {2, {"127.0.0.1", 50002}},
     {3, {"127.0.0.1", 50003}},
     {4, {"127.0.0.1", 50004}},
+    {5, {"127.0.0.1", 50005}},
+    {6, {"127.0.0.1", 50006}},
 };
 
 static const NodesConfig kCloudConfigs = {
