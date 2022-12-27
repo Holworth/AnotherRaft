@@ -271,7 +271,7 @@ class RaftState {
   int HRaftK() const { return hraft_k_; }
   int HRaftM() const { return hraft_m_; }
 
- private:
+ public:
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
   bool isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term);
@@ -373,7 +373,7 @@ class RaftState {
 
   void DecodeCollectedStripe();
 
- private:
+ public:
   // For concurrency control. A raft state instance might be accessed via
   // multiple threads, e.g. RPC thread that receives request; The state machine
   // thread that peridically apply committed log entries, and so on

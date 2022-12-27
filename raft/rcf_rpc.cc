@@ -42,7 +42,20 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
   util::RaftAppendEntriesProcessPerfCounter counter(arg_buf.getLength());
 #endif
 
-  raft_->Process(&args, &reply);
+  if (raft_ != nullptr) {
+    // auto start = util::NowTime();
+    raft_->Process(&args, &reply);
+    // auto end = util::NowTime();
+    // auto dura = util::DurationToMicros(start, end);
+    // printf("Process Time: %llu\n", dura);
+  } else {
+    reply.chunk_infos.reserve(args.entry_cnt);
+    for (int i = 0; i < args.entry_cnt; ++i) {
+      auto chunkinfo = args.entries[i].GetChunkInfo();
+      reply.chunk_infos.push_back(chunkinfo);
+    }
+    reply.chunk_info_cnt = reply.chunk_infos.size();
+  }
 
 #ifdef ENABLE_PERF_RECORDING
   counter.Record();
@@ -111,6 +124,8 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   RCF::ByteBuffer arg_buf(serializer.getSerializeSize(args));
   serializer.Serialize(&args, &arg_buf);
 
+  auto start_time = util::NowTime();
+
   RCF::Future<RCF::ByteBuffer> ret;
 
 #ifdef ENABLE_PERF_RECORDING
@@ -118,12 +133,16 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
 #endif
 
   auto cmp_callback = [=]() {
+/*
 #ifdef ENABLE_PERF_RECORDING
     onAppendEntriesCompleteRecordTimer(ret, client_ptr, this->raft_, this->id_, counter);
 #else
-    onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_);
+*/
+    onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_,
+                          {arg_buf.getLength(), start_time}, &(this->recorder_));
+/*
 #endif
-  };
+*/
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
@@ -166,7 +185,8 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
                                            ClientPtr client_ptr, RaftState *raft,
-                                           raft_node_id_t peer) {
+                                           raft_node_id_t peer, RPCArgStats rpc_stats, 
+                                           RPCStatsRecorder* recorder) {
   (void)client_ptr;
 
   auto ePtr = ret.getAsyncException();
@@ -174,10 +194,21 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
     LOG(util::kRPC, "S%d AppendEntries RPC Call Error: %s", peer,
         ePtr->getErrorString().c_str());
   } else {
+    auto time = util::DurationToMicros(rpc_stats.start_time, util::NowTime());
+
     RCF::ByteBuffer ret_buf = *ret;
     AppendEntriesReply reply;
     Serializer::NewSerializer().Deserialize(&ret_buf, &reply);
-    raft->Process(&reply);
+    if (raft != nullptr) {
+      raft->Process(&reply);
+    }
+
+    // Only record stat that is not heartbeat messages
+    if (rpc_stats.arg_size > kAppendEntriesArgsHdrSize) {
+      auto stat = RPCStats{rpc_stats.arg_size, ret_buf.getLength(), time,
+                           time - 0, 0};
+      recorder->Add(stat);
+    }
   }
 }
 
