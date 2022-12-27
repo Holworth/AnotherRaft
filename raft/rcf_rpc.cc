@@ -270,5 +270,51 @@ void RCFRpcServer::dealWithMessage(const RequestVoteArgs &reply) {
   // Nothing to do
 }
 
+void RPCStatsRecorder::Dump(std::ofstream &of) {
+  for (const auto &stat : history_) {
+    of << stat.ToString() << "\n";
+  }
+}
+
+void RPCStatsRecorder::Dump(const std::string &dst) {
+  std::ofstream of;
+  of.open(dst);
+
+  int64_t total_total_time = 0;
+  int64_t total_transfer_time = 0;
+  int64_t total_process_time = 0;
+
+  for (const auto &stat : history_) {
+    of << stat.ToString() << "\n";
+    total_total_time += stat.total_time;
+    total_process_time += stat.process_time;
+    total_transfer_time += stat.transfer_time;
+  }
+
+  int64_t avg_total_time = total_total_time / history_.size();
+  int64_t avg_process_time = total_process_time / history_.size();
+  int64_t avg_transfer_time = total_transfer_time / history_.size();
+
+  of << "[Average Total Time]:" << total_total_time / history_.size()
+     << "[Average Process Time]:" << total_process_time / history_.size()
+     << "[Average Transfer Time]:" << total_transfer_time / history_.size();
+
+  // Calculate standard dev
+  int64_t total_time_sq_sum = 0;
+  int64_t process_time_sq_sum = 0;
+  int64_t transfer_time_sq_sum = 0;
+  for (const auto &stat : history_) {
+    total_time_sq_sum += std::pow(stat.total_time - avg_total_time, 2);
+    process_time_sq_sum += std::pow(stat.process_time - avg_process_time, 2);
+    transfer_time_sq_sum += std::pow(stat.transfer_time - avg_transfer_time, 2);
+  }
+
+  of << "[StandardDev Total Time]: " << std::sqrt(total_time_sq_sum / history_.size())
+     << "[StandardDev Process Time]: " << std::sqrt(process_time_sq_sum / history_.size())
+     << "[StandardDev Transfer Time]: "
+     << std::sqrt(transfer_time_sq_sum / history_.size());
+  of.close();
+}
+
 }  // namespace rpc
 }  // namespace raft
