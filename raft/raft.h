@@ -372,7 +372,7 @@ class RaftState {
   // Construct a mapping table from current live followers and encoding fragments
   MappingTable ConstructMappingTable();
 
-  int GetClusterServerNumber() const { return peers_.size() + 1; }
+  int GetClusterServerNumber() const { return peers_.size(); }
 
   // In flexibleK, the leader needs to send AppendEntries arguments in every
   // heartbeat round

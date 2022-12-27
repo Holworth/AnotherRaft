@@ -1357,7 +1357,7 @@ RaftState::MappingTable RaftState::ConstructReTransferMappingTable() {
       break;
     }
     // For an alive server, push fragment to that follower
-    if (live_monitor_.IsAlive(id)) {
+    if (live_monitor_.IsAlive(id) && id != id_) {
       for (int i = 0; i < retransfer_num; ++i) {
         res[id].push_back(i);
         LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id, i);
