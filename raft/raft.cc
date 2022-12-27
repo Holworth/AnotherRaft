@@ -508,7 +508,8 @@ void RaftState::ReTransferRaftEntry(raft_index_t raft_index) {
     if (id == id_) {
       continue;
     }
-    if (!live_monitor_.IsAlive(id)) {
+    // This server is down, or this server will not be sent entries
+    if (!live_monitor_.IsAlive(id) || frag_map.count(id) == 0) {
       LOG(util::kRaft, "S%d detect S%d is not alive, send heartbeat", id_, id);
       sendHeartBeat(id);
       continue;
