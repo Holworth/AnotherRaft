@@ -17,12 +17,8 @@ static const int kRPCBenchTestPort = 50001;
 using NodesConfig = std::unordered_map<raft_node_id_t, rpc::NetAddress>;
 
 static const NodesConfig kLocalConfigs = {
-    {1, {"127.0.0.1", 50001}},
-    {2, {"127.0.0.1", 50002}},
-    {3, {"127.0.0.1", 50003}},
-    {4, {"127.0.0.1", 50004}},
-    {5, {"127.0.0.1", 50005}},
-    {6, {"127.0.0.1", 50006}},
+    {1, {"127.0.0.1", 50001}}, {2, {"127.0.0.1", 50002}}, {3, {"127.0.0.1", 50003}},
+    {4, {"127.0.0.1", 50004}}, {5, {"127.0.0.1", 50005}}, {6, {"127.0.0.1", 50006}},
 };
 
 static const NodesConfig kCloudConfigs = {
@@ -127,13 +123,15 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
   for (int i = 1; i <= propose_cnt; ++i) {
     auto data = GenerateRandomSlice(data_size, data_size);
     auto start = util::NowTime();
-    leader->livenss_monitor_.SetLivenessNumber(6);
+    leader->live_monitor_.SetLivenessNumber(6);
     leader->SetReTransferRPCCount(0);
     auto pr = leader->ReTransferOnFailure(CommandData{0, data});
     assert(pr.is_leader == true);
     // Loop until this entry is committed
     while (leader->GetReTransferRPCCount() < leader->GetReTransferRPCRequireCount()) {
       assert(leader->Role() == kLeader);
+      printf("require count: %d get count: %d\n", leader->GetReTransferRPCRequireCount(),
+             leader->GetReTransferRPCCount());
       // leader->Tick();
     }
     auto end = util::NowTime();
