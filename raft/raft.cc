@@ -216,6 +216,8 @@ void RaftState::Process(AppendEntriesReply *reply) {
   live_monitor_.UpdateLiveness(reply->reply_id);
 
   std::scoped_lock<std::mutex> lck(mtx_);
+  // Increment the rpc count
+  retransfer_rpc_count += 1;
 
   LOG(util::kRaft, "S%d RECV AE RESP From S%d (Accept%d Expect I%d Term %d)", id_,
       reply->reply_id, reply->success, reply->expect_index, reply->term);
@@ -467,6 +469,106 @@ bool RaftState::isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term) {
   return false;
 }
 
+void RaftState::ReTransferRaftEntry(raft_index_t raft_index) {
+  auto live_servers_num = live_monitor_.LiveNumber();
+  int encode_k = HRaftK(), encode_m = HRaftM();
+
+  assert(encode_k != 0);
+
+  // Fix the sequence number
+  auto version_num = VersionNumber{CurrentTerm(), 1};
+
+  LOG(util::kRaft, "S%d Estimate %d Server Alive K:%d M:%d VERSION NUM:%s", id_,
+      live_servers_num, encode_k, encode_m, version_num.ToString().c_str());
+
+  auto stripe = new Stripe();
+  EncodingRaftEntry(raft_index, encode_k, encode_m, version_num, stripe);
+  encoded_stripe_.insert_or_assign(raft_index, stripe);
+
+  auto new_version = Version{version_num, encode_k, encode_m, raft_index};
+  stripe->version = new_version;
+
+  // Update each fragments version number
+  for (auto &[id, frag] : stripe->fragments) {
+    auto frag_version = new_version;
+    frag_version.SetFragmentId(id);
+    frag_version.SetRaftIndex(frag.Index());
+    frag.SetVersion(frag_version);
+  }
+
+  auto frag_map = ConstructReTransferMappingTable();
+
+  // Step3: For each follower, send out the messages
+  for (const auto &[id, _] : peers_) {
+    if (id == id_) {
+      continue;
+    }
+    if (!live_monitor_.IsAlive(id)) {
+      LOG(util::kRaft, "S%d detect S%d is not alive, send heartbeat", id_, id);
+      sendHeartBeat(id);
+      continue;
+    }
+
+    // Construct an AppendEntries arguments struct 
+    AppendEntriesArgs args;
+    args.term = CurrentTerm();
+    args.leader_id = id_;
+    args.leader_commit = CommitIndex();
+    args.prev_log_index = raft_index - 1;
+    args.prev_log_term = lm_->TermAt(args.prev_log_index);
+
+    for (const auto &fragment_id : frag_map[id]) {
+      assert(encoded_stripe_.count(raft_index) != 0);
+      auto fragment = encoded_stripe_[raft_index]->fragments[fragment_id];
+      assert(fragment_id == fragment.GetVersion().fragment_id);
+      args.entries.push_back(fragment);
+      LOG(util::kRaft, "S%d Send (I%d T%d FragId%d) To S%d VersionIndex%d", id_,
+          raft_index, fragment.Term(), fragment_id, id,
+          fragment.GetVersion().GetRaftIndex());
+    }
+    args.entry_cnt = args.entries.size();
+    rpc_clients_[id]->sendMessage(args);
+  }
+  SetReTransferRPCRequireCount(frag_map.size());
+}
+
+ProposeResult RaftState::ReTransferOnFailure(const CommandData &command) {
+  std::scoped_lock<std::mutex> lck(mtx_);
+
+  if (Role() != kLeader) {
+    return ProposeResult{0, 0, false};
+  }
+
+  raft_index_t next_entry_index = lm_->LastLogEntryIndex() + 1;
+  LogEntry entry;
+  entry.SetType(kNormal);
+  entry.SetCommandData(command.command_data);
+  entry.SetIndex(next_entry_index);
+  entry.SetTerm(CurrentTerm());
+  entry.SetStartOffset(command.start_fragment_offset);
+  entry.SetVersion(Version::Default());
+
+  lm_->AppendLogEntry(entry);
+
+  LOG(util::kRaft, "S%d (Re)Propose at (I%d T%d) (ptr=%p)", id_, next_entry_index,
+      CurrentTerm(), entry.CommandData().data());
+
+  // -------- Encode this entry and send this proposed data out
+  ReTransferRaftEntry(next_entry_index);
+
+  // Persist this new entry: maybe it can be ignored?
+  if (storage_ != nullptr) {
+    std::vector<LogEntry> persist_ent{entry};
+    auto lo = lm_->LastLogEntryIndex();
+    LOG(util::kRaft, "S%d Starts Persisting Propose Entry(I%d)", id_, lo);
+    storage_->PersistEntries(lo, lo, persist_ent);
+    storage_->SetLastIndex(lo);
+    LOG(util::kRaft, "S%d Persist Propose Entry(I%d) Done", id_, lo);
+  }
+
+  return ProposeResult{next_entry_index, CurrentTerm(), true};
+}
+
 void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
                                                AppendEntriesReply *reply) {
   assert(args->entry_cnt == args->entries.size());
@@ -552,7 +654,8 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
     //         lm->LastLogEntryIndex(), log_id);
     //     storage_->PersistEntries(lo, lm->LastLogEntryIndex(), persist_entries);
     //     storage_->SetLastIndex(lm_->LastLogEntryIndex());
-    //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d] Finished", id_, lo,
+    //     LOG(util::kRaft, "S%d Persist Entries (I%d->I%d) for LOGS[%d] Finished", id_,
+    //     lo,
     //         lm->LastLogEntryIndex(), log_id);
     //   }
     // }
@@ -1237,6 +1340,31 @@ bool RaftState::FindFullEntryInStripe(const Stripe *stripe, LogEntry *ent) {
     }
   }
   return false;
+}
+
+RaftState::MappingTable RaftState::ConstructReTransferMappingTable() {
+  MappingTable res;
+  auto live_number = live_monitor_.LiveNumber();
+  LOG(util::kRaft, "Live number = %d", live_number);
+  // Assert that there are fewer live servers
+  assert(live_number < GetClusterServerNumber());
+  // Calculate the number of fragments that needs to be retransferred
+  auto retransfer_num = HRaftK() + HRaftM() - live_number;
+  // Pick F followers and transfer the retransfer fragments to these servers
+  // For simplicity, we pick the first F servers
+  for (const auto &[id, _] : peers_) {
+    if (res.size() >= livenessLevel()) {
+      break;
+    }
+    // For an alive server, push fragment to that follower
+    if (live_monitor_.IsAlive(id)) {
+      for (int i = 0; i < retransfer_num; ++i) {
+        res[id].push_back(i);
+        LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id, i);
+      }
+    }
+  }
+  return res;
 }
 
 RaftState::MappingTable RaftState::ConstructMappingTable() {

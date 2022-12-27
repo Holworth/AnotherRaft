@@ -24,20 +24,15 @@ static const NodesConfig kLocalConfigs = {
 };
 
 static const NodesConfig kCloudConfigs = {
-    {1, {"172.20.83.195", 50001}}, 
-    {2, {"172.20.83.196", 50001}},
-    {3, {"172.20.83.191", 50001}}, 
-    {4, {"172.20.83.193", 50001}},
-    {5, {"172.20.83.194", 50001}}, 
-    {6, {"172.20.83.190", 50001}},
+    {1, {"172.20.83.195", 50001}}, {2, {"172.20.83.196", 50001}},
+    {3, {"172.20.83.191", 50001}}, {4, {"172.20.83.193", 50001}},
+    {5, {"172.20.83.194", 50001}}, {6, {"172.20.83.190", 50001}},
 };
 
-std::string GetRaftLogName(raft_node_id_t id) {
-  return "raftlog" + std::to_string(id);
-}
+std::string GetRaftLogName(raft_node_id_t id) { return "raftlog" + std::to_string(id); }
 
 struct CommitLatencyRecorder {
-public:
+ public:
   CommitLatencyRecorder() = default;
   ~CommitLatencyRecorder() = default;
   void Add(uint64_t time) { hist_.push_back(time); }
@@ -53,8 +48,7 @@ public:
 };
 
 auto GenerateRandomSlice(int min_len, int max_len) -> Slice {
-  int rand_size =
-      (min_len == max_len) ? min_len : rand() % (max_len - min_len) + min_len;
+  int rand_size = (min_len == max_len) ? min_len : rand() % (max_len - min_len) + min_len;
   auto rand_data = new char[rand_size];
   for (decltype(rand_size) i = 0; i < rand_size; ++i) {
     rand_data[i] = rand();
@@ -98,8 +92,7 @@ std::shared_ptr<RaftState> ConstructRaftLeader(raft_node_id_t id,
   auto storage = FileStorage::Open(filename);
 
   std::shared_ptr<RaftState> ret;
-  auto raft_config =
-      RaftConfig{id, rpc_clients, storage, 10000, 10000, nullptr};
+  auto raft_config = RaftConfig{id, rpc_clients, storage, 10000, 10000, nullptr};
   ret.reset(RaftState::NewRaftState(raft_config));
   ret->convertToLeader();
   ret->SetCurrentTerm(1);
@@ -132,10 +125,11 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
   for (int i = 1; i <= propose_cnt; ++i) {
     auto data = GenerateRandomSlice(data_size, data_size);
     auto start = util::NowTime();
-    auto pr = leader->Propose(CommandData{0, data});
+    leader->SetReTransferRPCCount(0);
+    auto pr = leader->ReTransferOnFailure(CommandData{0, data});
     assert(pr.is_leader == true);
     // Loop until this entry is committed
-    while (leader->CommitIndex() < pr.propose_index) {
+    while (leader->ReTransferRPCCount() < leader->ReTransferRPCRequireCount()) {
       assert(leader->Role() == kLeader);
       leader->Tick();
     }
@@ -152,7 +146,7 @@ void RunRaftLeader(raft_node_id_t id, const NodesConfig &configs, int data_size,
   DumpRPCClients(leader, data_size);
   std::filesystem::remove(GetRaftLogName(id));
 }
-} // namespace raft
+}  // namespace raft
 
 int ParseNum(const char *s) {
   auto str = std::string(s);
@@ -161,12 +155,12 @@ int ParseNum(const char *s) {
   }
   auto num = std::atoi(str.substr(0, str.length() - 1).c_str());
   switch (str.back()) {
-  case 'K':
-  case 'k':
-    return num * 1024;
-  case 'M':
-  case 'm':
-    return num * 1024 * 1024;
+    case 'K':
+    case 'k':
+      return num * 1024;
+    case 'M':
+    case 'm':
+      return num * 1024 * 1024;
   }
   return 0;
 }

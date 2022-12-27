@@ -27,9 +27,9 @@ enum RaftRole {
 namespace config {
 const int64_t kHeartbeatInterval = 100;         // 100ms
 const int64_t kCollectFragmentsInterval = 100;  // 100ms
-const int64_t kReplicateInterval = 500;    // 500ms
-const int64_t kElectionTimeoutMin = 500;   // 500ms
-const int64_t kElectionTimeoutMax = 1000;  // 800ms
+const int64_t kReplicateInterval = 500;         // 500ms
+const int64_t kElectionTimeoutMin = 500;        // 500ms
+const int64_t kElectionTimeoutMax = 1000;       // 800ms
 const int kHRaftEncodingK = 4;
 const int kHRaftEncodingM = 3;
 };  // namespace config
@@ -272,6 +272,15 @@ class RaftState {
   int HRaftM() const { return hraft_m_; }
 
  public:
+  // This function receives a proposed data, encode it and transfer it when there are
+  // fail servers. This function is only used to do microbench on retransfer
+  ProposeResult ReTransferOnFailure(const CommandData &cmd_data);
+
+  void ReTransferRaftEntry(raft_index_t raft_index);
+
+  // Construct a mapping table that only contains the retransfer fragments
+  MappingTable ConstructReTransferMappingTable();
+
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
   bool isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term);
@@ -363,6 +372,8 @@ class RaftState {
   // Construct a mapping table from current live followers and encoding fragments
   MappingTable ConstructMappingTable();
 
+  int GetClusterServerNumber() const { return peers_.size() + 1; }
+
   // In flexibleK, the leader needs to send AppendEntries arguments in every
   // heartbeat round
   void replicateEntries();
@@ -438,6 +449,17 @@ class RaftState {
 
   int hraft_k_ = config::kHRaftEncodingK;
   int hraft_m_ = config::kHRaftEncodingM;
+
+  int retransfer_rpc_count = 0;
+  int retransfer_rpc_require_count = 0;
+
+  void SetReTransferRPCRequireCount(int num) { retransfer_rpc_require_count = num; }
+
+  int GetReTransferRPCRequireCount() const { return retransfer_rpc_require_count; }
+
+  void SetReTransferRPCCount(int num) { retransfer_rpc_count = num; }
+
+  int GetReTransferRPCCount() const { return retransfer_rpc_count; }
 
  private:
   int vote_me_cnt_;
