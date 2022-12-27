@@ -1362,10 +1362,10 @@ RaftState::MappingTable RaftState::ConstructReTransferMappingTable() {
     if (res.size() >= livenessLevel()) {
       break;
     }
-    // For an alive server, push fragment to that follower
+    // For an alive server, push fragments to that follower
     if (live_monitor_.IsAlive(id) && id != id_) {
       for (int i = 0; i < retransfer_num; ++i) {
-        res[id].push_back(i);
+        res[id].push_back((i + id) % GetClusterServerNumber());
         LOG(util::kRaft, "S%d Construct MappingTable (S%d <- Frag%d)", id_, id, i);
       }
     }
