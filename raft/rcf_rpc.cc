@@ -49,12 +49,12 @@ RCF::ByteBuffer RaftRPCService::AppendEntries(const RCF::ByteBuffer &arg_buf) {
     // auto dura = util::DurationToMicros(start, end);
     // printf("Process Time: %llu\n", dura);
   } else {
-    reply.chunk_infos.reserve(args.entry_cnt);
+    reply.versions.reserve(args.entry_cnt);
     for (int i = 0; i < args.entry_cnt; ++i) {
-      auto chunkinfo = args.entries[i].GetChunkInfo();
-      reply.chunk_infos.push_back(chunkinfo);
+      auto version = args.entries[i].GetVersion();
+      reply.versions.push_back(version);
     }
-    reply.chunk_info_cnt = reply.chunk_infos.size();
+    reply.version_cnt = reply.versions.size();
   }
 
 #ifdef ENABLE_PERF_RECORDING
@@ -143,6 +143,7 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
 /*
 #endif
 */
+  };
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
 
