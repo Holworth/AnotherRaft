@@ -421,7 +421,7 @@ class RaftState {
   // A place for storing fragments come from RequestFragments
   PreLeaderStripeStore preleader_stripe_store_;
 
- private:
+ public:
   std::map<raft_node_id_t, RaftPeer *> peers_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient *> rpc_clients_;
 
