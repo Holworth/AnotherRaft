@@ -3,6 +3,10 @@
 #include <chrono>
 #include <memory>
 
+#include <cmath>
+#include <ctime>
+#include <fstream>
+
 #include "RCF/ByteBuffer.hpp"
 #include "RCF/ClientStub.hpp"
 #include "RCF/Future.hpp"
@@ -141,6 +145,8 @@ class RCFRpcClient final : public RpcClient {
   NetAddress target_address_;
   bool stopped_;
   raft_node_id_t id_;
+
+  RPCStatsRecorder recorder_;
 };
 
 class RCFRpcServer final : public RpcServer {
