@@ -190,6 +190,14 @@ struct EncodingEntryPerfCounter final : public PerfCounter {
   }
 };
 
+inline TimePoint NowTime() {
+  return std::chrono::high_resolution_clock::now();
+}
+
+inline int64_t DurationToMicros(TimePoint start, TimePoint end) {
+  return std::chrono::duration_cast<std::chrono::microseconds>(end-start).count();
+}
+
 // Use singleton to access the global-only logger
 Logger* LoggerInstance();
 PerfLogger* PerfLoggerInstance();

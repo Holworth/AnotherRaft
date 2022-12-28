@@ -268,7 +268,7 @@ class RaftState {
   int CRaftK() const { return craft_k_; }
   int CRaftM() const { return craft_m_; }
 
- private:
+ public:
   // Check specified raft_index and raft_term is newer than log entries stored
   // in current raft peer. Return true if it is, otherwise returns false
   bool isLogUpToDate(raft_index_t raft_index, raft_term_t raft_term);
@@ -367,7 +367,7 @@ class RaftState {
 
   void DecodeCollectedStripe();
 
- private:
+ public:
   // For concurrency control. A raft state instance might be accessed via
   // multiple threads, e.g. RPC thread that receives request; The state machine
   // thread that peridically apply committed log entries, and so on
@@ -408,7 +408,7 @@ class RaftState {
   // A place for storing fragments come from RequestFragments
   PreLeaderStripeStore preleader_stripe_store_;
 
- private:
+ public:
   std::unordered_map<raft_node_id_t, RaftPeer *> peers_;
   std::unordered_map<raft_node_id_t, rpc::RpcClient *> rpc_clients_;
 
