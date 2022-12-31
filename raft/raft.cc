@@ -1378,7 +1378,7 @@ RaftState::MappingTable RaftState::ConstructReTransferMappingTable() {
 RaftState::MappingTable RaftState::ConstructMappingTable() {
   MappingTable res;
   for (const auto &[id, _] : peers_) {
-    assert(static_cast<raft_frag_id_t>(id) < HRaftK() + HRaftM());
+    assert(static_cast<raft_frag_id_t>(id) <= HRaftK() + HRaftM());
     if (live_monitor_.IsAlive(id)) {
       res.insert({id, std::vector<raft_frag_id_t>()});
       res[id].push_back(static_cast<raft_frag_id_t>(id));
