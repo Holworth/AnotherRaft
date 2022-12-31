@@ -30,8 +30,8 @@ const int64_t kCollectFragmentsInterval = 100;  // 100ms
 const int64_t kReplicateInterval = 500;         // 500ms
 const int64_t kElectionTimeoutMin = 500;        // 500ms
 const int64_t kElectionTimeoutMax = 1000;       // 800ms
-const int kHRaftEncodingK = 4;
-const int kHRaftEncodingM = 3;
+const int kHRaftEncodingK = 5;
+const int kHRaftEncodingM = 4;
 };  // namespace config
 
 struct RaftConfig {
