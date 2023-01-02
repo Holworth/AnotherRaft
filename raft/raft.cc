@@ -184,7 +184,7 @@ void RaftState::Process(AppendEntriesArgs *args, AppendEntriesReply *reply) {
   if (args->entry_cnt > 0) {
     checkConflictEntryAndAppendNew(args, reply);
   }
-  reply->expect_index = args->prev_log_index + args->entry_cnt + 1;
+  reply->expect_index = lm_->LastLogEntryIndex() + 1;
   LOG(util::kRaft, "S%d reply with expect index=%d", id_, reply->expect_index);
 
   // Step4: Update commit index if necessary
