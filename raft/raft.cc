@@ -685,7 +685,7 @@ void RaftState::checkConflictEntryAndAppendNew(AppendEntriesArgs *args,
 
 void RaftState::tryUpdateCommitIndex() {
   for (auto N = CommitIndex() + 1; N <= lm_->LastLogEntryIndex(); ++N) {
-    bool replicate_frag[10] = {false};
+    bool replicate_frag[32] = {false};
 
     // The entry at index N has not been replicated yet, which means index >=
     // N has not been replicated neither, directly return
