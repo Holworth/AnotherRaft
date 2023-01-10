@@ -43,4 +43,11 @@ target_link_libraries(bench_server kv)
 add_executable(bench_client bench_client.cc)
 target_link_libraries(bench_client kv)
 
+add_executable(ycsb_server ycsb_server.cc)
+target_link_libraries(ycsb_server kv)
+
+add_executable(ycsb_client ycsb_client.cc)
+target_link_libraries(ycsb_client kv)
+
+
 
