@@ -195,7 +195,7 @@ void KvServer::ExecuteGetOperation(const Request* request, Response* resp) {
   raft::util::Timer timer;
   timer.Reset();
   while (LastApplyIndex() < read_index) {
-    if (timer.ElapseMilliseconds() >= 300) {
+    if (timer.ElapseMilliseconds() >= 500) {
       LOG(raft::util::kRaft, "S%d Execute Get Operation Timeout, ReadIndex=%d", id_,
           read_index);
       resp->err = kRequestExecTimeout;
