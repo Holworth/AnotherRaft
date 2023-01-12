@@ -28,6 +28,7 @@ enum YCSBBenchType {
   YCSB_A = 0,
   YCSB_B = 1,
   YCSB_C = 2,
+  YCSB_F = 3,
 };
 
 static const char *YCSBTypeToString(YCSBOpType type) {
@@ -51,6 +52,7 @@ struct BenchConfiguration {
   int bench_put_cnt;
   int bench_put_size;
   int put_proportion;
+  YCSBBenchType bench_type;
 };
 
 struct AnalysisResults {
@@ -128,6 +130,9 @@ void BuildBench(const BenchConfiguration &cfg,
     auto op = rand() % 100;
     YCSBOpType type;
     if (op < cfg.put_proportion) {
+      if (cfg.bench_type == YCSB_F) {
+        bench->push_back({kGet, key, value});
+      }
       type = kPut;
       value = raft::util::MakeValue(key_id, cfg.bench_put_size);
     } else {
@@ -231,10 +236,13 @@ int main(int argc, char *argv[]) {
   } else if (strcmp(argv[5], "YCSB_C") == 0) {
     bench_type = YCSB_C;
     put_prop = 0;
+  } else if (strcmp(argv[5], "YCSB_F") == 0) {
+    bench_type = YCSB_F;
+    put_prop = 50;
   }
 
   std::vector<YCSBOperation> bench;
-  auto bench_cfg = BenchConfiguration{op_cnt, val_size, put_prop};
+  auto bench_cfg = BenchConfiguration{op_cnt, val_size, put_prop, bench_type};
   BuildBench(bench_cfg, &bench);
 
   std::thread threads[32];
