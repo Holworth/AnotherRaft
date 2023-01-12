@@ -190,6 +190,18 @@ struct EncodingEntryPerfCounter final : public PerfCounter {
   }
 };
 
+inline std::string MakeKey(uint64_t key_id, size_t key_size) {
+  std::string key = "key" + std::to_string(key_id);
+  key.append(key_size - key.size(), '0');
+  return key;
+}
+
+inline std::string MakeValue(uint64_t value_id, size_t value_size) {
+  std::string value = "value" + std::to_string(value_id);
+  value.append(value_size - value.size(), '0');
+  return value;
+}
+
 inline TimePoint NowTime() {
   return std::chrono::high_resolution_clock::now();
 }

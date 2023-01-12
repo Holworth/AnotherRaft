@@ -305,7 +305,10 @@ class RaftState {
   // Reset the next index and match index fields when current server becomes leader
   void resetNextIndexAndMatchIndex();
 
-  uint32_t NextSequence() { return seq_gen_.Next(); }
+  uint32_t NextSequence() { 
+    return 1;
+    // return seq_gen_.Next(); 
+  }
 
   void tickOnFollower();
   void tickOnCandidate();
