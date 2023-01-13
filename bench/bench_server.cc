@@ -22,12 +22,12 @@ int main(int argc, char* argv[]) {
   // Run the server
   auto node = kv::KvServiceNode::NewKvServiceNode(cluster_cfg, node_id);
   node->InitServiceNodeState();
+  RCF::sleepMs(1000);
   node->StartServiceNode();
 
-  // sleep for 60s, waiting for clients request
-  // This thread is supposed to running forever
-  std::this_thread::sleep_for(std::chrono::seconds(60));
-  while (true);
+  std::cout << "[Print to exit]:" << std::endl;
+  char c;
+  std::cin >> c;
 
   // Disconnect the kv node
   node->Disconnect();
