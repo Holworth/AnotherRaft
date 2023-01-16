@@ -28,7 +28,8 @@ enum YCSBBenchType {
   YCSB_A = 0,
   YCSB_B = 1,
   YCSB_C = 2,
-  YCSB_F = 3,
+  YCSB_D = 3,
+  YCSB_F = 4,
 };
 
 static const char *YCSBTypeToString(YCSBOpType type) {
@@ -199,11 +200,12 @@ void ExecuteBench(kv::KvServiceClient *client, int client_id, int interval,
 
   // Calculate the total throughput
   uint64_t total_time = 0;
-  for (const auto& op_stat : op_stats) {
+  for (const auto &op_stat : op_stats) {
     total_time += op_stat.op_latency;
   }
 
-  double thpt = (static_cast<double>(total_size) / (1024 * 1024)) / total_time * 1e6 * 8;
+  double thpt =
+      (static_cast<double>(total_size) / (1024 * 1024)) / total_time * 1e6 * 8;
   printf("\n[Client %d] Throughput: %.2lf Mbps\n", client_id, thpt);
 }
 
@@ -236,6 +238,9 @@ int main(int argc, char *argv[]) {
   } else if (strcmp(argv[5], "YCSB_C") == 0) {
     bench_type = YCSB_C;
     put_prop = 0;
+  } else if (strcmp(argv[5], "YCSB_D") == 0) {
+    bench_type = YCSB_D;
+    put_prop = 5;
   } else if (strcmp(argv[5], "YCSB_F") == 0) {
     bench_type = YCSB_F;
     put_prop = 50;
