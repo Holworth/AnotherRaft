@@ -31,8 +31,8 @@ const int64_t kReplicateInterval = 500;
 const int64_t kElectionTimeoutMin = 500;   // 500ms
 const int64_t kElectionTimeoutMax = 1000;  // 800ms
 const int kCRaftEncodingK = 1;
-const int kCRaftEncodingM = 6;
-};                                         // namespace config
+const int kCRaftEncodingM = 2;
+};  // namespace config
 
 struct RaftConfig {
   // The node id of curernt peer. A node id is the unique identifier to
@@ -305,9 +305,9 @@ class RaftState {
   // Reset the next index and match index fields when current server becomes leader
   void resetNextIndexAndMatchIndex();
 
-  uint32_t NextSequence() { 
+  uint32_t NextSequence() {
     return 1;
-    // return seq_gen_.Next(); 
+    // return seq_gen_.Next();
   }
 
   void tickOnFollower();
@@ -426,7 +426,7 @@ class RaftState {
   int64_t election_time_out_;
   int64_t heartbeatTimeInterval;
 
-  int craft_k_ = config::kCRaftEncodingK; 
+  int craft_k_ = config::kCRaftEncodingK;
   int craft_m_ = config::kCRaftEncodingM;
 
  private:
