@@ -129,20 +129,16 @@ void RCFRpcClient::sendMessage(const AppendEntriesArgs &args) {
   RCF::Future<RCF::ByteBuffer> ret;
 
 #ifdef ENABLE_PERF_RECORDING
-    util::AppendEntriesRPCPerfCounter counter(arg_buf.getLength());
+  util::AppendEntriesRPCPerfCounter counter(arg_buf.getLength());
 #endif
 
   auto cmp_callback = [=]() {
-/*
 #ifdef ENABLE_PERF_RECORDING
     onAppendEntriesCompleteRecordTimer(ret, client_ptr, this->raft_, this->id_, counter);
 #else
-*/
     onAppendEntriesComplete(ret, client_ptr, this->raft_, this->id_,
-                          {arg_buf.getLength(), start_time}, &(this->recorder_));
-/*
+                            {arg_buf.getLength(), start_time}, &(this->recorder_));
 #endif
-*/
   };
   ret = client_ptr->AppendEntries(RCF::AsyncTwoway(cmp_callback), arg_buf);
 }
@@ -186,8 +182,8 @@ void RCFRpcClient::onRequestVoteComplete(RCF::Future<RCF::ByteBuffer> ret,
 
 void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
                                            ClientPtr client_ptr, RaftState *raft,
-                                           raft_node_id_t peer, RPCArgStats rpc_stats, 
-                                           RPCStatsRecorder* recorder) {
+                                           raft_node_id_t peer, RPCArgStats rpc_stats,
+                                           RPCStatsRecorder *recorder) {
   (void)client_ptr;
 
   auto ePtr = ret.getAsyncException();
@@ -206,8 +202,7 @@ void RCFRpcClient::onAppendEntriesComplete(RCF::Future<RCF::ByteBuffer> ret,
 
     // Only record stat that is not heartbeat messages
     if (rpc_stats.arg_size > kAppendEntriesArgsHdrSize) {
-      auto stat = RPCStats{rpc_stats.arg_size, ret_buf.getLength(), time,
-                           time - 0, 0};
+      auto stat = RPCStats{rpc_stats.arg_size, ret_buf.getLength(), time, time - 0, 0};
       recorder->Add(stat);
     }
   }
